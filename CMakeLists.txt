@@ -8,8 +8,8 @@ pico_sdk_init()
 
 add_executable(rtos
   atomic.s
-  scheduler.s
   scheduler.cpp
+  scheduler.s
   test.cpp
 )
 

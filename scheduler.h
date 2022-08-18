@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#include "hardware/structs/systick.h"
+
+#ifndef QUANTUM
+#define QUANTUM 1250000
+#endif
+
 extern "C" {
 
 typedef void (*TaskEntry)();
@@ -25,6 +31,11 @@ struct Task {
 
 Task* new_task(int priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
+void yield();
+
+inline int remaining_quantum() {
+  return systick_hw->cvr;
+}
 
 }  // extern "C"
 

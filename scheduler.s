@@ -84,14 +84,14 @@ rtos_internal_task_switch_handler:
         BGE     0f
 
         // Was the task in a rollback region?
-        LSLS    R3, R1, #28
-        LSRS    R3, R3, #28
-        CMP     R3, #8
+        LSLS    R3, R1, #27
+        LSRS    R3, R3, #27
+        CMP     R3, #24
         BGT     0f
 
         // Rollback task
-        LSRS    R1, R1, #4
-        LSLS    R1, R1, #4
+        LSRS    R1, R1, #5
+        LSLS    R1, R1, #5
         STR     R1, [R2, #return_addr_offset]
 
         // EXC_RETURN value.

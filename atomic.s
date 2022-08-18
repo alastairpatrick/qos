@@ -8,38 +8,42 @@
 // at a byte offset of 8 or less, it is rolled back to offset 0. Otherwise,
 // no action is taken.
 
-.BALIGN 16
+.BALIGN 32
 .GLOBAL atomic_start
 .TYPE atomic_start, %function
 atomic_start:
 
 
-// int atomic_add(int* atomic, int addend)
-.BALIGN 16
+// int32_t atomic_add(atomic_t* atomic, int32_t addend)
+.BALIGN 32
 .GLOBAL atomic_add
 .TYPE atomic_add, %function
-        NOP
-        NOP
+        B       0f
+.SPACE  22 - (1f - 0f)
 atomic_add:
+0:
         LDR     R3, [R0]
         ADDS    R3, R3, R1
-        STR     R3, [R0]      // byte offset 8
+1:      STR     R3, [R0]      // byte offset 24
         MOVS    R0, R3
         BX      LR
 
 
-// int atomic_compare_and_set(int* atomic, int expected, int new_value)
-.BALIGN 16
+// int32_t atomic_compare_and_set(atomic_t* source, int32_t expected, atomic_t* dest, int32_t new_value)
+.BALIGN 32
 .GLOBAL atomic_compare_and_set
 .TYPE atomic_compare_and_set, %function
-        NOP
+        B       0f
+.SPACE  22 - (1f - 0f)
 atomic_compare_and_set:
-        LDR     R3, [R0]
-        CMP     R3, R1
-        BNE     0f
-        STR     R2, [R0]      // byte offset 8
-0:      MOVS    R0, R3
+0:
+        LDR     R7, [R0]
+        CMP     R7, R1
+        BNE     2f
+1:      STR     R3, [R2]      // byte offset 24
+2:      MOVS    R0, R7
         BX      LR
+
 
 
 /*
@@ -66,7 +70,7 @@ atomic_try_write_queue:
         BX      LR
 */
 
-.BALIGN 16
+.BALIGN 32
 .GLOBAL atomic_end
 .TYPE atomic_end, %function
 atomic_end:
