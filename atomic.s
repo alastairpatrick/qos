@@ -21,11 +21,10 @@ atomic_start:
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_add:
-0:
-        LDR     R3, [R0]
-        ADDS    R3, R3, R1
-1:      STR     R3, [R0]      // byte offset 24
-        MOVS    R0, R3
+0:      LDR     R7, [R0]
+        ADDS    R7, R7, R1
+1:      STR     R7, [R0]      // byte offset 24
+        MOVS    R0, R7
         BX      LR
 
 
@@ -36,8 +35,7 @@ atomic_add:
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_compare_and_set:
-0:
-        LDR     R7, [R0]
+0:      LDR     R7, [R0]
         CMP     R7, R1
         BNE     2f
 1:      STR     R3, [R2]      // byte offset 24
