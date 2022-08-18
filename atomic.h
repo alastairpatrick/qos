@@ -1,16 +1,15 @@
 #ifndef RTOS_ATOMIC_H
 #define RTOS_ATOMIC_H
 
-#include <stdint.h>
+#include "base.h"
 
-extern "C" {
+BEGIN_EXTERN_C
 
-typedef volatile int32_t atomic32_t;
+int32_t atomic_add(atomic32_t* atomic, int32_t addend);
+int32_t atomic_compare_and_set(atomic32_t* atomic, int32_t expected, int32_t new_value);
+int32_t atomic_conditional_block(atomic32_t* atomic);
 
-int atomic_add(atomic32_t* atomic, int32_t addend);
-int atomic_compare_and_set(atomic32_t* source, int32_t expected, atomic32_t* dest, int32_t new_value);
-
-}  // extern "C"
+END_EXTERN_C
 
 #endif  // RTOS_ATOMIC_H
 

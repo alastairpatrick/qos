@@ -8,9 +8,12 @@ pico_sdk_init()
 
 add_executable(rtos
   atomic.s
+  c.c
+  mutex.cpp
   scheduler.cpp
+  scheduler.inl.c
   scheduler.s
-  test.cpp
+  test.c
 )
 
 pico_add_extra_outputs(rtos)

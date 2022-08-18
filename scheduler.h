@@ -5,38 +5,29 @@
 
 #include "hardware/structs/systick.h"
 
+#include "base.h"
+
 #ifndef QUANTUM
-#define QUANTUM 1250000
+//#define QUANTUM 1250000
+#define QUANTUM 1000
 #endif
 
-extern "C" {
+BEGIN_EXTERN_C
 
 typedef void (*TaskEntry)();
 
-struct Task {
-  void* sp;
-  int32_t r4;
-  int32_t r5;
-  int32_t r6;
-  int32_t r7;
-  int32_t r8;
-  int32_t r9;
-  int32_t r10;
-  int32_t r11;
+extern struct Task* current_task;
 
-  int priority;
-  int32_t* stack;
-  int32_t stack_size;
-};
-
-Task* new_task(int priority, TaskEntry entry, int32_t stack_size);
+struct Task* new_task(int priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
+
+void ready_blocked_tasks();
 void yield();
+void conditional_proactive_yield();
+int32_t conditional_block(atomic32_t* atomic, int32_t expected);
 
-inline int remaining_quantum() {
-  return systick_hw->cvr;
-}
+int remaining_quantum();
 
-}  // extern "C"
+END_EXTERN_C
 
 #endif  // RTOS_SCHEDULER_H

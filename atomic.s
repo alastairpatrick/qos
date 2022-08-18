@@ -2,6 +2,8 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
+.EQU    svc_block, 1
+
 // Atomic routines are 16 byte aligned at most 16 bytes long.
 //
 // On context switch, if a task is found to be executing an atomic function
@@ -21,25 +23,41 @@ atomic_start:
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_add:
-0:      LDR     R7, [R0]
-        ADDS    R7, R7, R1
-1:      STR     R7, [R0]      // byte offset 24
-        MOVS    R0, R7
+0:      LDR     R3, [R0]
+        ADDS    R3, R3, R1
+1:      STR     R3, [R0]      // byte offset 24
+        MOVS    R0, R3
         BX      LR
 
 
-// int32_t atomic_compare_and_set(atomic_t* source, int32_t expected, atomic_t* dest, int32_t new_value)
+// int32_t atomic_compare_and_set(atomic_t* atomic, int32_t expected, int32_t new_value)
 .BALIGN 32
 .GLOBAL atomic_compare_and_set
 .TYPE atomic_compare_and_set, %function
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_compare_and_set:
-0:      LDR     R7, [R0]
-        CMP     R7, R1
+0:      LDR     R3, [R0]
+        CMP     R3, R1
         BNE     2f
-1:      STR     R3, [R2]      // byte offset 24
-2:      MOVS    R0, R7
+1:      STR     R2, [R0]      // byte offset 24
+2:      MOVS    R0, R3
+        BX      LR
+
+
+
+
+// int32_t atomic_conditional_block(atomic32_t* atomic)
+.GLOBAL atomic_conditional_block
+.TYPE atomic_conditional_block, %function
+        B       0f
+.SPACE  22 - (1f - 0f)
+atomic_conditional_block:
+0:      LDR     R3, [R0]
+        CMP     R3, #0
+        BEQ     2f
+1:      SVC     #svc_block     // byte offset 24
+2:      MOVS    R0, R3
         BX      LR
 
 
