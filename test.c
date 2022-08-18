@@ -1,35 +1,36 @@
 #include "atomic.h"
 #include "scheduler.h"
-#include "mutex.h"
+#include "semaphore.h"
+
 #include <assert.h>
 
-struct Mutex* g_mutex;
+struct Semaphore* g_semaphore;
 atomic32_t g_count;
 
 void do_task1() {
   for(;;) {
-    acquire_mutex(g_mutex);
+    acquire_semaphore(g_semaphore, 1);
     g_count += 1;
     g_count -= 1;
     int count = g_count;
-    release_mutex(g_mutex);
+    release_semaphore(g_semaphore, 1);
     assert(count == 0);
   }
 }
 
 void do_task2() {
   for(;;) {
-    acquire_mutex(g_mutex);
+    acquire_semaphore(g_semaphore, 1);
     g_count += 1;
     g_count -= 1;
     int count = g_count;
-    release_mutex(g_mutex);
+    release_semaphore(g_semaphore, 1);
     assert(count == 0);
   }
 }
 
 int main() {
-  g_mutex = new_mutex();
+  g_semaphore = new_semaphore(1);
   struct Task* task2 = new_task(1, do_task2, 1024);
   struct Task* task1 = new_task(1, do_task1, 1024);
   start_scheduler();

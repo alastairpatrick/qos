@@ -6,7 +6,7 @@
 #include "scheduler.struct.h"
 
 Mutex* new_mutex() {
-  auto mutex = new Mutex();
+  auto mutex = new Mutex;
   init_mutex(mutex);
   return mutex;
 }
@@ -19,7 +19,7 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
   conditional_proactive_yield();
 
   while (atomic_compare_and_set(&mutex->acquired, 0, 1)) {
-    atomic_conditional_block(&mutex->acquired);
+    atomic_compare_and_block(&mutex->acquired, 1);
   }
 
   ++current_task->lock_count;

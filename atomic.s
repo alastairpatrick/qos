@@ -47,15 +47,15 @@ atomic_compare_and_set:
 
 
 
-// int32_t atomic_conditional_block(atomic32_t* atomic)
-.GLOBAL atomic_conditional_block
-.TYPE atomic_conditional_block, %function
+// int32_t atomic_compare_and_block(atomic32_t* atomic, int32_t expected)
+.GLOBAL atomic_compare_and_block
+.TYPE atomic_compare_and_block, %function
         B       0f
 .SPACE  22 - (1f - 0f)
-atomic_conditional_block:
+atomic_compare_and_block:
 0:      LDR     R3, [R0]
-        CMP     R3, #0
-        BEQ     2f
+        CMP     R3, R1
+        BNE     2f
 1:      SVC     #svc_block     // byte offset 24
 2:      MOVS    R0, R3
         BX      LR
