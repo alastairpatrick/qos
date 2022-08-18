@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct Task {
+typedef struct Task {
   void* sp;
   int32_t r4;
   int32_t r5;
@@ -18,6 +18,6 @@ struct Task {
   int32_t* stack;
   int32_t stack_size;
   int lock_count;
-};
+} Task;
 
 #endif  // RTOS_TASK_STRUCT_H

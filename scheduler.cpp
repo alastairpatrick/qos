@@ -93,11 +93,21 @@ void STRIPED_RAM ready_blocked_tasks() {
 }
 
 void STRIPED_RAM conditional_proactive_yield() {
-  return;
+  //return;
   // Heuristic to avoid Systick preempting while lock held.
   if ((current_task->lock_count == 0) && (remaining_quantum() < QUANTUM/2)) {
     yield();
   }
+}
+
+void increment_lock_count() {
+  conditional_proactive_yield();
+  ++current_task->lock_count;
+}
+
+void decrement_lock_count() {
+  assert(--current_task->lock_count >= 0);
+  conditional_proactive_yield();
 }
 
 Task* STRIPED_RAM rtos_internal_context_switch(int new_state, Task* current) {

@@ -10,6 +10,7 @@ add_executable(rtos
   atomic.s
   c.c
   mutex.cpp
+  queue.cpp
   scheduler.cpp
   scheduler.inl.c
   scheduler.s

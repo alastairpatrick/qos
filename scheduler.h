@@ -8,8 +8,7 @@
 #include "base.h"
 
 #ifndef QUANTUM
-//#define QUANTUM 1250000
-#define QUANTUM 1000
+#define QUANTUM 1250000
 #endif
 
 BEGIN_EXTERN_C
@@ -24,7 +23,8 @@ void start_scheduler();
 void ready_blocked_tasks();
 void yield();
 void conditional_proactive_yield();
-int32_t conditional_block(atomic32_t* atomic, int32_t expected);
+void increment_lock_count();
+void decrement_lock_count();
 
 int remaining_quantum();
 

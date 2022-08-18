@@ -3,8 +3,8 @@
 
 #include "base.h"
 
-struct Semaphore {
+typedef struct Semaphore {
   atomic32_t count;
-};
+} Semaphore;
 
 #endif  // RTOS_SEMAPHORE_STRUCT_H

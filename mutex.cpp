@@ -3,7 +3,6 @@
 
 #include "atomic.h"
 #include "scheduler.h"
-#include "scheduler.struct.h"
 
 Mutex* new_mutex() {
   auto mutex = new Mutex;
@@ -16,13 +15,11 @@ void init_mutex(Mutex* mutex) {
 }
 
 void STRIPED_RAM acquire_mutex(Mutex* mutex) {
-  conditional_proactive_yield();
+  increment_lock_count();
 
   while (atomic_compare_and_set(&mutex->acquired, 0, 1)) {
     atomic_compare_and_block(&mutex->acquired, 1);
   }
-
-  ++current_task->lock_count;
 }
 
 void STRIPED_RAM release_mutex(Mutex* mutex) {
@@ -31,6 +28,5 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
 
   ready_blocked_tasks();
 
-  assert(--current_task->lock_count >= 0);
-  conditional_proactive_yield();
+  decrement_lock_count();
 }

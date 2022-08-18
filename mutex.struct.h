@@ -3,8 +3,8 @@
 
 #include "base.h"
 
-struct Mutex {
+typedef struct Mutex {
   atomic32_t acquired;
-};
+} Mutex;
 
 #endif  // RTOS_MUTEX_STRUCT_H
