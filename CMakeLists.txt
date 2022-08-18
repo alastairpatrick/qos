@@ -25,5 +25,6 @@ pico_enable_stdio_usb(rtos 1)
 target_link_libraries(rtos
   hardware_dma
   hardware_exception
+  hardware_irq
   pico_stdlib
 )

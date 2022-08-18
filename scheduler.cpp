@@ -8,6 +8,7 @@
 #include <list>
 
 #include "hardware/exception.h"
+#include "hardware/irq.h"
 #include "hardware/structs/scb.h"
 #include "hardware/structs/systick.h"
 #include "hardware/sync.h"
@@ -71,8 +72,13 @@ void start_scheduler() {
   systick_hw->csr = 0;
 
   exception_set_exclusive_handler(PENDSV_EXCEPTION, rtos_internal_pendsv_handler);
+  irq_set_priority(PENDSV_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
+
   exception_set_exclusive_handler(SVCALL_EXCEPTION, rtos_internal_svc_handler);
+  irq_set_priority(SVCALL_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
+  
   exception_set_exclusive_handler(SYSTICK_EXCEPTION, rtos_internal_systick_handler);
+  irq_set_priority(SYSTICK_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
 
   // Enable SysTick, processor clock, enable exception
   systick_hw->rvr = QUANTUM;
