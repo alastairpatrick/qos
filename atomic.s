@@ -4,7 +4,7 @@
 
 .EQU    svc_block, 1
 
-// Atomic routines are 32 byte aligned at most 32 bytes long.
+// Atomic routines are 32 byte aligned and at most 32 bytes long.
 //
 // On context switch, if a task is found to be executing an atomic function
 // at a byte offset of 24 or less, it is rolled back to offset 0. Otherwise,
@@ -45,8 +45,6 @@ atomic_compare_and_set:
         BX      LR
 
 
-
-
 // int32_t atomic_compare_and_block(atomic32_t* atomic, int32_t expected)
 .GLOBAL atomic_compare_and_block
 .TYPE atomic_compare_and_block, %function
@@ -60,31 +58,6 @@ atomic_compare_and_block:
 2:      MOVS    R0, R3
         BX      LR
 
-
-
-/*
-// bool atomic_try_write_queue(queue_t* queue, int item)
-.BALIGN 16
-.GLOBAL atomic_try_write_queue
-.TYPE atomic_try_write_queue, %function
-        B       atomic_try_write_queue
-        .SPACE  12, 0
-atomic_try_write_queue:
-        ; Fail if queue is full.
-        LDR     R4, [R0, #read_idx]
-        LDR     R5, [R0, #write_idx]
-        ADDS    R6, R5, #4
-        LDR     R7, [R0, #idx_mask]
-        ANDS    R6, R7
-        CMP     R4, R6
-        BEQ     return_zero
-
-        LDR     R4, [R0, #buffer]
-        STR     R1, [R4, R5]            // not externally visible
-        STR     R6, [R0, #write_idx]    // commit at byte offset 24
-        MOVS    R0, 1
-        BX      LR
-*/
 
 .BALIGN 32
 .GLOBAL atomic_end
