@@ -5,6 +5,10 @@
 #include <string.h>
 
 struct Queue* g_queue;
+struct Task* g_producer_task1;
+struct Task* g_producer_task2;
+struct Task* g_consumer_task1;
+struct Task* g_consumer_task2;
 
 void do_producer_task1() {
   for(;;) {
@@ -39,10 +43,10 @@ void do_consumer_task2() {
 int main() {
   g_queue = new_queue(100);
 
-  new_task(1, do_producer_task1, 1024);
-  new_task(1, do_producer_task2, 1024);
-  new_task(1, do_consumer_task1, 1024);
-  new_task(1, do_consumer_task2, 1024);
+  g_producer_task1 = new_task(1, do_producer_task1, 1024);
+  g_consumer_task1 = new_task(1, do_consumer_task1, 1024);
+  g_producer_task2 = new_task(1, do_producer_task2, 1024);
+  g_consumer_task2 = new_task(1, do_consumer_task2, 1024);
 
   start_scheduler();
 

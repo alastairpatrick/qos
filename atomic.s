@@ -2,7 +2,7 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
-.EQU    svc_block, 1
+.EQU    svc_block, 4
 
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //

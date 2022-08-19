@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cstring>
 #include <list>
 
 #include "hardware/exception.h"
@@ -26,9 +28,10 @@ struct ExceptionFrame {
 };
 
 struct Scheduler {
-  Task idle_task;
-  std::list<Task> ready_tasks;
-  std::list<Task> blocked_tasks;
+  std::list<Task> ready_tasks;    // Always in descending priority order
+  std::list<Task> blocked_tasks;  // Always in descending priority order
+  std::list<Task> pending_tasks;  // Always in descending priority order
+  std::list<Task> running_tasks;  // Contains exactly one task.
   volatile bool ready_blocked_tasks;
 };
 
@@ -36,17 +39,27 @@ static Scheduler g_schedulers[NUM_CORES];
 
 extern "C" {
   void rtos_internal_init_stacks();
-  void rtos_internal_svc_handler();
-  void rtos_internal_systick_handler();
-  void rtos_internal_pendsv_handler();
-  Task* rtos_internal_context_switch(int new_state, Task* current);
+  void rtos_supervisor_svc_handler();
+  void rtos_supervisor_systick_handler();
+  void rtos_supervisor_pendsv_handler();
+  Task* rtos_supervisor_context_switch(int new_state, Task* current);
+  void rtos_supervisor_sleep(uint32_t time);
 }
 
 Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& ready_tasks = scheduler.ready_tasks;
 
-  Task* task = &*ready_tasks.emplace(ready_tasks.end());
+  // Maintain ready tasks in descending priority order.
+  auto position = ready_tasks.begin();
+  for (; position != ready_tasks.end(); ++position) {
+    if (position->priority < priority) {
+      break;
+    }
+  }
+  Task* task = &*ready_tasks.emplace(position);
+
+  task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
@@ -64,20 +77,20 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
 void start_scheduler() {
   auto& scheduler = g_schedulers[get_core_num()];
 
-  // This thread is going to become the idle task.
-  current_task = &scheduler.idle_task;
-
+  Task* idle_task = current_task = &*scheduler.running_tasks.emplace(scheduler.running_tasks.begin());
+  memset(idle_task, 0, sizeof(idle_task));
+  
   rtos_internal_init_stacks();
 
   systick_hw->csr = 0;
 
-  exception_set_exclusive_handler(PENDSV_EXCEPTION, rtos_internal_pendsv_handler);
+  exception_set_exclusive_handler(PENDSV_EXCEPTION, rtos_supervisor_pendsv_handler);
   irq_set_priority(PENDSV_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
 
-  exception_set_exclusive_handler(SVCALL_EXCEPTION, rtos_internal_svc_handler);
+  exception_set_exclusive_handler(SVCALL_EXCEPTION, rtos_supervisor_svc_handler);
   irq_set_priority(SVCALL_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
-  
-  exception_set_exclusive_handler(SYSTICK_EXCEPTION, rtos_internal_systick_handler);
+
+  exception_set_exclusive_handler(SYSTICK_EXCEPTION, rtos_supervisor_systick_handler);
   irq_set_priority(SYSTICK_EXCEPTION, PICO_LOWEST_IRQ_PRIORITY);
 
   // Enable SysTick, processor clock, enable exception
@@ -106,53 +119,84 @@ void STRIPED_RAM conditional_proactive_yield() {
   }
 }
 
-void increment_lock_count() {
+void STRIPED_RAM increment_lock_count() {
   conditional_proactive_yield();
   ++current_task->lock_count;
 }
 
-void decrement_lock_count() {
+void STRIPED_RAM decrement_lock_count() {
   assert(--current_task->lock_count >= 0);
   conditional_proactive_yield();
 }
 
-Task* STRIPED_RAM rtos_internal_context_switch(int new_state, Task* current) {
+Task* STRIPED_RAM rtos_supervisor_context_switch(int blocked, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& ready_tasks = scheduler.ready_tasks;
   auto& blocked_tasks = scheduler.blocked_tasks;
+  auto& pending_tasks = scheduler.pending_tasks;
+  auto& running_tasks = scheduler.running_tasks;
 
-  if (new_state) {
-    auto current_it = --ready_tasks.end();
-    assert(current == &*current_it);
-
-    // Move current task into blocked list, ordered by descending priority.
-    int priority = current->priority;
-    auto it = blocked_tasks.end();
-    for (;;) {
-      if (it == blocked_tasks.begin() || (--it)->priority > priority) {
-        blocked_tasks.splice(it, ready_tasks, current_it);
-        break;
-      }
-    }
-  }
+  assert(current == &*running_tasks.begin());
+  int current_priority = current->priority;
 
   // If some tasks might be able to transition from blocked to ready, make all blocked tasks ready.
   if (scheduler.ready_blocked_tasks) {
     scheduler.ready_blocked_tasks = false;
-    ready_tasks.splice(ready_tasks.begin(), blocked_tasks);
+
+    if (!blocked_tasks.empty()) {
+      // The blocked tasks are in descending order and all have >= priority than any pending task
+      // so could just insert the blocked tasks at the beginning of the pending list. However,
+      // to give tasks with equal priority round robin scheduling, skip any already pending
+      // tasks with priority equal to the highest priority blocked task.
+      int blocked_priority = blocked_tasks.front().priority;
+
+      auto position = pending_tasks.begin();
+      for (; position != pending_tasks.end(); ++position) {
+        if (position->priority < blocked_priority) {
+          break;
+        }
+      }
+      pending_tasks.splice(position, blocked_tasks);
+      assert(blocked_tasks.empty());
+    }
   }
+
+  if (blocked) {
+    // Maintain blocked_tasks in descending priority order.
+    assert(blocked_tasks.empty() || current_priority <= blocked_tasks.back().priority);
+    blocked_tasks.splice(blocked_tasks.end(), running_tasks, running_tasks.begin());
+  } else  {
+    // Maintain ready_tasks in descending priority order.
+    if (ready_tasks.empty() || current_priority <= ready_tasks.back().priority) {
+      // Fast path for common case.
+      ready_tasks.splice(ready_tasks.end(), running_tasks, running_tasks.begin());
+    } else {
+      // This can happen if a task blocks, is rescheduled and then yields.
+      auto position = ready_tasks.begin();
+      for (; position != ready_tasks.end(); ++position) {
+        if (position->priority < current_priority) {
+          break;
+        }
+      }
+      ready_tasks.splice(position, running_tasks, running_tasks.begin());
+    }
+  }
+
+  if (pending_tasks.empty()) {
+    std::swap(pending_tasks, ready_tasks);
+
+    // The idle task never blocks so is always be either pending or ready.
+    assert(!pending_tasks.empty());
+  }
+
+  running_tasks.splice(running_tasks.begin(), pending_tasks, pending_tasks.begin());
 
   // Reset SysTick.
   systick_hw->cvr = 0;
 
-  // If there are no ready tasks then sleep.
-  if (ready_tasks.empty()) {
-    return &scheduler.idle_task;
-  }
+  return &running_tasks.front();
+}
 
-  // Round robin the ready tasks, returning the one moved from front of list to back.
-  auto first_ready = ready_tasks.begin();
-  ready_tasks.splice(ready_tasks.end(), ready_tasks, first_ready);
+void STRIPED_RAM rtos_supervisor_sleep(uint32_t time) {
 
-  return &*first_ready;
 }

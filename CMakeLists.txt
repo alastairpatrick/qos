@@ -23,8 +23,10 @@ pico_add_extra_outputs(rtos)
 pico_enable_stdio_usb(rtos 1)
 
 target_link_libraries(rtos
+  hardware_claim
   hardware_dma
   hardware_exception
   hardware_irq
+  hardware_timer
   pico_stdlib
 )

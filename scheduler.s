@@ -11,6 +11,12 @@
 
 .EXTERN atomic_start, atomic_end
 
+.BALIGN 4
+svc_dispatch:
+        .WORD   svc_yield_handler          // #0
+        .WORD   svc_block_handler          // #4
+        .WORD   svc_sleep_handler          // #8
+
 main_stack_start:
         .SPACE  1024, 0
 main_stack_end:
@@ -31,34 +37,48 @@ rtos_internal_init_stacks:
         BX      LR
 
 
-// void rtos_internal_svc_handler()
-.GLOBAL rtos_internal_svc_handler
-.TYPE rtos_internal_svc_handler, %function
-rtos_internal_svc_handler:
+// void rtos_supervisor_svc_handler()
+.GLOBAL rtos_supervisor_svc_handler
+.TYPE rtos_supervisor_svc_handler, %function
+rtos_supervisor_svc_handler:
         // Get SVC arg
         MRS     R2, PSP
-        LDR     R0, [R2, #return_addr_offset]
-        SUBS    R0, R0, #2
-        LDRB    R0, [R0]
+        LDR     R3, [R2, #return_addr_offset]
+        SUBS    R3, R3, #2
+        LDRB    R3, [R3]
+        LDR     R2, =svc_dispatch
+        LDR     R2, [R2, R3]
+        BX      R2
+
+.TYPE svc_block_handler, %function
+svc_block_handler:
+        MOVS    R0, #1
         B       context_switch
 
-// void rtos_internal_systick_handler()
-// void rtos_internal_pendsv_handler()
-.GLOBAL rtos_internal_systick_handler
-.GLOBAL rtos_internal_pendsv_handler
-.TYPE rtos_internal_systick_handler, %function
-.TYPE rtos_internal_pendsv_handler, %function
-rtos_internal_systick_handler:
-rtos_internal_pendsv_handler:
-        // Get yielding task's SP.
-        MRS     R2, PSP
+.TYPE svc_sleep_handler, %function
+svc_sleep_handler:
+        BL      rtos_supervisor_sleep
+        B       context_switch
 
+// void rtos_supervisor_systick_handler()
+// void rtos_supervisor_pendsv_handler()
+.GLOBAL rtos_supervisor_systick_handler
+.GLOBAL rtos_supervisor_pendsv_handler
+.TYPE rtos_supervisor_systick_handler, %function
+.TYPE rtos_supervisor_pendsv_handler, %function
+.TYPE svc_yield_handler, %function
+rtos_supervisor_systick_handler:
+rtos_supervisor_pendsv_handler:
+svc_yield_handler:
         // New state on systick is always READY.
         MOVS    R0, #0
 
-context_switch:
         // R0 becomes the first parameter of rtos_internal_switch_tasks, zero to leave
         // the task in READY state and non-zero for BLOCKED state.
+
+context_switch:
+        // Get yielding task's SP.
+        MRS     R2, PSP
 
         // EXC_RETURN value.
         PUSH    {LR}
@@ -77,8 +97,8 @@ context_switch:
         MOV     R7, R11
         STM     R3!, {R4-R7}
 
-        // TCB* rtos_internal_context_switch(int new_state, TCB* current);
-        BL      rtos_internal_context_switch
+        // TCB* rtos_supervisor_context_switch(int new_state, TCB* current);
+        BL      rtos_supervisor_context_switch
 
         // Store new TCB.
         ADR     R1, current_task
@@ -121,14 +141,6 @@ context_switch:
 
         // EXC_RETURN value.
 0:      POP     {PC}
-
-
-// void yield();
-.GLOBAL yield
-.TYPE yield, %function
-yield:
-        SVC     #svc_yield
-        BX      LR
 
 
 .BALIGN 4
