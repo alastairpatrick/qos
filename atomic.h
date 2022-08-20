@@ -7,7 +7,6 @@ BEGIN_EXTERN_C
 
 int32_t atomic_add(atomic32_t* atomic, int32_t addend);
 int32_t atomic_compare_and_set(atomic32_t* atomic, int32_t expected, int32_t new_value);
-int32_t atomic_compare_and_block(atomic32_t* atomic, int32_t expected);
 
 END_EXTERN_C
 

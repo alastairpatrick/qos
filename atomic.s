@@ -2,8 +2,6 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
-.EQU    svc_block, 4
-
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //
 // On context switch, if a task is found to be executing an atomic function
@@ -45,25 +43,7 @@ atomic_compare_and_set:
         BX      LR
 
 
-// int32_t atomic_compare_and_block(atomic32_t* atomic, int32_t expected)
-.GLOBAL atomic_compare_and_block
-.TYPE atomic_compare_and_block, %function
-        B       0f
-.SPACE  22 - (1f - 0f)
-atomic_compare_and_block:
-0:      LDR     R3, [R0]
-        CMP     R3, R1
-        BNE     2f
-1:      SVC     #svc_block     // byte offset 24
-2:      MOVS    R0, R3
-        BX      LR
-
-
 .BALIGN 32
 .GLOBAL atomic_end
 .TYPE atomic_end, %function
 atomic_end:
-
-return_zero:
-        MOVS    R0, #0
-        BX      LR

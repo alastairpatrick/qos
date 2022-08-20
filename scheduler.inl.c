@@ -10,12 +10,10 @@ inline int STRIPED_RAM remaining_quantum() {
 }
 
 inline void yield() {
-  //__asm__("SVC #0");
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }
 
 inline void sleep(uint32_t time) {
-  __asm__("SVC #8");
 }
 
 #endif  // SCHEDULER_INL_C

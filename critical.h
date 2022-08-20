@@ -16,14 +16,23 @@
 // Unlike on some operating systems, except in cases of high contention, critical
 // sections are usually more expensive than mutexes. Generally prefer mutexes
 // and only use critical sections if you actually want to prevent preemption.
+//
+// Critical section may also change the state of the task from running to
+// some other state, causing preemption.
 
 BEGIN_EXTERN_C
 
-typedef void (*CriticalSectionProc)(void*);
-typedef void (*CriticalSectionVAProc)(va_list args);
+typedef enum TaskState {
+  TASK_RUNNING,
+  TASK_READY,
+  TASK_BLOCKED,
+} TaskState;
 
-void critical_section(CriticalSectionProc proc, void*);
-void critical_section_va(CriticalSectionProc proc, ...);
+typedef TaskState (*CriticalSectionProc)(void*);
+typedef TaskState (*CriticalSectionVAProc)(va_list args);
+
+TaskState critical_section(CriticalSectionProc proc, void*);
+TaskState critical_section_va(CriticalSectionVAProc proc, ...);
 
 END_EXTERN_C
 

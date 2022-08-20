@@ -4,7 +4,7 @@
 #include "base.h"
 
 typedef struct Mutex {
-  atomic32_t acquired;
+  atomic32_t acquire_count;
 } Mutex;
 
 #endif  // RTOS_MUTEX_STRUCT_H

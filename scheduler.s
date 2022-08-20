@@ -6,17 +6,9 @@
 .EQU    icsr, 0xE000ED04
 .EQU    pendsvset, 1 << 28
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
-.EQU    svc_yield, 0
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
 
 .EXTERN atomic_start, atomic_end
-
-.BALIGN 4
-svc_dispatch:
-        .WORD   svc_yield_handler               // #0
-        .WORD   svc_block_handler               // #4
-        .WORD   svc_sleep_handler               // #8
-        .WORD   svc_critical_section_handler    // #12
 
 main_stack_start:
         .SPACE  1024, 0
@@ -42,29 +34,12 @@ rtos_internal_init_stacks:
 .GLOBAL rtos_supervisor_svc_handler
 .TYPE rtos_supervisor_svc_handler, %function
 rtos_supervisor_svc_handler:
-        // Get SVC arg
-        MRS     R2, PSP
-        LDR     R3, [R2, #return_addr_offset]
-        SUBS    R3, R3, #2
-        LDRB    R3, [R3]
-        LDR     R2, =svc_dispatch
-        LDR     R2, [R2, R3]
-        BX      R2
-
-.TYPE svc_block_handler, %function
-svc_block_handler:
-        MOVS    R0, #1
-        B       context_switch
-
-.TYPE svc_sleep_handler, %function
-svc_sleep_handler:
-        BL      rtos_supervisor_sleep
-        B       context_switch
-
-.TYPE svc_critical_section_handler, %function
-svc_critical_section_handler:
-        BX      R1
-
+        PUSH    {LR}
+        BLX     R1
+        SUBS    R0, R0, #1
+        BGE     context_switch
+        POP     {PC}
+        
 
 // void rtos_supervisor_systick_handler()
 // void rtos_supervisor_pendsv_handler()
@@ -72,10 +47,11 @@ svc_critical_section_handler:
 .GLOBAL rtos_supervisor_pendsv_handler
 .TYPE rtos_supervisor_systick_handler, %function
 .TYPE rtos_supervisor_pendsv_handler, %function
-.TYPE svc_yield_handler, %function
 rtos_supervisor_systick_handler:
 rtos_supervisor_pendsv_handler:
-svc_yield_handler:
+        // EXC_RETURN value.
+        PUSH    {LR}
+
         // New state on systick is always READY.
         MOVS    R0, #0
 
@@ -85,9 +61,6 @@ svc_yield_handler:
 context_switch:
         // Get yielding task's SP.
         MRS     R2, PSP
-
-        // EXC_RETURN value.
-        PUSH    {LR}
 
         // Get yielding task's TCB.
         LDR     R3, current_task
