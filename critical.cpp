@@ -1,6 +1,6 @@
 #include "critical.h"
 
-TaskState critical_section(CriticalSectionProc proc, void* ctx) {
+TaskState STRIPED_RAM critical_section(CriticalSectionProc proc, void* ctx) {
   TaskState r;
   __asm__(R"(
     MOV   R1, %1
@@ -11,7 +11,7 @@ TaskState critical_section(CriticalSectionProc proc, void* ctx) {
   return r;  
 }
 
-TaskState critical_section_va(CriticalSectionVAProc proc, ...) {
+TaskState STRIPED_RAM critical_section_va(CriticalSectionVAProc proc, ...) {
   va_list args;
   va_start(args, proc);
   TaskState r;

@@ -3,9 +3,8 @@
 .THUMB_FUNC
 .BALIGN 4
 
-.EQU    icsr, 0xE000ED04
-.EQU    pendsvset, 1 << 28
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
+.EQU    r0_offset, 0
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
 
 .EXTERN atomic_start, atomic_end
@@ -35,9 +34,18 @@ rtos_internal_init_stacks:
 .TYPE rtos_supervisor_svc_handler, %function
 rtos_supervisor_svc_handler:
         PUSH    {LR}
+        
+        // Invoke critical section callback.
         BLX     R1
+
+        // Store return value on process stack where it will be restored into R0.
+        MRS     R2, PSP
+        STR     R0, [R2, #r0_offset]
+
+        // Context switch if running state not wanted.
         SUBS    R0, R0, #1
         BGE     context_switch
+
         POP     {PC}
         
 
@@ -55,13 +63,13 @@ rtos_supervisor_pendsv_handler:
         // New state on systick is always READY.
         MOVS    R0, #0
 
+        // Get yielding task's SP.
+        MRS     R2, PSP
+
         // R0 becomes the first parameter of rtos_internal_switch_tasks, zero to leave
         // the task in READY state and non-zero for BLOCKED state.
 
 context_switch:
-        // Get yielding task's SP.
-        MRS     R2, PSP
-
         // Get yielding task's TCB.
         LDR     R3, current_task
         MOVS    R1, R3
