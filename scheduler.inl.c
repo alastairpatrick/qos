@@ -5,7 +5,7 @@
 
 #include "hardware/structs/scb.h"
 
-inline int STRIPED_RAM remaining_quantum() {
+inline int remaining_quantum() {
   return systick_hw->cvr;
 }
 

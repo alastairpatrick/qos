@@ -36,7 +36,9 @@ rtos_supervisor_svc_handler:
         PUSH    {LR}
         
         // Invoke critical section callback.
-        BLX     R1
+        MOVS    R2, R0
+        MOVS    R0, R1
+        BLX     R2
 
         // Store return value on process stack where it will be restored into R0.
         MRS     R2, PSP

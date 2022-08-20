@@ -1,4 +1,4 @@
-#include "scheduler.h"
+#include "scheduler.inl.c"
 #include "queue.h"
 
 #include <assert.h>

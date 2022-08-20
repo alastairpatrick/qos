@@ -2,7 +2,7 @@
 #include "semaphore.struct.h"
 
 #include "atomic.h"
-#include "critical.h"
+#include "critical.inl.c"
 #include "scheduler.h"
 
 #include <cassert>

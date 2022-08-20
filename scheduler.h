@@ -23,11 +23,11 @@ void start_scheduler();
 
 void yield();
 void conditional_proactive_yield();
-void sleep(uint32_t time);
+inline void sleep(uint32_t time);
 void increment_lock_count();
 void decrement_lock_count();
 
-int remaining_quantum();
+inline int remaining_quantum();
 
 void ready_blocked_tasks();
 
