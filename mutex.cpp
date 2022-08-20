@@ -16,7 +16,7 @@ void init_mutex(Mutex* mutex) {
 }
 
 static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
-  Mutex* mutex = (Mutex*) m;
+  auto mutex = (Mutex*) m;
 
   if (mutex->acquire_count++ == 0) {
     return TASK_RUNNING;
