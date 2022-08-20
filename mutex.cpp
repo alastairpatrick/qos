@@ -12,13 +12,14 @@ Mutex* new_mutex() {
 }
 
 void init_mutex(Mutex* mutex) {
-  mutex->acquire_count = 0;
+  mutex->acquired = 0;
 }
 
 static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
   auto mutex = (Mutex*) m;
 
-  if (mutex->acquire_count++ == 0) {
+  if (mutex->acquired == 0) {
+    mutex->acquired = 1;
     return TASK_RUNNING;
   }
 
@@ -30,7 +31,7 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
 
   for (;;) {
     // Fast path for uncontended acquisition.
-    if (atomic_compare_and_set(&mutex->acquire_count, 0, 1) == 0) {
+    if (atomic_compare_and_set(&mutex->acquired, 0, 1) == 0) {
       break;
     }
 
@@ -41,11 +42,10 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
 }
 
 void STRIPED_RAM release_mutex(Mutex* mutex) {
-  assert(mutex->acquire_count);
+  assert(mutex->acquired);
 
-  if (atomic_add(&mutex->acquire_count, -1) != 0) {
-    ready_blocked_tasks();
-  }
+  mutex->acquired = 0;
+  ready_blocked_tasks();
 
   decrement_lock_count();
 }

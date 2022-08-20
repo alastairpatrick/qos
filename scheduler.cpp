@@ -1,7 +1,9 @@
 #include "scheduler.h"
 #include "scheduler.struct.h"
 #include "scheduler.inl.c"
+
 #include "atomic.h"
+#include "critical.h"
 
 #include <algorithm>
 #include <cassert>
@@ -128,6 +130,15 @@ void STRIPED_RAM decrement_lock_count() {
   assert(--current_task->lock_count >= 0);
   conditional_proactive_yield();
 }
+
+static TaskState STRIPED_RAM yield_critical(void*) {
+  return TASK_READY;
+}
+
+void STRIPED_RAM yield() {
+  critical_section(yield_critical, 0);
+}
+
 
 Task* STRIPED_RAM rtos_supervisor_context_switch(int blocked, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
