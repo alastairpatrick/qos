@@ -9,6 +9,7 @@ pico_sdk_init()
 add_executable(rtos
   atomic.s
   c.c
+  critical.cpp
   mutex.cpp
   queue.cpp
   scheduler.cpp

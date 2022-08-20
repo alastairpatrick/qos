@@ -13,9 +13,10 @@
 
 .BALIGN 4
 svc_dispatch:
-        .WORD   svc_yield_handler          // #0
-        .WORD   svc_block_handler          // #4
-        .WORD   svc_sleep_handler          // #8
+        .WORD   svc_yield_handler               // #0
+        .WORD   svc_block_handler               // #4
+        .WORD   svc_sleep_handler               // #8
+        .WORD   svc_critical_section_handler    // #12
 
 main_stack_start:
         .SPACE  1024, 0
@@ -59,6 +60,11 @@ svc_block_handler:
 svc_sleep_handler:
         BL      rtos_supervisor_sleep
         B       context_switch
+
+.TYPE svc_critical_section_handler, %function
+svc_critical_section_handler:
+        BX      R1
+
 
 // void rtos_supervisor_systick_handler()
 // void rtos_supervisor_pendsv_handler()

@@ -1,6 +1,7 @@
 // The purpose of this file is to ensure that no C++ slips into public header files.
 
 #include "atomic.h"
+#include "critical.h"
 #include "mutex.h"
 #include "mutex.struct.h"
 #include "queue.h"
