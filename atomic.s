@@ -31,10 +31,13 @@ atomic_add:
 // int32_t atomic_compare_and_set(atomic_t* atomic, int32_t expected, int32_t new_value)
 .BALIGN 32
 .GLOBAL atomic_compare_and_set
+.GLOBAL atomic_compare_and_set_ptr
 .TYPE atomic_compare_and_set, %function
+.TYPE atomic_compare_and_set_ptr, %function
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_compare_and_set:
+atomic_compare_and_set_ptr:
 0:      LDR     R3, [R0]
         CMP     R3, R1
         BNE     2f

@@ -14,5 +14,6 @@
 #define STRIPED_RAM __attribute__((section(".time_critical")))
 
 typedef volatile int32_t atomic32_t;
+typedef volatile void* atomic_ptr_t;
 
 #endif  // RTOS_BASE_H
