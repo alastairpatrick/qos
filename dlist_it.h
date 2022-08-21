@@ -18,6 +18,14 @@ struct DListIterator {
   explicit DListIterator(T& item): node(&item.node) {}
   explicit DListIterator(DNode* node): node(node) {}
 
+  static inline DListIterator<T> begin(DList& list) {
+    return DListIterator<T>(list.sentinel.next);
+  }
+
+  static inline DListIterator<T> end(DList& list) {
+    return DListIterator<T>(&list.sentinel);
+  }
+
   reference operator*() {
     return *(T*) node;
   }
@@ -37,6 +45,17 @@ struct DListIterator {
     return t;
   }
 
+  DListIterator& operator--() {
+    node = node->prev;
+    return *this;
+  }
+
+  DListIterator operator--(int) {
+    DListIterator t = *this;
+    node = node->prev;
+    return t;
+  }
+
   friend bool operator==(const DListIterator& a, const DListIterator& b) {
     return a.node == b.node;
   }
@@ -47,26 +66,6 @@ struct DListIterator {
 
   DNode* node;
 };
-
-template <typename T>
-static inline DListIterator<T> begin(DList& list) {
-  return DListIterator<T>(list.sentinel.next);
-}
-
-template <typename T>
-static inline DListIterator<T> front(DList& list) {
-  return DListIterator<T>(list.sentinel.next);
-}
-
-template <typename T>
-static inline DListIterator<T> end(DList& list) {
-  return DListIterator<T>(&list.sentinel);
-}
-
-template <typename T>
-static inline DListIterator<T> back(DList& list) {
-  return DListIterator<T>(list.sentinel.prev);
-}
 
 template <typename T>
 static inline void splice(DListIterator<T> dest, DListIterator<T> begin, DListIterator<T> end) {

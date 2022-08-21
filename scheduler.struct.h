@@ -25,4 +25,8 @@ typedef struct Task {
   int lock_count;
 } Task;
 
+typedef struct TaskDList {
+  DList tasks;
+} TaskDList;
+
 #endif  // RTOS_TASK_STRUCT_H

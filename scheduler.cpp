@@ -31,9 +31,9 @@ struct ExceptionFrame {
 };
 
 struct Scheduler {
-  DList ready_tasks;    // Always in descending priority order
-  DList blocked_tasks;  // Always in descending priority order
-  DList pending_tasks;  // Always in descending priority order
+  TaskDList ready;    // Always in descending priority order
+  TaskDList blocked;  // Always in descending priority order
+  TaskDList pending;  // Always in descending priority order
   volatile bool ready_blocked_tasks;
 };
 
@@ -49,27 +49,27 @@ extern "C" {
 }
 
 static void init_scheduler(Scheduler& scheduler) {
-  if (scheduler.ready_tasks.sentinel.next) {
+  if (scheduler.ready.tasks.sentinel.next) {
     return;
   }
 
-  init_dlist(&scheduler.ready_tasks);
-  init_dlist(&scheduler.blocked_tasks);
-  init_dlist(&scheduler.pending_tasks);
+  init_dlist(&scheduler.ready.tasks);
+  init_dlist(&scheduler.blocked.tasks);
+  init_dlist(&scheduler.pending.tasks);
 }
 
 Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
   init_scheduler(scheduler);
 
-  auto& ready_tasks = scheduler.ready_tasks;
+  auto& ready = scheduler.ready;
 
   Task* task = new Task;
   init_dnode(&task->node);
 
   // Maintain ready tasks in descending priority order.
-  auto position = begin<Task>(ready_tasks);
-  for (; position != end<Task>(ready_tasks); ++position) {
+  auto position = begin(ready);
+  for (; position != end(ready); ++position) {
     if (position->priority < priority) {
       break;
     }
@@ -158,11 +158,11 @@ void STRIPED_RAM yield() {
 }
 
 
-Task* STRIPED_RAM rtos_supervisor_context_switch(int blocked, Task* current) {
+Task* STRIPED_RAM rtos_supervisor_context_switch(int blocks, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
-  auto& ready_tasks = scheduler.ready_tasks;
-  auto& blocked_tasks = scheduler.blocked_tasks;
-  auto& pending_tasks = scheduler.pending_tasks;
+  auto& ready = scheduler.ready;
+  auto& blocked = scheduler.blocked;
+  auto& pending = scheduler.pending;
 
   assert(current == current_task);
   int current_priority = current->priority;
@@ -171,37 +171,37 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(int blocked, Task* current) {
   if (scheduler.ready_blocked_tasks) {
     scheduler.ready_blocked_tasks = false;
 
-    if (!is_dlist_empty(&blocked_tasks)) {
+    if (begin(blocked) != end(blocked)) {
       // The blocked tasks are in descending order and all have >= priority than any pending task
       // so could just insert the blocked tasks at the beginning of the pending list. However,
       // to give tasks with equal priority round robin scheduling, skip any already pending
       // tasks with priority equal to the highest priority blocked task.
-      int blocked_priority = front<Task>(blocked_tasks)->priority;
+      int blocked_priority = begin(blocked)->priority;
 
-      auto position = begin<Task>(pending_tasks);
-      for (; position != end<Task>(pending_tasks); ++position) {
+      auto position = begin(pending);
+      for (; position != end(pending); ++position) {
         if (position->priority < blocked_priority) {
           break;
         }
       }
-      splice(position, begin<Task>(blocked_tasks), end<Task>(blocked_tasks));
-      assert(is_dlist_empty(&blocked_tasks));
+      splice(position, begin(blocked), end(blocked));
+      assert(is_dlist_empty(&blocked.tasks));
     }
   }
 
-  if (blocked) {
-    // Maintain blocked_tasks in descending priority order.
-    assert(is_dlist_empty(&blocked_tasks) || current_priority <= back<Task>(blocked_tasks)->priority);
-    splice(end<Task>(blocked_tasks), *current);
+  if (blocks) {
+    // Maintain blocked in descending priority order.
+    assert(begin(blocked) == end(blocked) || current_priority <= (--end(blocked))->priority);
+    splice(end(blocked), *current);
   } else  {
-    // Maintain ready_tasks in descending priority order.
-    if (is_dlist_empty(&ready_tasks) || current_priority <= back<Task>(ready_tasks)->priority) {
+    // Maintain ready in descending priority order.
+    if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
       // Fast path for common case.
-      splice(end<Task>(ready_tasks), *current);
+      splice(end(ready), *current);
     } else {
       // This can happen if a task blocks, is rescheduled and then yields.
-      auto position = begin<Task>(ready_tasks);
-      for (; position != end<Task>(ready_tasks); ++position) {
+      auto position = begin(ready);
+      for (; position != end(ready); ++position) {
         if (position->priority < current_priority) {
           break;
         }
@@ -210,14 +210,14 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(int blocked, Task* current) {
     }
   }
 
-  if (is_dlist_empty(&pending_tasks)) {
-    swap_dlist(&pending_tasks, &ready_tasks);
+  if (begin(pending) == end(pending)) {
+    swap_dlist(&pending.tasks, &ready.tasks);
 
     // The idle task never blocks so is always be either pending or ready.
-    assert(!is_dlist_empty(&pending_tasks));
+    assert(begin(pending) != end(pending));
   }
 
-  current = &*front<Task>(pending_tasks);
+  current = &*begin(pending);
   remove_dnode(&current->node);
 
   // Reset SysTick.
