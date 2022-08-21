@@ -24,7 +24,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   int32_t old_count = semaphore->count;
   int32_t new_count = old_count - count;
   if (new_count < 0) {
-    return TASK_BLOCKED;
+    return TASK_BUSY_BLOCKED;
   }
 
   semaphore->count = new_count;

@@ -8,6 +8,9 @@
 typedef struct Task {
   DNode node;
 
+  // For use by synchronization object on which this task is waiting.
+  Task* sync_next;
+
   void* sp;
   int32_t r4;
   int32_t r5;

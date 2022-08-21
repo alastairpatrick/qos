@@ -44,7 +44,7 @@ extern "C" {
   void rtos_supervisor_svc_handler();
   void rtos_supervisor_systick_handler();
   void rtos_supervisor_pendsv_handler();
-  Task* rtos_supervisor_context_switch(int new_state, Task* current);
+  Task* rtos_supervisor_context_switch(TaskState new_state, Task* current);
   void rtos_supervisor_sleep(uint32_t time);
 }
 
@@ -58,6 +58,17 @@ static void init_scheduler(Scheduler& scheduler) {
   init_dlist(&scheduler.pending.tasks);
 }
 
+// Insert task into ordered list.
+static void insert_task(TaskDList& list, Task* task) {
+  auto position = begin(list);
+  for (; position != end(list); ++position) {
+    if (position->priority < task->priority) {
+      break;
+    }
+  }
+  splice(position, *task);
+}
+
 Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
   init_scheduler(scheduler);
@@ -66,20 +77,13 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
 
   Task* task = new Task;
   init_dnode(&task->node);
-
-  // Maintain ready tasks in descending priority order.
-  auto position = begin(ready);
-  for (; position != end(ready); ++position) {
-    if (position->priority < priority) {
-      break;
-    }
-  }
-  splice(position, *task);
+  insert_task(ready, task);
 
   task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
+  task->lock_count = 0;
 
   task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
   ExceptionFrame* frame = (ExceptionFrame*) task->sp;
@@ -132,7 +136,7 @@ void STRIPED_RAM ready_blocked_tasks() {
 }
 
 void STRIPED_RAM conditional_proactive_yield() {
-  //return;
+  return;
   // Heuristic to avoid Systick preempting while lock held.
   if ((current_task->lock_count == 0) && (remaining_quantum() < QUANTUM/2)) {
     yield();
@@ -158,7 +162,7 @@ void STRIPED_RAM yield() {
 }
 
 
-Task* STRIPED_RAM rtos_supervisor_context_switch(int blocks, Task* current) {
+Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& ready = scheduler.ready;
   auto& blocked = scheduler.blocked;
@@ -189,25 +193,21 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(int blocks, Task* current) {
     }
   }
 
-  if (blocks) {
+  if (new_state == TASK_BUSY_BLOCKED) {
     // Maintain blocked in descending priority order.
     assert(begin(blocked) == end(blocked) || current_priority <= (--end(blocked))->priority);
     splice(end(blocked), *current);
-  } else  {
+  } else if (new_state == TASK_READY) {
     // Maintain ready in descending priority order.
     if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
       // Fast path for common case.
       splice(end(ready), *current);
     } else {
       // This can happen if a task blocks, is rescheduled and then yields.
-      auto position = begin(ready);
-      for (; position != end(ready); ++position) {
-        if (position->priority < current_priority) {
-          break;
-        }
-      }
-      splice(position, *current);
+      insert_task(ready, current);
     }
+  } else {
+    assert(new_state == TASK_SYNC_BLOCKED);
   }
 
   if (begin(pending) == end(pending)) {
@@ -224,6 +224,13 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(int blocks, Task* current) {
   systick_hw->cvr = 0;
 
   return current;
+}
+
+void STRIPED_RAM critical_ready_task(Task* task) {
+  assert(task->sync_next == nullptr);
+
+  auto& scheduler = g_schedulers[get_core_num()];
+  insert_task(scheduler.ready, task);
 }
 
 void STRIPED_RAM rtos_supervisor_sleep(uint32_t time) {

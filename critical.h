@@ -35,14 +35,9 @@
 // much less expensive than critical sections and never cause priority
 // inversion.
 
+#include "scheduler.h"
 
 BEGIN_EXTERN_C
-
-typedef enum TaskState {
-  TASK_RUNNING,
-  TASK_READY,
-  TASK_BLOCKED,
-} TaskState;
 
 typedef TaskState (*CriticalSectionProc)(void*);
 typedef TaskState (*CriticalSectionVAProc)(va_list args);

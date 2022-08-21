@@ -3,9 +3,11 @@
 .THUMB_FUNC
 .BALIGN 4
 
+.EQU    ctx_offset, 12              // Offset of context region within TCB. Must match struct Task.
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
 .EQU    r0_offset, 0
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
+.EQU    task_ready, 1               // Must match enum TastState.
 
 .EXTERN atomic_start, atomic_end
 
@@ -45,8 +47,8 @@ rtos_supervisor_svc_handler:
         STR     R0, [R2, #r0_offset]
 
         // Context switch if running state not wanted.
-        SUBS    R0, R0, #1
-        BGE     context_switch
+        CMP     R0, #0
+        BNE     context_switch
 
         POP     {PC}
         
@@ -63,7 +65,7 @@ rtos_supervisor_pendsv_handler:
         PUSH    {LR}
 
         // New state on systick is always READY.
-        MOVS    R0, #0
+        MOVS    R0, #task_ready
 
         // Get yielding task's SP.
         MRS     R2, PSP
@@ -75,7 +77,7 @@ context_switch:
         // Get yielding task's TCB.
         LDR     R3, current_task
         MOVS    R1, R3
-        ADDS    R3, R3, #8
+        ADDS    R3, R3, #ctx_offset
 
         // Save SP, R4-R7 in TCB
         STM     R3!, {R2, R4-R7}
@@ -95,7 +97,7 @@ context_switch:
         STR     R0, [R1]
 
         // Restore R8-R11 & LR from TCB.
-        ADDS    R0, R0, #8
+        ADDS    R0, R0, #ctx_offset
         MOVS    R1, R0
         ADDS    R1, R1, #4*5
         LDM     R1!, {R2-R5}

@@ -14,6 +14,13 @@
 
 BEGIN_EXTERN_C
 
+typedef enum TaskState {
+  TASK_RUNNING,
+  TASK_READY,
+  TASK_BUSY_BLOCKED,
+  TASK_SYNC_BLOCKED,
+} TaskState;
+
 typedef void (*TaskEntry)();
 
 extern struct Task* current_task;
@@ -30,6 +37,9 @@ void decrement_lock_count();
 inline int remaining_quantum();
 
 void ready_blocked_tasks();
+
+// May only be called from critical section
+void critical_ready_task(struct Task* task);
 
 END_EXTERN_C
 
