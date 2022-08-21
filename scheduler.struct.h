@@ -1,9 +1,13 @@
 #ifndef RTOS_TASK_STRUCT_H
 #define RTOS_TASK_STRUCT_H
 
+#include "dlist.struct.h"
+
 #include <stdint.h>
 
 typedef struct Task {
+  DNode node;
+
   void* sp;
   int32_t r4;
   int32_t r5;

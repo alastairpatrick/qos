@@ -2,6 +2,9 @@
 
 #include "atomic.h"
 #include "critical.inl.c"
+#include "dlist.h"
+#include "dlist.inl.c"
+#include "dlist.struct.h"
 #include "mutex.h"
 #include "mutex.struct.h"
 #include "queue.h"

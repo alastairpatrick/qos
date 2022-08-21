@@ -75,6 +75,7 @@ context_switch:
         // Get yielding task's TCB.
         LDR     R3, current_task
         MOVS    R1, R3
+        ADDS    R3, R3, #8
 
         // Save SP, R4-R7 in TCB
         STM     R3!, {R2, R4-R7}
@@ -94,6 +95,7 @@ context_switch:
         STR     R0, [R1]
 
         // Restore R8-R11 & LR from TCB.
+        ADDS    R0, R0, #8
         MOVS    R1, R0
         ADDS    R1, R1, #4*5
         LDM     R1!, {R2-R5}
