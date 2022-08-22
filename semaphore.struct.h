@@ -2,10 +2,11 @@
 #define RTOS_SEMAPHORE_STRUCT_H
 
 #include "base.h"
+#include "scheduler.struct.h"
 
 typedef struct Semaphore {
   atomic32_t count;
-  struct Task* waiting;
+  TaskSchedulingDList waiting;
 } Semaphore;
 
 #endif  // RTOS_SEMAPHORE_STRUCT_H

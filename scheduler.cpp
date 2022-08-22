@@ -86,7 +86,6 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
   task->lock_count = 0;
-  task->sync_next = nullptr;
   task->sync_state = 0;
 
   task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
@@ -142,7 +141,7 @@ void STRIPED_RAM ready_blocked_tasks() {
 }
 
 void STRIPED_RAM conditional_proactive_yield() {
-  // return;
+  //return;
   // Heuristic to avoid Systick preempting while lock held.
   if ((current_task->lock_count == 0) && (remaining_quantum() < QUANTUM/2)) {
     yield();
@@ -202,11 +201,11 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   if (current_task != &idle_task) {
     if (new_state == TASK_BUSY_BLOCKED) {
       // Maintain blocked in descending priority order.
-      assert(begin(busy_blocked) == end(busy_blocked) || current_priority <= (--end(busy_blocked))->priority);
+      assert(begin(busy_blocked).empty() || current_priority <= (--end(busy_blocked))->priority);
       splice(end(busy_blocked), *current);
     } else if (new_state == TASK_READY) {
       // Maintain ready in descending priority order.
-      if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
+      if (begin(ready).empty() || current_priority <= (--end(ready))->priority) {
         // Fast path for common case.
         splice(end(ready), *current);
       } else {
@@ -217,15 +216,15 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
     }
   }
 
-  if (begin(pending) == end(pending)) {
+  if (begin(pending).empty()) {
     swap_dlist(&pending.tasks, &ready.tasks);
   }
 
-  if (begin(pending) == end(pending)) {
+  if (begin(pending).empty()) {
     current = &idle_task;
   } else {
     current = &*begin(pending);
-    remove_dnode(&current->scheduling_node);
+    begin(pending).remove();
   }
 
   // Reset SysTick.

@@ -73,6 +73,17 @@ struct DListIterator {
     return a.node != b.node;
   }
 
+  bool empty() {
+    return node == node->next;
+  }
+
+  // Removes referenced node and returns pointer to next.
+  DListIterator remove() {
+    DListIterator t(node->next);
+    remove_dnode(node);
+    return t;
+  }
+
   DNode* node;
 };
 

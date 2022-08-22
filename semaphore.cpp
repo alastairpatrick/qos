@@ -3,8 +3,7 @@
 
 #include "atomic.h"
 #include "critical.inl.c"
-#include "scheduler.h"
-#include "scheduler.struct.h"
+#include "dlist_it.h"
 #include "sync_util.h"
 
 #include <cassert>
@@ -17,7 +16,7 @@ Semaphore* new_semaphore(int32_t initial_count) {
 
 void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   semaphore->count = initial_count;
-  semaphore->waiting = nullptr;
+  init_dlist(&semaphore->waiting.tasks);
 }
 
 static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
@@ -58,24 +57,22 @@ TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
   semaphore->count += count;
 
   auto should_yield = false;
-  auto list = &semaphore->waiting;
-  while (*list) {
-    auto task = *list;
+  auto position = begin(semaphore->waiting);
+  while (position != end(semaphore->waiting)) {
+    auto task = &*position;
+
     if (task->sync_state <= semaphore->count) {
       semaphore->count -= task->sync_state;
-
-      critical_ready_task(task);
 
       if (task->priority > current_task->priority) {
         should_yield = true;
       }
 
-      Task* next_task = task->sync_next;
-      task->sync_next = nullptr;
-      task->sync_state = 0;
-      *list = next_task;
+      position = position.remove();
+
+      critical_ready_task(task);
     } else {
-      list = &task->sync_next;
+      ++position;
     }
   }
 

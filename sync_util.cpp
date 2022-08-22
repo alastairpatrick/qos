@@ -1,13 +1,15 @@
-#include "scheduler.struct.h"
-
 #include "sync_util.h"
 
+#include "dlist_it.h"
+#include "scheduler.struct.h"
+#include "scheduler.inl.c"
+
 // Insert current task into linked list, maintaining descending priority order.
-void insert_sync_list(Task** list, Task* task) {
+void insert_sync_list(TaskSchedulingDList* list, Task* task) {
   int current_priority = task->priority;
-  while (*list && (*list)->priority > current_priority) {
-    list = &(*list)->sync_next;
+  auto position = begin(*list);
+  while (position != end(*list) && position->priority > current_priority) {
+    ++position;
   }
-  task->sync_next = *list;
-  *list = task;
+  splice(position, *task);
 }

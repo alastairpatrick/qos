@@ -3,8 +3,7 @@
 
 #include "atomic.h"
 #include "critical.h"
-#include "scheduler.h"
-#include "scheduler.struct.h"
+#include "dlist_it.h"
 #include "sync_util.h"
 
 enum MutexState {
@@ -22,7 +21,7 @@ Mutex* new_mutex() {
 
 void init_mutex(Mutex* mutex) {
   mutex->owner_state = 0;
-  mutex->waiting = nullptr;
+  init_dlist(&mutex->waiting.tasks);
 }
 
 static Task* STRIPED_RAM unpack_owner(int32_t owner_state) {
@@ -44,7 +43,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
   auto state = unpack_state(owner_state);
 
   if (state == AVAILABLE) {
-    assert(!mutex->waiting);
+    assert(is_dlist_empty(&mutex->waiting.tasks));
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
     return TASK_RUNNING;
   }
@@ -82,12 +81,13 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
 
   assert(state == ACQUIRED_CONTENDED);
 
-  auto resumed = mutex->waiting;
-  mutex->waiting = resumed->sync_next;
-  resumed->sync_next = nullptr;
-  critical_ready_task(resumed);
+  auto resumed_it = begin(mutex->waiting);
+  auto resumed = &*resumed_it;
+  resumed_it.remove();
+  critical_ready_task(&*resumed);
 
-  mutex->owner_state = pack_owner_state(resumed, mutex->waiting ? ACQUIRED_CONTENDED : ACQUIRED_UNCONTENDED);
+  state = begin(mutex->waiting).empty() ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
+  mutex->owner_state = pack_owner_state(&*resumed, state);
 
   if (resumed->priority > current_task->priority) {
     return TASK_READY;

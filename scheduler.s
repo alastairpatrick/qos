@@ -3,7 +3,7 @@
 .THUMB_FUNC
 .BALIGN 4
 
-.EQU    ctx_offset, 24              // Offset of context region within TCB. Must match struct Task.
+.EQU    ctx_offset, 20              // Offset of context region within TCB. Must match struct Task.
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
 .EQU    r0_offset, 0
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack

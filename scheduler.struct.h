@@ -12,7 +12,7 @@ typedef struct Task {
   DNode timing_node;
 
   // For use by synchronization object on which this task is waiting.
-  Task* sync_next;
+  // Synchronization objects should also use scheduling_node while task is in state TASK_SYNC_BLOCKED.s
   int32_t sync_state;
   
   void* sp;
