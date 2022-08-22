@@ -32,7 +32,7 @@ struct ExceptionFrame {
 
 struct Scheduler {
   TaskDList ready;    // Always in descending priority order
-  TaskDList blocked;  // Always in descending priority order
+  TaskDList busy_blocked;  // Always in descending priority order
   TaskDList pending;  // Always in descending priority order
   volatile bool ready_blocked_tasks;
 };
@@ -54,7 +54,7 @@ static void init_scheduler(Scheduler& scheduler) {
   }
 
   init_dlist(&scheduler.ready.tasks);
-  init_dlist(&scheduler.blocked.tasks);
+  init_dlist(&scheduler.busy_blocked.tasks);
   init_dlist(&scheduler.pending.tasks);
 }
 
@@ -84,6 +84,8 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
   task->lock_count = 0;
+  task->sync_next = nullptr;
+  task->sync_state = 0;
 
   task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
   ExceptionFrame* frame = (ExceptionFrame*) task->sp;
@@ -165,7 +167,7 @@ void STRIPED_RAM yield() {
 Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& ready = scheduler.ready;
-  auto& blocked = scheduler.blocked;
+  auto& busy_blocked = scheduler.busy_blocked;
   auto& pending = scheduler.pending;
 
   assert(current == current_task);
@@ -175,12 +177,12 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   if (scheduler.ready_blocked_tasks) {
     scheduler.ready_blocked_tasks = false;
 
-    if (begin(blocked) != end(blocked)) {
+    if (begin(busy_blocked) != end(busy_blocked)) {
       // The blocked tasks are in descending order and all have >= priority than any pending task
       // so could just insert the blocked tasks at the beginning of the pending list. However,
       // to give tasks with equal priority round robin scheduling, skip any already pending
       // tasks with priority equal to the highest priority blocked task.
-      int blocked_priority = begin(blocked)->priority;
+      int blocked_priority = begin(busy_blocked)->priority;
 
       auto position = begin(pending);
       for (; position != end(pending); ++position) {
@@ -188,15 +190,15 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
           break;
         }
       }
-      splice(position, begin(blocked), end(blocked));
-      assert(is_dlist_empty(&blocked.tasks));
+      splice(position, begin(busy_blocked), end(busy_blocked));
+      assert(is_dlist_empty(&busy_blocked.tasks));
     }
   }
 
   if (new_state == TASK_BUSY_BLOCKED) {
     // Maintain blocked in descending priority order.
-    assert(begin(blocked) == end(blocked) || current_priority <= (--end(blocked))->priority);
-    splice(end(blocked), *current);
+    assert(begin(busy_blocked) == end(busy_blocked) || current_priority <= (--end(busy_blocked))->priority);
+    splice(end(busy_blocked), *current);
   } else if (new_state == TASK_READY) {
     // Maintain ready in descending priority order.
     if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
@@ -227,8 +229,6 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
 }
 
 void STRIPED_RAM critical_ready_task(Task* task) {
-  assert(task->sync_next == nullptr);
-
   auto& scheduler = g_schedulers[get_core_num()];
   insert_task(scheduler.ready, task);
 }

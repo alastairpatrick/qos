@@ -10,7 +10,8 @@ typedef struct Task {
 
   // For use by synchronization object on which this task is waiting.
   Task* sync_next;
-
+  int32_t sync_state;
+  
   void* sp;
   int32_t r4;
   int32_t r5;

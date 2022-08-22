@@ -5,6 +5,7 @@
 
 typedef struct Semaphore {
   atomic32_t count;
+  struct Task* waiting;
 } Semaphore;
 
 #endif  // RTOS_SEMAPHORE_STRUCT_H

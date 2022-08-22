@@ -42,30 +42,30 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
-  if (state == AVAILABLE) {
-    assert(!mutex->waiting);
-    mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
+  if (current_task->sync_state == 0) {
+    if (state == AVAILABLE) {
+      assert(!mutex->waiting);
+      mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
+      return TASK_RUNNING;
+    }
+
+    mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
+
+    // Insert current task into linked list, maintaining descending priority order.
+    int current_priority = current_task->priority;
+    auto list = &mutex->waiting;
+    while (*list && (*list)->priority > current_priority) {
+      list = &(*list)->sync_next;
+    }
+    current_task->sync_next = *list;
+    current_task->sync_state = 1;
+    *list = current_task;
+
+    return TASK_SYNC_BLOCKED;
+  } else {
+    current_task->sync_state = 0;
     return TASK_RUNNING;
   }
-
-  if (owner == current_task) {
-    // This means release_mutex_critical() transferred ownership before resuming the current task,
-    // not that the mutex was acquired in a reentrant fashion.
-    return TASK_RUNNING;
-  }
-
-  mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
-
-  // Insert current task into linked list, maintaining descending priority order.
-  int current_priority = current_task->priority;
-  auto list = &mutex->waiting;
-  while (*list && (*list)->priority > current_priority) {
-    list = &(*list)->sync_next;
-  }
-  current_task->sync_next = *list;
-  *list = current_task;
-
-  return TASK_SYNC_BLOCKED;
 }
 
 void STRIPED_RAM acquire_mutex(Mutex* mutex) {
@@ -73,15 +73,12 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
 
   increment_lock_count();
 
-  for (;;) {
-    // Fast path for uncontended acquisition.
-    if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
-      break;
-    }
+  // Fast path for uncontended acquisition.
+  if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
+    return;
+  }
     
-    if (critical_section(acquire_mutex_critical, mutex) == TASK_RUNNING) {
-      break;
-    } 
+  while (critical_section(acquire_mutex_critical, mutex) != TASK_RUNNING) {
   }
 }
 
