@@ -18,12 +18,20 @@ inline void sleep(uint32_t time) {
 
 #ifdef __cplusplus
 
-inline DListIterator<Task> begin(TaskDList& list) {
-  return DListIterator<Task>::begin(list.tasks);
+inline DListIterator<Task, &Task::scheduling_node> begin(TaskSchedulingDList& list) {
+  return DListIterator<Task, &Task::scheduling_node>::begin(list.tasks);
 }
 
-inline DListIterator<Task> end(TaskDList& list) {
-  return DListIterator<Task>::end(list.tasks);
+inline DListIterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list) {
+  return DListIterator<Task, &Task::scheduling_node>::end(list.tasks);
+}
+
+inline DListIterator<Task, &Task::timing_node> begin(TaskTimingDList& list) {
+  return DListIterator<Task, &Task::timing_node>::begin(list.tasks);
+}
+
+inline DListIterator<Task, &Task::timing_node> end(TaskTimingDList& list) {
+  return DListIterator<Task, &Task::timing_node>::end(list.tasks);
 }
 
 #endif   // __cplusplus

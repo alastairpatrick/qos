@@ -8,7 +8,8 @@
 #include <stdint.h>
 
 typedef struct Task {
-  DNode node;
+  DNode scheduling_node;
+  DNode timing_node;
 
   // For use by synchronization object on which this task is waiting.
   Task* sync_next;
@@ -31,8 +32,12 @@ typedef struct Task {
   int lock_count;
 } Task;
 
-typedef struct TaskDList {
+typedef struct TaskSchedulingDList {
   DList tasks;
-} TaskDList;
+} TaskSchedulingDList;
+
+typedef struct TaskTimingDList {
+  DList tasks;
+} TaskTimingDList;
 
 #endif  // RTOS_TASK_STRUCT_H

@@ -7,31 +7,40 @@
 
 #include <iterator>
 
-template <typename T>
+template <typename T, DNode T::*NODE>
 struct DListIterator {
   using iterator_category = std::bidirectional_iterator_tag;
   using difference_type   = std::ptrdiff_t;
   using value_type        = T;
   using pointer           = T*;
   using reference         = T&;
-    
-  explicit DListIterator(T& item): node(&item.node) {}
-  explicit DListIterator(DNode* node): node(node) {}
 
-  static inline DListIterator<T> begin(DList& list) {
-    return DListIterator<T>(list.sentinel.next);
+  pointer node_to_object(DNode* node) {
+    uintptr_t node_offset = uintptr_t(&(pointer(nullptr)->*NODE));
+    return pointer(uintptr_t(node) - node_offset);
   }
 
-  static inline DListIterator<T> end(DList& list) {
-    return DListIterator<T>(&list.sentinel);
+  DNode* object_to_node(pointer object) {
+    return &(object->*NODE);
+  }
+
+  explicit DListIterator(T& item): node(object_to_node(&item)) {}
+  explicit DListIterator(DNode* node): node(node) {}
+
+  static inline DListIterator begin(DList& list) {
+    return DListIterator(list.sentinel.next);
+  }
+
+  static inline DListIterator end(DList& list) {
+    return DListIterator(&list.sentinel);
   }
 
   reference operator*() {
-    return *(T*) node;
+    return *node_to_object(node);
   }
 
   pointer operator->() {
-    return (T*) node;
+    return node_to_object(node);
   }
 
   DListIterator& operator++() {
@@ -67,19 +76,19 @@ struct DListIterator {
   DNode* node;
 };
 
-template <typename T>
-static inline void splice(DListIterator<T> dest, DListIterator<T> begin, DListIterator<T> end) {
+template <typename T, DNode T::*NODE>
+static inline void splice(DListIterator<T, NODE> dest, DListIterator<T, NODE> begin, DListIterator<T, NODE> end) {
   splice_dlist(dest.node, begin.node, end.node);
 }
 
-template <typename T>
-static inline void splice(DListIterator<T> dest, DListIterator<T> source) {
+template <typename T, DNode T::*NODE>
+static inline void splice(DListIterator<T, NODE> dest, DListIterator<T, NODE> source) {
   splice_dnode(dest.node, source.node);
 }
 
-template <typename T>
-static inline void splice(DListIterator<T> dest, T& source) {
-  splice_dnode(dest.node, &source.node);
+template <typename T, DNode T::*NODE>
+static inline void splice(DListIterator<T, NODE> dest, T& source) {
+  splice_dnode(dest.node, &(source.*NODE));
 }
 
 #endif  // RTOS_DLIST_IT_H

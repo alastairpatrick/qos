@@ -32,9 +32,9 @@ struct ExceptionFrame {
 
 struct Scheduler {
   Task idle_task;
-  TaskDList ready;    // Always in descending priority order
-  TaskDList busy_blocked;  // Always in descending priority order
-  TaskDList pending;  // Always in descending priority order
+  TaskSchedulingDList ready;         // Always in descending priority order
+  TaskSchedulingDList busy_blocked;  // Always in descending priority order
+  TaskSchedulingDList pending;       // Always in descending priority order
   volatile bool ready_blocked_tasks;
 };
 
@@ -60,7 +60,7 @@ static void init_scheduler(Scheduler& scheduler) {
 }
 
 // Insert task into ordered list.
-static void insert_task(TaskDList& list, Task* task) {
+static void insert_task(TaskSchedulingDList& list, Task* task) {
   auto position = begin(list);
   for (; position != end(list); ++position) {
     if (position->priority < task->priority) {
@@ -77,7 +77,8 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   auto& ready = scheduler.ready;
 
   Task* task = new Task;
-  init_dnode(&task->node);
+  init_dnode(&task->scheduling_node);
+  init_dnode(&task->timing_node);
   insert_task(ready, task);
 
   task->entry = entry;
@@ -105,7 +106,8 @@ void start_scheduler() {
   init_scheduler(scheduler);
 
   current_task = &idle_task;
-  init_dnode(&idle_task.node);
+  init_dnode(&idle_task.scheduling_node);
+  init_dnode(&idle_task.timing_node);
   idle_task.priority = INT_MIN;
 
   rtos_internal_init_stacks();
@@ -165,7 +167,6 @@ void STRIPED_RAM yield() {
   critical_section(yield_critical, 0);
 }
 
-
 Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& ready = scheduler.ready;
@@ -224,7 +225,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
     current = &idle_task;
   } else {
     current = &*begin(pending);
-    remove_dnode(&current->node);
+    remove_dnode(&current->scheduling_node);
   }
 
   // Reset SysTick.
