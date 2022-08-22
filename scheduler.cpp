@@ -31,6 +31,7 @@ struct ExceptionFrame {
 };
 
 struct Scheduler {
+  Task idle_task;
   TaskDList ready;    // Always in descending priority order
   TaskDList busy_blocked;  // Always in descending priority order
   TaskDList pending;  // Always in descending priority order
@@ -99,12 +100,13 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
 
 void start_scheduler() {
   auto& scheduler = g_schedulers[get_core_num()];
+  auto& idle_task = scheduler.idle_task;
+
   init_scheduler(scheduler);
 
-  Task* idle_task = current_task = new Task;
-  memset(idle_task, 0, sizeof(idle_task));
-  init_dnode(&idle_task->node);
-  idle_task->priority = INT_MIN;
+  current_task = &idle_task;
+  init_dnode(&idle_task.node);
+  idle_task.priority = INT_MIN;
 
   rtos_internal_init_stacks();
 
@@ -169,6 +171,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   auto& ready = scheduler.ready;
   auto& busy_blocked = scheduler.busy_blocked;
   auto& pending = scheduler.pending;
+  auto& idle_task = scheduler.idle_task;
 
   assert(current == current_task);
   int current_priority = current->priority;
@@ -195,32 +198,35 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
     }
   }
 
-  if (new_state == TASK_BUSY_BLOCKED) {
-    // Maintain blocked in descending priority order.
-    assert(begin(busy_blocked) == end(busy_blocked) || current_priority <= (--end(busy_blocked))->priority);
-    splice(end(busy_blocked), *current);
-  } else if (new_state == TASK_READY) {
-    // Maintain ready in descending priority order.
-    if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
-      // Fast path for common case.
-      splice(end(ready), *current);
+  if (current_task != &idle_task) {
+    if (new_state == TASK_BUSY_BLOCKED) {
+      // Maintain blocked in descending priority order.
+      assert(begin(busy_blocked) == end(busy_blocked) || current_priority <= (--end(busy_blocked))->priority);
+      splice(end(busy_blocked), *current);
+    } else if (new_state == TASK_READY) {
+      // Maintain ready in descending priority order.
+      if (begin(ready) == end(ready) || current_priority <= (--end(ready))->priority) {
+        // Fast path for common case.
+        splice(end(ready), *current);
+      } else {
+        // This can happen if a task blocks, is rescheduled and then yields.
+        insert_task(ready, current);
+      }
     } else {
-      // This can happen if a task blocks, is rescheduled and then yields.
-      insert_task(ready, current);
+      assert(new_state == TASK_SYNC_BLOCKED);
     }
-  } else {
-    assert(new_state == TASK_SYNC_BLOCKED);
   }
 
   if (begin(pending) == end(pending)) {
     swap_dlist(&pending.tasks, &ready.tasks);
-
-    // The idle task never blocks so is always be either pending or ready.
-    assert(begin(pending) != end(pending));
   }
 
-  current = &*begin(pending);
-  remove_dnode(&current->node);
+  if (begin(pending) == end(pending)) {
+    current = &idle_task;
+  } else {
+    current = &*begin(pending);
+    remove_dnode(&current->node);
+  }
 
   // Reset SysTick.
   systick_hw->cvr = 0;
