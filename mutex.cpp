@@ -57,7 +57,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
 }
 
 void STRIPED_RAM acquire_mutex(Mutex* mutex) {
-  assert(!owns_mutex());
+  assert(!owns_mutex(mutex));
 
   increment_lock_count();
 
@@ -97,7 +97,7 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
 }
 
 void STRIPED_RAM release_mutex(Mutex* mutex) {
-  assert(owns_mutex());
+  assert(owns_mutex(mutex));
 
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
