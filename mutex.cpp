@@ -25,15 +25,15 @@ void init_mutex(Mutex* mutex) {
   mutex->waiting = nullptr;
 }
 
-static Task* unpack_owner(int32_t owner_state) {
+static Task* STRIPED_RAM unpack_owner(int32_t owner_state) {
   return (Task*) (owner_state & ~3);
 }
 
-static MutexState unpack_state(int32_t owner_state) {
+static MutexState STRIPED_RAM unpack_state(int32_t owner_state) {
   return MutexState(owner_state & 3);
 }
 
-static int32_t pack_owner_state(Task* owner, MutexState state) {
+static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
   return int32_t(owner) | state;
 }
 
@@ -57,7 +57,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
 }
 
 void STRIPED_RAM acquire_mutex(Mutex* mutex) {
-  assert(unpack_owner(mutex->owner_state) != current_task);
+  assert(!owns_mutex());
 
   increment_lock_count();
 
@@ -69,13 +69,11 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
   critical_section(acquire_mutex_critical, mutex);
 }
 
-TaskState release_mutex_critical(void* m) {
+TaskState STRIPED_RAM release_mutex_critical(void* m) {
   auto mutex = (Mutex*) m;
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
-
-  assert(owner == current_task);
 
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
@@ -99,6 +97,8 @@ TaskState release_mutex_critical(void* m) {
 }
 
 void STRIPED_RAM release_mutex(Mutex* mutex) {
+  assert(owns_mutex());
+
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
   if (atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
@@ -110,6 +110,6 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
   decrement_lock_count();
 }
 
-int STRIPED_RAM own_mutex(Mutex* mutex) {
+int STRIPED_RAM owns_mutex(Mutex* mutex) {
   return unpack_owner(mutex->owner_state) == current_task;
 }

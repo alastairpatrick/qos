@@ -9,7 +9,7 @@ struct Mutex* new_mutex();
 void init_mutex(struct Mutex* mutex);
 void acquire_mutex(struct Mutex* mutex);
 void release_mutex(struct Mutex* mutex);
-int own_mutex(struct Mutex* mutex);
+int owns_mutex(struct Mutex* mutex);
 
 END_EXTERN_C
 
