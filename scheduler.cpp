@@ -140,7 +140,7 @@ void STRIPED_RAM ready_blocked_tasks() {
 }
 
 void STRIPED_RAM conditional_proactive_yield() {
-  return;
+  // return;
   // Heuristic to avoid Systick preempting while lock held.
   if ((current_task->lock_count == 0) && (remaining_quantum() < QUANTUM/2)) {
     yield();
@@ -209,7 +209,6 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
         // Fast path for common case.
         splice(end(ready), *current);
       } else {
-        // This can happen if a task blocks, is rescheduled and then yields.
         insert_task(ready, current);
       }
     } else {

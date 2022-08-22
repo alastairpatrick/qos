@@ -1,6 +1,8 @@
 #ifndef RTOS_TASK_STRUCT_H
 #define RTOS_TASK_STRUCT_H
 
+#include "scheduler.h"
+
 #include "dlist.struct.h"
 
 #include <stdint.h>

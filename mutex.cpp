@@ -5,6 +5,7 @@
 #include "critical.h"
 #include "scheduler.h"
 #include "scheduler.struct.h"
+#include "sync_util.h"
 
 enum MutexState {
   AVAILABLE,
@@ -42,30 +43,17 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
-  if (current_task->sync_state == 0) {
-    if (state == AVAILABLE) {
-      assert(!mutex->waiting);
-      mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-      return TASK_RUNNING;
-    }
-
-    mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
-
-    // Insert current task into linked list, maintaining descending priority order.
-    int current_priority = current_task->priority;
-    auto list = &mutex->waiting;
-    while (*list && (*list)->priority > current_priority) {
-      list = &(*list)->sync_next;
-    }
-    current_task->sync_next = *list;
-    current_task->sync_state = 1;
-    *list = current_task;
-
-    return TASK_SYNC_BLOCKED;
-  } else {
-    current_task->sync_state = 0;
+  if (state == AVAILABLE) {
+    assert(!mutex->waiting);
+    mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
     return TASK_RUNNING;
   }
+
+  mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
+
+  insert_sync_list(&mutex->waiting, current_task);
+
+  return TASK_SYNC_BLOCKED;
 }
 
 void STRIPED_RAM acquire_mutex(Mutex* mutex) {
@@ -78,8 +66,7 @@ void STRIPED_RAM acquire_mutex(Mutex* mutex) {
     return;
   }
     
-  while (critical_section(acquire_mutex_critical, mutex) != TASK_RUNNING) {
-  }
+  critical_section(acquire_mutex_critical, mutex);
 }
 
 TaskState release_mutex_critical(void* m) {
@@ -121,4 +108,8 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
 
   critical_section(release_mutex_critical, mutex);
   decrement_lock_count();
+}
+
+int STRIPED_RAM own_mutex(Mutex* mutex) {
+  return unpack_owner(mutex->owner_state) == current_task;
 }

@@ -5,6 +5,7 @@
 #include "critical.inl.c"
 #include "scheduler.h"
 #include "scheduler.struct.h"
+#include "sync_util.h"
 
 #include <cassert>
 
@@ -23,38 +24,21 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
 
-  assert(count > 0);
-
-  if (current_task->sync_state == 0) {
-    auto old_count = semaphore->count;
-    auto new_count = old_count - count;
-    if (new_count >= 0) {
-      semaphore->count = new_count;
-      return TASK_RUNNING;
-    }
-
-    // Insert current task into linked list, maintaining descending priority order.
-    auto current_priority = current_task->priority;
-    auto list = &semaphore->waiting;
-    while (*list && (*list)->priority > current_priority) {
-      list = &(*list)->sync_next;
-    }
-    current_task->sync_next = *list;
-    *list = current_task;
-
-    current_task->sync_state = count;
-    return TASK_SYNC_BLOCKED;
-  } else {
-    current_task->sync_state = 0;
+  auto old_count = semaphore->count;
+  auto new_count = old_count - count;
+  if (new_count >= 0) {
+    semaphore->count = new_count;
     return TASK_RUNNING;
   }
+
+  // Insert current task into linked list, maintaining descending priority order.
+  insert_sync_list(&semaphore->waiting, current_task);
+  current_task->sync_state = count;
+
+  return TASK_SYNC_BLOCKED;
 }
 
 void STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count) {
-  if (count == 0) {
-    return;
-  }
-
   assert(count >= 0);
 
   // Fast path.
@@ -64,8 +48,7 @@ void STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count) {
     return;
   }
 
-  while (critical_section_va(acquire_semaphore_critical, semaphore, count) != TASK_RUNNING) {
-  }
+  critical_section_va(acquire_semaphore_critical, semaphore, count);
 }
 
 TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
@@ -89,6 +72,7 @@ TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
 
       Task* next_task = task->sync_next;
       task->sync_next = nullptr;
+      task->sync_state = 0;
       *list = next_task;
     } else {
       list = &task->sync_next;
@@ -103,10 +87,6 @@ TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
 }
 
 void STRIPED_RAM release_semaphore(Semaphore* semaphore, int32_t count) {
-  if (count == 0) {
-    return;
-  }
-
-  assert(count > 0);
+  assert(count >= 0);
   critical_section_va(release_semaphore_critical, semaphore, count);
 }
