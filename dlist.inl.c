@@ -12,7 +12,7 @@ inline void init_dnode(struct DNode* node) {
   node->prev = node;
 }
 
-inline int is_dlist_empty(DList* list) {
+inline bool is_dlist_empty(DList* list) {
   return list->sentinel.next == &list->sentinel;
 }
 

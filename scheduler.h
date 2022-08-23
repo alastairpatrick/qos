@@ -25,7 +25,7 @@ typedef void (*TaskEntry)();
 
 extern struct Task* current_task;
 
-struct Task* new_task(int priority, TaskEntry entry, int32_t stack_size);
+struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
 inline void yield();

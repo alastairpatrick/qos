@@ -10,7 +10,6 @@ enum MutexState {
   AVAILABLE,
   ACQUIRED_UNCONTENDED,
   ACQUIRED_CONTENDED,
-  ACQUIRED_PENDING,
 };
 
 Mutex* new_mutex() {
@@ -121,6 +120,6 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
   critical_section(release_mutex_critical, mutex);
 }
 
-int STRIPED_RAM owns_mutex(Mutex* mutex) {
+bool STRIPED_RAM owns_mutex(Mutex* mutex) {
   return unpack_owner(mutex->owner_state) == current_task;
 }

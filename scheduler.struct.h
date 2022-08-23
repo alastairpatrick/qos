@@ -19,7 +19,7 @@ typedef struct Task {
   int32_t r11;
 
   TaskEntry entry;
-  int priority;
+  int32_t priority;
   int32_t* stack;
   int32_t stack_size;
 

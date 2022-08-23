@@ -96,7 +96,7 @@ context_switch:
         MOV     R7, R11
         STM     R3!, {R4-R7}
 
-        // TCB* rtos_supervisor_context_switch(int new_state, TCB* current);
+        // TCB* rtos_supervisor_context_switch(TaskState new_state, TCB* current);
         BL      rtos_supervisor_context_switch
 
         // Store new TCB.

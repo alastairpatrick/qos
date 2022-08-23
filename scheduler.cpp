@@ -73,7 +73,7 @@ static void insert_task(TaskSchedulingDList& list, Task* task) {
   splice(position, *task);
 }
 
-Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
+Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
   init_scheduler(scheduler);
 
@@ -199,7 +199,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   auto& idle_task = scheduler.idle_task;
 
   assert(current == current_task);
-  int current_priority = current->priority;
+  auto current_priority = current->priority;
 
   // If some tasks might be able to transition from blocked to ready, make all blocked tasks ready.
   if (scheduler.ready_blocked_tasks) {
@@ -210,7 +210,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
       // so could just insert the blocked tasks at the beginning of the pending list. However,
       // to give tasks with equal priority round robin scheduling, skip any already pending
       // tasks with priority equal to the highest priority blocked task.
-      int blocked_priority = begin(busy_blocked)->priority;
+      auto blocked_priority = begin(busy_blocked)->priority;
 
       auto position = begin(pending);
       for (; position != end(pending); ++position) {

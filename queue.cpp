@@ -32,7 +32,7 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, int32
 
   acquire_mutex(&queue->mutex, NO_TIMEOUT);
 
-  int copy_bytes = std::min(size, queue->capacity - queue->write_idx);
+  auto copy_bytes = std::min(size, queue->capacity - queue->write_idx);
   memcpy(&queue->buffer[queue->write_idx], data, copy_bytes);
 
   queue->write_idx += copy_bytes;
@@ -55,7 +55,7 @@ bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, int32_t time
 
   acquire_mutex(&queue->mutex, NO_TIMEOUT);
 
-  int copy_bytes = std::min(size, queue->capacity - queue->read_idx);
+  auto copy_bytes = std::min(size, queue->capacity - queue->read_idx);
   memcpy(data, &queue->buffer[queue->read_idx], copy_bytes);
 
   queue->read_idx += copy_bytes;
