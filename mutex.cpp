@@ -188,7 +188,7 @@ TaskState release_and_signal_condition_var_critical(void* v) {
     
     // Once signalled, any timeout is cancelled; the waiting task must always
     // return owning the mutex, regardless of timeout.
-    remove_dnode(&signalled_task->timing_node);
+    remove_dnode(&signalled_task->timeout_node);
   }
 
   return release_mutex_critical(var->mutex);
@@ -215,7 +215,7 @@ TaskState release_and_broadcast_condition_var_critical(void* v) {
     
     // Once signalled, any timeout is cancelled; the waiting task must always
     // return owning the mutex, regardless of timeout.
-    remove_dnode(&signalled_task->timing_node);
+    remove_dnode(&signalled_task->timeout_node);
   }
 
   return release_mutex_critical(var->mutex);

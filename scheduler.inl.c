@@ -35,12 +35,12 @@ inline DListIterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list
   return DListIterator<Task, &Task::scheduling_node>::end(list.tasks);
 }
 
-inline DListIterator<Task, &Task::timing_node> begin(TaskTimingDList& list) {
-  return DListIterator<Task, &Task::timing_node>::begin(list.tasks);
+inline DListIterator<Task, &Task::timeout_node> begin(TaskTimeoutDList& list) {
+  return DListIterator<Task, &Task::timeout_node>::begin(list.tasks);
 }
 
-inline DListIterator<Task, &Task::timing_node> end(TaskTimingDList& list) {
-  return DListIterator<Task, &Task::timing_node>::end(list.tasks);
+inline DListIterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
+  return DListIterator<Task, &Task::timeout_node>::end(list.tasks);
 }
 
 #endif   // __cplusplus

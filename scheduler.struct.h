@@ -26,7 +26,7 @@ typedef struct Task {
   DNode scheduling_node;
   int32_t sync_state;
 
-  DNode timing_node;
+  DNode timeout_node;
   uint64_t awaken_systick_count;
 } Task;
 
@@ -34,8 +34,8 @@ typedef struct TaskSchedulingDList {
   DList tasks;
 } TaskSchedulingDList;
 
-typedef struct TaskTimingDList {
+typedef struct TaskTimeoutDList {
   DList tasks;
-} TaskTimingDList;
+} TaskTimeoutDList;
 
 #endif  // RTOS_TASK_STRUCT_H

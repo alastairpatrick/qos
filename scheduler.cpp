@@ -35,7 +35,7 @@ struct Scheduler {
   TaskSchedulingDList ready;         // Always in descending priority order
   TaskSchedulingDList busy_blocked;  // Always in descending priority order
   TaskSchedulingDList pending;       // Always in descending priority order
-  TaskTimingDList delayed;
+  TaskTimeoutDList delayed;
   volatile bool ready_blocked_tasks;
   volatile uint64_t systick_count;
 };
@@ -81,7 +81,7 @@ Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
 
   Task* task = new Task;
   init_dnode(&task->scheduling_node);
-  init_dnode(&task->timing_node);
+  init_dnode(&task->timeout_node);
   insert_task(ready, task);
 
   task->entry = entry;
@@ -108,7 +108,7 @@ void start_scheduler() {
 
   current_task = &idle_task;
   init_dnode(&idle_task.scheduling_node);
-  init_dnode(&idle_task.timing_node);
+  init_dnode(&idle_task.timeout_node);
   idle_task.priority = INT_MIN;
 
   rtos_internal_init_stacks();
@@ -259,7 +259,7 @@ bool STRIPED_RAM critical_ready_task(Task* task) {
   auto& scheduler = g_schedulers[get_core_num()];
   insert_task(scheduler.ready, task);
 
-  remove_dnode(&task->timing_node);
+  remove_dnode(&task->timeout_node);
 
   return task->priority > current_task->priority;
 }
