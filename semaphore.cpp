@@ -4,7 +4,7 @@
 #include "atomic.h"
 #include "critical.inl.c"
 #include "dlist_it.h"
-#include "sync_util.h"
+#include "internal_sync.h"
 
 #include <cassert>
 
@@ -79,7 +79,7 @@ TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
     if (task->sync_state <= semaphore->count) {
       semaphore->count -= task->sync_state;
 
-      position = position.remove();
+      position = remove(position);
 
       critical_set_critical_section_result(task, true);
       should_yield |= critical_ready_task(task);

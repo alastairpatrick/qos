@@ -1,4 +1,4 @@
-#include "sync_util.h"
+#include "internal_sync.h"
 
 #include "dlist_it.h"
 #include "scheduler.struct.h"
@@ -11,5 +11,5 @@ void internal_insert_sync_list(TaskSchedulingDList* list, Task* task) {
   while (position != end(*list) && position->priority > current_priority) {
     ++position;
   }
-  splice(position, *task);
+  splice(position, task);
 }

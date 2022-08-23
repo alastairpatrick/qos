@@ -70,7 +70,7 @@ static void insert_task(TaskSchedulingDList& list, Task* task) {
       break;
     }
   }
-  splice(position, *task);
+  splice(position, task);
 }
 
 Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
@@ -153,7 +153,7 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_systick_count <= systick_count) {
     auto task = &*position;
-    position = position.remove();
+    position = remove(position);
 
     task->sync_state = 0;
 
@@ -176,7 +176,7 @@ void STRIPED_RAM internal_insert_delayed_task(Task* task, int32_t quanta) {
       break;
     }
   }
-  splice(position, *task);
+  splice(position, task);
 }
 
 TaskState STRIPED_RAM internal_sleep_critical(void* p) {
@@ -226,13 +226,13 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   if (current_task != &idle_task) {
     if (new_state == TASK_BUSY_BLOCKED) {
       // Maintain blocked in descending priority order.
-      assert(begin(busy_blocked).empty() || current_priority <= (--end(busy_blocked))->priority);
-      splice(end(busy_blocked), *current);
+      assert(empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority);
+      splice(end(busy_blocked), current);
     } else if (new_state == TASK_READY) {
       // Maintain ready in descending priority order.
-      if (begin(ready).empty() || current_priority <= (--end(ready))->priority) {
+      if (empty(begin(ready)) || current_priority <= (--end(ready))->priority) {
         // Fast path for common case.
-        splice(end(ready), *current);
+        splice(end(ready), current);
       } else {
         insert_task(ready, current);
       }
@@ -241,15 +241,15 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
     }
   }
 
-  if (begin(pending).empty()) {
+  if (empty(begin(pending))) {
     swap_dlist(&pending.tasks, &ready.tasks);
   }
 
-  if (begin(pending).empty()) {
+  if (empty(begin(pending))) {
     current = &idle_task;
   } else {
     current = &*begin(pending);
-    begin(pending).remove();
+    remove(begin(pending));
   }
 
   return current;

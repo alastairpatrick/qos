@@ -11,12 +11,12 @@ add_executable(rtos
   c.c
   critical.s
   dlist.cpp
+  internal_sync.cpp
   mutex.cpp
   queue.cpp
   scheduler.cpp
   scheduler.s
   semaphore.cpp
-  sync_util.cpp
   test.c
 )
 

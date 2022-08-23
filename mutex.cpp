@@ -4,7 +4,7 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
-#include "sync_util.h"
+#include "internal_sync.h"
 
 enum MutexState {
   AVAILABLE,
@@ -98,7 +98,7 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
   critical_set_critical_section_result(resumed, true);
   bool should_yield = critical_ready_task(resumed);
 
-  state = begin(mutex->waiting).empty() ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
+  state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(&*resumed, state);
 
   if (should_yield) {
