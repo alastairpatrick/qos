@@ -12,4 +12,9 @@ typedef struct Mutex {
   TaskSchedulingDList waiting;
 } Mutex;
 
+typedef struct ConditionVar {
+  Mutex* mutex;
+  TaskSchedulingDList waiting;
+} ConditionVar;
+
 #endif  // RTOS_MUTEX_STRUCT_H

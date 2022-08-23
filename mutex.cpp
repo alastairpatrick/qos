@@ -6,6 +6,10 @@
 #include "dlist_it.h"
 #include "internal_sync.h"
 
+void internal_insert_delayed_task(Task* task, int32_t quanta);
+
+//////// Mutex ////////
+
 enum MutexState {
   AVAILABLE,
   ACQUIRED_UNCONTENDED,
@@ -36,8 +40,6 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
 }
 
 static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
-  void internal_insert_delayed_task(Task* task, int32_t quanta);
-
   auto mutex = va_arg(args, Mutex*);
   auto timeout = va_arg(args, int32_t);
 
@@ -122,4 +124,104 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
 
 bool STRIPED_RAM owns_mutex(Mutex* mutex) {
   return unpack_owner(mutex->owner_state) == current_task;
+}
+
+
+//////// ConditionVar ////////
+
+ConditionVar* new_condition_var(Mutex* mutex) {
+  auto var = new ConditionVar;
+  init_condition_var(var, mutex);
+  return var;
+}
+
+void init_condition_var(ConditionVar* var, Mutex* mutex) {
+  var->mutex = mutex;
+  init_dlist(&var->waiting.tasks);
+}
+
+void acquire_condition_var(struct ConditionVar* var, int32_t timeout) {
+  acquire_mutex(var->mutex, timeout);
+}
+
+TaskState wait_condition_var_critical(va_list args) {
+  auto var = va_arg(args, ConditionVar*);
+  auto timeout = va_arg(args, int32_t);
+
+  // _Atomically_ release mutex and add to condition variable waiting list.
+
+  release_mutex_critical(var->mutex);
+
+  internal_insert_sync_list(&var->waiting, current_task);
+
+  if (timeout > 0) {
+    internal_insert_delayed_task(current_task, timeout);
+  }
+
+  return TASK_SYNC_BLOCKED;
+}
+
+bool wait_condition_var(ConditionVar* var, int32_t timeout) {
+  assert(owns_mutex(var->mutex));
+  assert(timeout != 0);
+  return critical_section_va(wait_condition_var_critical, var, timeout);
+}
+
+void release_condition_var(ConditionVar* var) {
+  release_mutex(var->mutex);
+}
+
+TaskState release_and_signal_condition_var_critical(void* v) {
+  auto var = (ConditionVar*) v;
+
+  auto signalled_it = begin(var->waiting);
+  if (!empty(signalled_it)) {
+
+    // The current task owns the mutex so the signalled task is not immediately
+    // ready. Rather it is moved from the condition variable's waiting list to
+    // the mutex's.
+    auto signalled_task = &*signalled_it;
+    internal_insert_sync_list(&var->mutex->waiting, signalled_task);
+    
+    // Both the current task and the signalled task are contending for the lock.
+    var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
+    
+    // Once signalled, any timeout is cancelled; the waiting task must always
+    // return owning the mutex, regardless of timeout.
+    remove_dnode(&signalled_task->timing_node);
+  }
+
+  return release_mutex_critical(var->mutex);
+}
+
+void release_and_signal_condition_var(ConditionVar* var) {
+  assert(owns_mutex(var->mutex));
+  critical_section(release_and_signal_condition_var_critical, var);
+}
+
+TaskState release_and_broadcast_condition_var_critical(void* v) {
+  auto var = (ConditionVar*) v;
+
+  while (!empty(begin(var->waiting))) {
+    auto signalled_task = &*begin(var->waiting);
+
+    // The current task owns the mutex so the signalled task is not immediately
+    // ready. Rather it is moved from the condition variable's waiting list to
+    // the mutex's.
+    internal_insert_sync_list(&var->mutex->waiting, signalled_task);
+    
+    // Both the current task and one or more signalled tasks are contending for the lock.
+    var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
+    
+    // Once signalled, any timeout is cancelled; the waiting task must always
+    // return owning the mutex, regardless of timeout.
+    remove_dnode(&signalled_task->timing_node);
+  }
+
+  return release_mutex_critical(var->mutex);
+}
+
+void release_and_broadcast_condition_var(ConditionVar* var) {
+  assert(owns_mutex(var->mutex));
+  critical_section(release_and_broadcast_condition_var_critical, var);
 }
