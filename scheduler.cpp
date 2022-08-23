@@ -145,7 +145,7 @@ void STRIPED_RAM ready_blocked_tasks() {
 bool STRIPED_RAM rtos_supervisor_systick() {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& delayed = scheduler.delayed;
-
+  
   uint64_t systick_count = scheduler.systick_count + 1;
   scheduler.systick_count = systick_count;
 
@@ -157,32 +157,36 @@ bool STRIPED_RAM rtos_supervisor_systick() {
 
     task->sync_state = 0;
 
-    critical_set_blocked_task_result(task, -1);
     should_yield |= critical_ready_task(task);
   }
 
   return should_yield;
 }
 
-TaskState STRIPED_RAM internal_sleep_critical(void* p) {
-  auto quanta = *(int32_t*) p;
-  assert(quanta >= 0);
+void STRIPED_RAM internal_insert_delayed_task(Task* task, int32_t quanta) {
+  assert(quanta > 0);
 
   auto& scheduler = g_schedulers[get_core_num()];
   auto& delayed = scheduler.delayed;
+
+  task->awaken_systick_count = scheduler.systick_count + quanta;
+  auto position = begin(delayed);
+  for (; position != end(delayed); ++position) {
+    if (position->awaken_systick_count >= task->awaken_systick_count) {
+      break;
+    }
+  }
+  splice(position, *task);
+}
+
+TaskState STRIPED_RAM internal_sleep_critical(void* p) {
+  auto quanta = *(int32_t*) p;
 
   if (quanta == 0) {
     return TASK_READY;
   }
 
-  current_task->awaken_systick_count = scheduler.systick_count + quanta;
-  auto position = begin(delayed);
-  for (; position != end(delayed); ++position) {
-    if (position->awaken_systick_count >= current_task->awaken_systick_count) {
-      break;
-    }
-  }
-  splice(position, *current_task);
+  internal_insert_delayed_task(current_task, quanta);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -255,11 +259,16 @@ bool STRIPED_RAM critical_ready_task(Task* task) {
   auto& scheduler = g_schedulers[get_core_num()];
   insert_task(scheduler.ready, task);
 
+  remove_dnode(&task->timing_node);
+
   return task->priority > current_task->priority;
 }
 
-void STRIPED_RAM critical_set_blocked_task_result(Task* task, int32_t result) {
-  assert(task != current_task);
-  ExceptionFrame* frame = (ExceptionFrame*) task->sp;
-  frame->r0 = result;
+void STRIPED_RAM critical_set_critical_section_result(Task* task, int32_t result) {
+  if (task == current_task) {
+    critical_set_current_critical_section_result(result);
+  } else {
+    ExceptionFrame* frame = (ExceptionFrame*) task->sp;
+    frame->r0 = result;
+  }
 }

@@ -44,6 +44,8 @@ typedef TaskState (*CriticalSectionVAProc)(va_list args);
 
 int32_t critical_section(CriticalSectionProc proc, void*);
 inline int32_t critical_section_va(CriticalSectionVAProc proc, ...);
+void critical_set_critical_section_result(struct Task* task, int32_t result);
+void critical_set_current_critical_section_result(int32_t result);
 
 END_EXTERN_C
 

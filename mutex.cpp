@@ -36,8 +36,12 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
   return int32_t(owner) | state;
 }
 
-static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
-  auto mutex = (Mutex*) m;
+static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
+  void internal_insert_delayed_task(Task* task, int32_t quanta);
+
+  auto mutex = va_arg(args, Mutex*);
+  auto timeout = va_arg(args, int32_t);
+
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
@@ -45,6 +49,11 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
   if (state == AVAILABLE) {
     assert(is_dlist_empty(&mutex->waiting.tasks));
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
+    critical_set_current_critical_section_result(true);
+    return TASK_RUNNING;
+  }
+
+  if (timeout == 0) {
     return TASK_RUNNING;
   }
 
@@ -52,18 +61,25 @@ static TaskState STRIPED_RAM acquire_mutex_critical(void* m) {
 
   insert_sync_list(&mutex->waiting, current_task);
 
+  if (timeout > 0) {
+    internal_insert_delayed_task(current_task, timeout);
+  }
+
   return TASK_SYNC_BLOCKED;
 }
 
-void STRIPED_RAM acquire_mutex(Mutex* mutex) {
+bool STRIPED_RAM acquire_mutex(Mutex* mutex, int32_t timeout) {
   assert(!owns_mutex(mutex));
 
-  // Fast path for uncontended acquisition.
   if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
-    return;
+    return true;
   }
   
-  critical_section(acquire_mutex_critical, mutex);
+  if (timeout == 0) {
+    return false;
+  }
+
+  return critical_section_va(acquire_mutex_critical, mutex, timeout);
 }
 
 TaskState STRIPED_RAM release_mutex_critical(void* m) {
@@ -79,9 +95,8 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
 
   assert(state == ACQUIRED_CONTENDED);
 
-  auto resumed_it = begin(mutex->waiting);
-  auto resumed = &*resumed_it;
-  resumed_it.remove();
+  auto resumed = &*begin(mutex->waiting);
+  critical_set_critical_section_result(resumed, true);
   bool should_yield = critical_ready_task(resumed);
 
   state = begin(mutex->waiting).empty() ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;

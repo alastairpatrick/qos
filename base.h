@@ -13,6 +13,8 @@
 
 #define STRIPED_RAM __attribute__((section(".time_critical")))
 
+#define NO_TIMEOUT -1
+
 typedef volatile int32_t atomic32_t;
 typedef volatile void* atomic_ptr_t;
 

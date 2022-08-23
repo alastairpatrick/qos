@@ -36,7 +36,7 @@ rtos_internal_init_stacks:
 rtos_supervisor_svc_handler:
         PUSH    {LR}
 
-        // Store zero as default result (value of R0 on retgurn from SVC)
+        // Store zero as default result (value of R0 on return from SVC)
         MRS     R3, PSP
         MOVS    R2, #0
         STR     R2, [R3, #r0_offset]

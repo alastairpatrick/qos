@@ -35,7 +35,7 @@ void ready_blocked_tasks();
 
 // May only be called from critical section
 bool critical_ready_task(struct Task* task);
-void critical_set_blocked_task_result(struct Task* task, int32_t result);
+
 
 END_EXTERN_C
 

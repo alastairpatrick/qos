@@ -9,8 +9,8 @@ BEGIN_EXTERN_C
 
 struct Queue* new_queue(int32_t capacity);
 void init_queue(struct Queue* queue, void* buffer, int32_t capacity);
-void write_queue(struct Queue* queue, const void* data, int32_t size);
-void read_queue(struct Queue* queue, void* data, int32_t size);
+bool write_queue(struct Queue* queue, const void* data, int32_t size, int32_t timeout);
+bool read_queue(struct Queue* queue, void* data, int32_t size, int32_t timeout);
 
 END_EXTERN_C
 
