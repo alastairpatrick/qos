@@ -15,6 +15,8 @@ Queue* new_queue(int32_t capacity) {
 }
 
 void init_queue(Queue* queue, void* buffer, int32_t capacity) {
+  assert(capacity > 0);
+  
   init_semaphore(&queue->read_semaphore, 0);
   init_semaphore(&queue->write_semaphore, capacity);
   init_mutex(&queue->mutex);

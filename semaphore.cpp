@@ -15,6 +15,7 @@ Semaphore* new_semaphore(int32_t initial_count) {
 }
 
 void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
+  assert(initial_count >= 0);
   semaphore->count = initial_count;
   init_dlist(&semaphore->waiting.tasks);
 }
