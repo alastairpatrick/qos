@@ -42,8 +42,8 @@ BEGIN_EXTERN_C
 typedef TaskState (*CriticalSectionProc)(void*);
 typedef TaskState (*CriticalSectionVAProc)(va_list args);
 
-TaskState critical_section(CriticalSectionProc proc, void*);
-inline TaskState critical_section_va(CriticalSectionVAProc proc, ...);
+int32_t critical_section(CriticalSectionProc proc, void*);
+inline int32_t critical_section_va(CriticalSectionVAProc proc, ...);
 
 END_EXTERN_C
 

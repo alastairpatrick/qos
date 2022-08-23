@@ -64,13 +64,9 @@ TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
     if (task->sync_state <= semaphore->count) {
       semaphore->count -= task->sync_state;
 
-      if (task->priority > current_task->priority) {
-        should_yield = true;
-      }
-
       position = position.remove();
 
-      critical_ready_task(task);
+      should_yield |= critical_ready_task(task);
     } else {
       ++position;
     }

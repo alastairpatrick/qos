@@ -26,8 +26,6 @@ void init_queue(Queue* queue, void* buffer, int32_t capacity) {
 }
 
 void STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size) {
-  increment_lock_count();
-
   acquire_semaphore(&queue->write_semaphore, size);
 
   acquire_mutex(&queue->mutex);
@@ -44,13 +42,9 @@ void STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size) {
   release_mutex(&queue->mutex);
 
   release_semaphore(&queue->read_semaphore, size);
-
-  decrement_lock_count();
 }
 
 void STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size) {
-  increment_lock_count();
-
   acquire_semaphore(&queue->read_semaphore, size);
 
   acquire_mutex(&queue->mutex);
@@ -67,6 +61,4 @@ void STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size) {
   release_mutex(&queue->mutex);
 
   release_semaphore(&queue->write_semaphore, size);
-
-  decrement_lock_count();
 }

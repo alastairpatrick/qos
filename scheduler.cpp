@@ -35,7 +35,9 @@ struct Scheduler {
   TaskSchedulingDList ready;         // Always in descending priority order
   TaskSchedulingDList busy_blocked;  // Always in descending priority order
   TaskSchedulingDList pending;       // Always in descending priority order
+  TaskTimingDList delayed;
   volatile bool ready_blocked_tasks;
+  volatile uint64_t systick_count;
 };
 
 static Scheduler g_schedulers[NUM_CORES];
@@ -45,8 +47,8 @@ extern "C" {
   void rtos_supervisor_svc_handler();
   void rtos_supervisor_systick_handler();
   void rtos_supervisor_pendsv_handler();
+  bool rtos_supervisor_systick();
   Task* rtos_supervisor_context_switch(TaskState new_state, Task* current);
-  void rtos_supervisor_sleep(uint32_t time);
 }
 
 static void init_scheduler(Scheduler& scheduler) {
@@ -57,6 +59,7 @@ static void init_scheduler(Scheduler& scheduler) {
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
   init_dlist(&scheduler.pending.tasks);
+  init_dlist(&scheduler.delayed.tasks);
 }
 
 // Insert task into ordered list.
@@ -85,7 +88,6 @@ Task *new_task(int priority, TaskEntry entry, int32_t stack_size) {
   task->priority = priority;
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
-  task->lock_count = 0;
   task->sync_state = 0;
 
   task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
@@ -140,30 +142,49 @@ void STRIPED_RAM ready_blocked_tasks() {
   scheduler.ready_blocked_tasks = true;
 }
 
-void STRIPED_RAM conditional_proactive_yield() {
-  //return;
-  // Heuristic to avoid Systick preempting while lock held.
-  if ((current_task->lock_count == 0) && (remaining_quantum() < QUANTUM/2)) {
-    yield();
+bool STRIPED_RAM rtos_supervisor_systick() {
+  auto& scheduler = g_schedulers[get_core_num()];
+  auto& delayed = scheduler.delayed;
+
+  uint64_t systick_count = scheduler.systick_count + 1;
+  scheduler.systick_count = systick_count;
+
+  bool should_yield = false;
+  auto position = begin(delayed);
+  while (position != end(delayed) && position->awaken_systick_count <= systick_count) {
+    auto task = &*position;
+    position = position.remove();
+
+    task->sync_state = 0;
+
+    critical_set_blocked_task_result(task, -1);
+    should_yield |= critical_ready_task(task);
   }
+
+  return should_yield;
 }
 
-void STRIPED_RAM increment_lock_count() {
-  conditional_proactive_yield();
-  ++current_task->lock_count;
-}
+TaskState STRIPED_RAM internal_sleep_critical(void* p) {
+  auto quanta = *(int32_t*) p;
+  assert(quanta >= 0);
 
-void STRIPED_RAM decrement_lock_count() {
-  assert(--current_task->lock_count >= 0);
-  conditional_proactive_yield();
-}
+  auto& scheduler = g_schedulers[get_core_num()];
+  auto& delayed = scheduler.delayed;
 
-static TaskState STRIPED_RAM yield_critical(void*) {
-  return TASK_READY;
-}
+  if (quanta == 0) {
+    return TASK_READY;
+  }
 
-void STRIPED_RAM yield() {
-  critical_section(yield_critical, 0);
+  current_task->awaken_systick_count = scheduler.systick_count + quanta;
+  auto position = begin(delayed);
+  for (; position != end(delayed); ++position) {
+    if (position->awaken_systick_count >= current_task->awaken_systick_count) {
+      break;
+    }
+  }
+  splice(position, *current_task);
+
+  return TASK_SYNC_BLOCKED;
 }
 
 Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {
@@ -227,17 +248,18 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
     begin(pending).remove();
   }
 
-  // Reset SysTick.
-  systick_hw->cvr = 0;
-
   return current;
 }
 
-void STRIPED_RAM critical_ready_task(Task* task) {
+bool STRIPED_RAM critical_ready_task(Task* task) {
   auto& scheduler = g_schedulers[get_core_num()];
   insert_task(scheduler.ready, task);
+
+  return task->priority > current_task->priority;
 }
 
-void STRIPED_RAM rtos_supervisor_sleep(uint32_t time) {
-
+void STRIPED_RAM critical_set_blocked_task_result(Task* task, int32_t result) {
+  assert(task != current_task);
+  ExceptionFrame* frame = (ExceptionFrame*) task->sp;
+  frame->r0 = result;
 }

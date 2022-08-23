@@ -3,17 +3,26 @@
 
 #include "scheduler.h"
 
+#include "critical.h"
+#include "critical.inl.c"
+
 #ifdef __cplusplus
 #include "dlist_it.h"
 #endif
 
 #include "hardware/structs/scb.h"
 
-inline int remaining_quantum() {
-  return systick_hw->cvr;
+BEGIN_EXTERN_C
+TaskState internal_sleep_critical(void* p);
+END_EXTERN_C
+
+inline void yield() {
+  int32_t quanta = 0;
+  critical_section(internal_sleep_critical, &quanta);
 }
 
-inline void sleep(uint32_t time) {
+inline void sleep(int32_t quanta) {
+  critical_section(internal_sleep_critical, &quanta);
 }
 
 #ifdef __cplusplus

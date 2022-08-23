@@ -3,7 +3,6 @@
 .THUMB_FUNC
 .BALIGN 4
 
-.EQU    ctx_offset, 20              // Offset of context region within TCB. Must match struct Task.
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
 .EQU    r0_offset, 0
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
@@ -36,15 +35,16 @@ rtos_internal_init_stacks:
 .TYPE rtos_supervisor_svc_handler, %function
 rtos_supervisor_svc_handler:
         PUSH    {LR}
-        
+
+        // Store zero as default result (value of R0 on retgurn from SVC)
+        MRS     R3, PSP
+        MOVS    R2, #0
+        STR     R2, [R3, #r0_offset]
+
         // Invoke critical section callback.
         MOVS    R2, R0
         MOVS    R0, R1
         BLX     R2
-
-        // Store return value on process stack where it will be restored into R0.
-        MRS     R2, PSP
-        STR     R0, [R2, #r0_offset]
 
         // Context switch if running state not wanted.
         CMP     R0, #0
@@ -54,30 +54,37 @@ rtos_supervisor_svc_handler:
         
 
 // void rtos_supervisor_systick_handler()
-// void rtos_supervisor_pendsv_handler()
 .GLOBAL rtos_supervisor_systick_handler
-.GLOBAL rtos_supervisor_pendsv_handler
 .TYPE rtos_supervisor_systick_handler, %function
-.TYPE rtos_supervisor_pendsv_handler, %function
 rtos_supervisor_systick_handler:
+        // EXC_RETURN value.
+        PUSH    {LR}
+
+        // bool rtos_supervisor_systick()
+        BL      rtos_supervisor_systick
+        CMP     R0, #0
+        BNE     context_switch_ready
+
+        POP     {PC}
+
+// void rtos_supervisor_pendsv_handler()
+.GLOBAL rtos_supervisor_pendsv_handler
+.TYPE rtos_supervisor_pendsv_handler, %function
 rtos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // New state on systick is always READY.
+context_switch_ready:
+        // R0 becomes the first parameter of rtos_internal_switch_tasks.
         MOVS    R0, #task_ready
 
+context_switch:
         // Get yielding task's SP.
         MRS     R2, PSP
 
-        // R0 becomes the first parameter of rtos_internal_switch_tasks, zero to leave
-        // the task in READY state and non-zero for BLOCKED state.
-
-context_switch:
         // Get yielding task's TCB.
         LDR     R3, current_task
         MOVS    R1, R3
-        ADDS    R3, R3, #ctx_offset
 
         // Save SP, R4-R7 in TCB
         STM     R3!, {R2, R4-R7}
@@ -97,7 +104,6 @@ context_switch:
         STR     R0, [R1]
 
         // Restore R8-R11 & LR from TCB.
-        ADDS    R0, R0, #ctx_offset
         MOVS    R1, R0
         ADDS    R1, R1, #4*5
         LDM     R1!, {R2-R5}
@@ -135,8 +141,6 @@ context_switch:
         // EXC_RETURN value.
 0:      POP     {PC}
 
-
-.BALIGN 4
 
 .GLOBAL current_task
 .TYPE current_task, %object
