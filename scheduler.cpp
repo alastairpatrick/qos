@@ -20,14 +20,14 @@
 #include "pico/platform.h"
 
 struct ExceptionFrame {
-  uint32_t r0;
-  uint32_t r1;
-  uint32_t r2;
-  uint32_t r3;
-  uint32_t r12;
+  int32_t r0;
+  int32_t r1;
+  int32_t r2;
+  int32_t r3;
+  int32_t r12;
   void* lr;
   TaskEntry return_addr;
-  uint32_t xpsr;
+  int32_t xpsr;
 };
 
 struct Scheduler {

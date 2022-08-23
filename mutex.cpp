@@ -58,7 +58,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
-  insert_sync_list(&mutex->waiting, current_task);
+  internal_insert_sync_list(&mutex->waiting, current_task);
 
   if (timeout > 0) {
     internal_insert_delayed_task(current_task, timeout);

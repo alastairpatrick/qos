@@ -5,6 +5,6 @@
 #include "scheduler.struct.h"
 #include "scheduler.inl.c"
 
-void insert_sync_list(TaskSchedulingDList* list, Task* task);
+void internal_insert_sync_list(TaskSchedulingDList* list, Task* task);
 
 #endif //  RTOS_SYNC_UTIL_H

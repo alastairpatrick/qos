@@ -39,7 +39,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   }
 
   // Insert current task into linked list, maintaining descending priority order.
-  insert_sync_list(&semaphore->waiting, current_task);
+  internal_insert_sync_list(&semaphore->waiting, current_task);
   current_task->sync_state = count;
 
   if (timeout > 0) {
