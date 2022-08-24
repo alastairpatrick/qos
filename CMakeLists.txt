@@ -31,4 +31,5 @@ target_link_libraries(rtos
   hardware_irq
   hardware_timer
   pico_stdlib
+  pico_time
 )

@@ -6,9 +6,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "hardware/irq.h"
+#include "pico/time.h"
+
 struct Queue* g_queue;
 struct Mutex* g_mutex;
 struct ConditionVar* g_cond_var;
+repeating_timer_t g_repeating_timer;
 struct Task* g_delay_task;
 struct Task* g_producer_task1;
 struct Task* g_producer_task2;
@@ -19,6 +23,10 @@ struct Task* g_observe_cond_var_task1;
 struct Task* g_observe_cond_var_task2;
 
 int g_observed_count;
+
+bool interrupt_service_routine(repeating_timer_t* timer) {
+  return true;
+}
 
 void do_delay_task() {
   for(;;) {
@@ -74,7 +82,7 @@ void do_observe_cond_var_task1() {
     while ((g_observed_count & 1) != 1) {
       wait_condition_var(g_cond_var, NO_TIMEOUT);
     }
-    printf("count is odd: %d\n", g_observed_count);
+    //printf("count is odd: %d\n", g_observed_count);
     release_condition_var(g_cond_var);
 
     sleep(5);
@@ -87,7 +95,7 @@ void do_observe_cond_var_task2() {
     while ((g_observed_count & 1) != 0) {
       wait_condition_var(g_cond_var, NO_TIMEOUT);
     }
-    printf("count is even: %d\n", g_observed_count);
+    //printf("count is even: %d\n", g_observed_count);
     release_condition_var(g_cond_var);
 
     sleep(5);
@@ -95,9 +103,17 @@ void do_observe_cond_var_task2() {
 }
 
 int main() {
+  alarm_pool_init_default();
+  irq_set_priority(TIMER_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
+  irq_set_priority(TIMER_IRQ_1, PICO_HIGHEST_IRQ_PRIORITY);
+  irq_set_priority(TIMER_IRQ_2, PICO_HIGHEST_IRQ_PRIORITY);
+  irq_set_priority(TIMER_IRQ_3, PICO_HIGHEST_IRQ_PRIORITY);
+
   g_queue = new_queue(100);
   g_mutex = new_mutex();
   g_cond_var = new_condition_var(g_mutex);
+
+  add_repeating_timer_ms(100, interrupt_service_routine, 0, &g_repeating_timer);
 
   g_delay_task = new_task(100, do_delay_task, 1024);
   g_producer_task1 = new_task(1, do_producer_task1, 1024);

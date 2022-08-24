@@ -5,6 +5,7 @@
 
 .EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
 .EQU    r0_offset, 0
+.EQU    r1_offset, 4
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
 .EQU    task_ready, 1               // Must match enum TastState.
 
@@ -35,15 +36,19 @@ rtos_internal_init_stacks:
 .TYPE rtos_supervisor_svc_handler, %function
 rtos_supervisor_svc_handler:
         PUSH    {LR}
-
-        // Store zero as default result (value of R0 on return from SVC)
         MRS     R3, PSP
-        MOVS    R2, #0
-        STR     R2, [R3, #r0_offset]
+
+        // Load proc to call.
+        LDR     R2, [R3, #r0_offset]
+
+        // Store 0 as default return value
+        MOVS    R0, #0
+        STR     R0, [R3, #r0_offset]
+
+        // Load call context.
+        LDR     R0, [R3, #r1_offset]
 
         // Invoke critical section callback.
-        MOVS    R2, R0
-        MOVS    R0, R1
         BLX     R2
 
         // Context switch if running state not wanted.
@@ -142,6 +147,7 @@ context_switch:
 0:      POP     {PC}
 
 
+.BALIGN 4
 .GLOBAL current_task
 .TYPE current_task, %object
 current_task:

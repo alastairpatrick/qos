@@ -11,9 +11,9 @@
 .TYPE critical_section_va_internal, %function
 critical_section:
 critical_section_va_internal:
-    MOV   R3, LR
-    SVC   #0
-    BX    R3
+    MOV     R3, LR
+    SVC     #0
+    BX      R3
 
 
 // void critical_set_current_critical_section_result(int32_t result)
