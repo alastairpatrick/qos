@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstring>
 
 #include "hardware/exception.h"
@@ -38,9 +37,9 @@ struct Scheduler {
   TaskSchedulingDList pending;       // Always in descending priority order
   TaskTimeoutDList delayed;
   volatile bool ready_blocked_tasks;
-  volatile uint64_t systick_count;
 };
 
+volatile int64_t g_internal_tick_counts[NUM_CORES];
 static Scheduler g_schedulers[NUM_CORES];
 
 extern "C" {
@@ -52,10 +51,17 @@ extern "C" {
   Task* rtos_supervisor_context_switch(TaskState new_state, Task* current);
 }
 
-static void init_scheduler(Scheduler& scheduler) {
+static void init_scheduler() {
+  auto& scheduler = g_schedulers[get_core_num()];
+
   if (scheduler.ready.tasks.sentinel.next) {
     return;
   }
+
+  // Avoid starting at a large number so that durations and absolute times never have the same value.
+  // No need for the the extra range an unsigned 64-bit time would provide. Depending on how the
+  // duration of a tick is considered, signed-64 bit offers millions of years of range.
+  g_internal_tick_counts[get_core_num()] = MIN_TICK_COUNT;
 
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
@@ -76,7 +82,7 @@ static void insert_task(TaskSchedulingDList& list, Task* task) {
 
 Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
-  init_scheduler(scheduler);
+  init_scheduler();
 
   auto& ready = scheduler.ready;
 
@@ -107,7 +113,7 @@ void start_scheduler() {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& idle_task = scheduler.idle_task;
 
-  init_scheduler(scheduler);
+  init_scheduler();
 
   current_task = &idle_task;
   init_dnode(&idle_task.scheduling_node);
@@ -145,15 +151,16 @@ void STRIPED_RAM ready_blocked_tasks() {
 }
 
 bool STRIPED_RAM rtos_supervisor_systick() {
-  auto& scheduler = g_schedulers[get_core_num()];
+  auto core_num = get_core_num();
+  auto& scheduler = g_schedulers[core_num];
   auto& delayed = scheduler.delayed;
   
-  uint64_t systick_count = scheduler.systick_count + 1;
-  scheduler.systick_count = systick_count;
+  int64_t tick_count = g_internal_tick_counts[core_num] + 1;
+  g_internal_tick_counts[core_num] = tick_count;
 
   bool should_yield = false;
   auto position = begin(delayed);
-  while (position != end(delayed) && position->awaken_systick_count <= systick_count) {
+  while (position != end(delayed) && position->awaken_tick_count <= tick_count) {
     auto task = &*position;
     position = remove(position);
 
@@ -166,13 +173,14 @@ bool STRIPED_RAM rtos_supervisor_systick() {
 void STRIPED_RAM internal_insert_delayed_task(Task* task, int32_t quanta) {
   assert(quanta > 0);
 
-  auto& scheduler = g_schedulers[get_core_num()];
+  auto core_num = get_core_num();
+  auto& scheduler = g_schedulers[core_num];
   auto& delayed = scheduler.delayed;
 
-  task->awaken_systick_count = scheduler.systick_count + quanta;
+  task->awaken_tick_count = g_internal_tick_counts[core_num] + quanta;
   auto position = begin(delayed);
   for (; position != end(delayed); ++position) {
-    if (position->awaken_systick_count >= task->awaken_systick_count) {
+    if (position->awaken_tick_count >= task->awaken_tick_count) {
       break;
     }
   }

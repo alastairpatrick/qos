@@ -1,6 +1,7 @@
 #ifndef RTOS_SCHEDULER_H
 #define RTOS_SCHEDULER_H
 
+#include <limits.h>
 #include <stdint.h>
 
 #include "hardware/structs/systick.h"
@@ -11,6 +12,8 @@
 #define QUANTUM 1250000
 //#define QUANTUM 1000
 #endif
+
+#define MIN_TICK_COUNT (INT64_MAX / 2)
 
 BEGIN_EXTERN_C
 

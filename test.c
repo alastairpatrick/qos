@@ -1,7 +1,8 @@
-#include "scheduler.inl.c"
+#include "atomic.h"
 #include "interrupt.h"
 #include "mutex.h"
 #include "queue.h"
+#include "scheduler.inl.c"
 
 #include <assert.h>
 #include <string.h>
@@ -33,9 +34,12 @@ bool repeating_timer_isr(repeating_timer_t* timer) {
   return true;
 }
 
+int64_t tick_count;
+
 void do_delay_task() {
   for(;;) {
     sleep(1000);
+    tick_count = atomic_tick_count();
   }
 }
 

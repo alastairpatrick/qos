@@ -35,7 +35,7 @@ typedef struct Task {
   UnblockTaskProc sync_unblock_task_proc;
 
   DNode timeout_node;
-  uint64_t awaken_systick_count;
+  uint64_t awaken_tick_count;
 } Task;
 
 typedef struct TaskSchedulingDList {

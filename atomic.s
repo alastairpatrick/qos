@@ -2,6 +2,8 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
+.EQU    sio_cpuid_offset, 0xD0000000
+
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //
 // On context switch, if a task is found to be executing an atomic function
@@ -43,6 +45,23 @@ atomic_compare_and_set_ptr:
         BNE     2f
 1:      STR     R2, [R0]      // byte offset 24
 2:      MOVS    R0, R3
+        BX      LR
+
+
+// int64_t atomic_tick_count()
+.BALIGN 32
+.GLOBAL atomic_tick_count
+.TYPE atomic_tick_count, %function
+        B       0f
+.SPACE  22 - (1f - 0f)
+atomic_tick_count:
+0:      LDR     R2, =sio_cpuid_offset
+        LDR     R2, [R2]
+        LSLS    R2, R2, #3
+        LDR     R3, =g_internal_tick_counts
+        ADDS    R3, R3, R2
+        LDR     R0, [R3]
+1:      LDR     R1, [R3, #4]    // byte offset 24
         BX      LR
 
 
