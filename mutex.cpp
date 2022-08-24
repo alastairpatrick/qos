@@ -4,9 +4,8 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
+#include "scheduler.internal.h"
 #include "sync.internal.h"
-
-void internal_insert_delayed_task(Task* task, int32_t quanta);
 
 //////// Mutex ////////
 
@@ -186,8 +185,6 @@ TaskState release_and_signal_condition_var_critical(void* v) {
     // Both the current task and the signalled task are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
     
-    // Once signalled, any timeout is cancelled; the waiting task must always
-    // return owning the mutex, regardless of timeout.
     remove_dnode(&signalled_task->timeout_node);
   }
 
@@ -213,8 +210,6 @@ TaskState release_and_broadcast_condition_var_critical(void* v) {
     // Both the current task and one or more signalled tasks are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
     
-    // Once signalled, any timeout is cancelled; the waiting task must always
-    // return owning the mutex, regardless of timeout.
     remove_dnode(&signalled_task->timeout_node);
   }
 

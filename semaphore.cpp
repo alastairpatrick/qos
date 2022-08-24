@@ -4,6 +4,7 @@
 #include "atomic.h"
 #include "critical.inl.c"
 #include "dlist_it.h"
+#include "scheduler.internal.h"
 #include "sync.internal.h"
 
 #include <cassert>
@@ -21,8 +22,6 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
 }
 
 static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
-  void internal_insert_delayed_task(Task* task, int32_t quanta);
-
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, int32_t);

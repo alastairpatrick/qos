@@ -11,12 +11,13 @@ add_executable(rtos
   c.c
   critical.s
   dlist.cpp
-  sync.internal.cpp
+  interrupt.cpp
   mutex.cpp
   queue.cpp
   scheduler.cpp
   scheduler.s
   semaphore.cpp
+  sync.internal.cpp
   test.c
 )
 
@@ -29,7 +30,7 @@ target_link_libraries(rtos
   hardware_dma
   hardware_exception
   hardware_irq
-  hardware_timer
+  hardware_pwm
   pico_stdlib
   pico_time
 )

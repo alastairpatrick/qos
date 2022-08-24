@@ -89,7 +89,9 @@ Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   task->priority = priority;
   task->stack_size = stack_size;
   task->stack = new int32_t[(stack_size + 3) / 4];
+  task->sync_ptr = 0;
   task->sync_state = 0;
+  task->sync_unblock_task_proc = 0;
 
   task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
   ExceptionFrame* frame = (ExceptionFrame*) task->sp;
@@ -154,8 +156,6 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   while (position != end(delayed) && position->awaken_systick_count <= systick_count) {
     auto task = &*position;
     position = remove(position);
-
-    task->sync_state = 0;
 
     should_yield |= critical_ready_task(task);
   }
@@ -257,9 +257,18 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
 
 bool STRIPED_RAM critical_ready_task(Task* task) {
   auto& scheduler = g_schedulers[get_core_num()];
-  insert_task(scheduler.ready, task);
+ 
+  if (task->sync_unblock_task_proc) {
+    task->sync_unblock_task_proc(task);
+  }
+
+  task->sync_ptr = 0;
+  task->sync_state = 0;
+  task->sync_unblock_task_proc = 0;
 
   remove_dnode(&task->timeout_node);
+
+  insert_task(scheduler.ready, task);
 
   return task->priority > current_task->priority;
 }

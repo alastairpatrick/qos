@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+typedef void (*UnblockTaskProc)(struct Task*);
+
 typedef struct Task {
   void* sp;
   int32_t r4;
@@ -24,7 +26,13 @@ typedef struct Task {
   int32_t stack_size;
 
   DNode scheduling_node;
+
+  // May be used by synchronization primitive during TASK_SYNC_BLOCKING. Must be
+  // zero at all other times. sync_unblock_task_proc must be called before making
+  // the task ready.
+  volatile void* sync_ptr;
   int32_t sync_state;
+  UnblockTaskProc sync_unblock_task_proc;
 
   DNode timeout_node;
   uint64_t awaken_systick_count;
@@ -37,5 +45,7 @@ typedef struct TaskSchedulingDList {
 typedef struct TaskTimeoutDList {
   DList tasks;
 } TaskTimeoutDList;
+
+void internal_insert_delayed_task(Task* task, int32_t quanta);
 
 #endif  // RTOS_TASK_INTERNAL_H

@@ -1,4 +1,5 @@
 #include "scheduler.inl.c"
+#include "interrupt.h"
 #include "mutex.h"
 #include "queue.h"
 
@@ -7,7 +8,10 @@
 #include <stdio.h>
 
 #include "hardware/irq.h"
+#include "hardware/pwm.h"
 #include "pico/time.h"
+
+#define PWM_SLICE 0
 
 struct Queue* g_queue;
 struct Mutex* g_mutex;
@@ -21,10 +25,11 @@ struct Task* g_consumer_task2;
 struct Task* g_update_cond_var_task;
 struct Task* g_observe_cond_var_task1;
 struct Task* g_observe_cond_var_task2;
+struct Task* g_wait_pwm_task;
 
 int g_observed_count;
 
-bool interrupt_service_routine(repeating_timer_t* timer) {
+bool repeating_timer_isr(repeating_timer_t* timer) {
   return true;
 }
 
@@ -102,18 +107,30 @@ void do_observe_cond_var_task2() {
   }
 }
 
+void do_wait_pwm_wrap() {
+  for (;;) {
+    wait_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, NO_TIMEOUT);
+    pwm_clear_irq(PWM_SLICE);
+  }
+}
+
+void init_pwm_interrupt() {
+  pwm_config cfg = pwm_get_default_config();
+  pwm_config_set_clkdiv_int(&cfg, 255);
+  pwm_config_set_wrap(&cfg, 65535);
+  pwm_init(PWM_SLICE, &cfg, true);
+  init_wait_irq(PWM_IRQ_WRAP);
+}
+
 int main() {
   alarm_pool_init_default();
-  irq_set_priority(TIMER_IRQ_0, PICO_HIGHEST_IRQ_PRIORITY);
-  irq_set_priority(TIMER_IRQ_1, PICO_HIGHEST_IRQ_PRIORITY);
-  irq_set_priority(TIMER_IRQ_2, PICO_HIGHEST_IRQ_PRIORITY);
-  irq_set_priority(TIMER_IRQ_3, PICO_HIGHEST_IRQ_PRIORITY);
+  add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
+  init_pwm_interrupt();
+  
   g_queue = new_queue(100);
   g_mutex = new_mutex();
   g_cond_var = new_condition_var(g_mutex);
-
-  add_repeating_timer_ms(100, interrupt_service_routine, 0, &g_repeating_timer);
 
   g_delay_task = new_task(100, do_delay_task, 1024);
   g_producer_task1 = new_task(1, do_producer_task1, 1024);
@@ -123,7 +140,8 @@ int main() {
   g_observe_cond_var_task1 = new_task(1, do_observe_cond_var_task1, 1024);
   g_observe_cond_var_task2 = new_task(1, do_observe_cond_var_task2, 1024);
   g_update_cond_var_task = new_task(1, do_update_cond_var_task, 1024);
-  
+  g_wait_pwm_task = new_task(1, do_wait_pwm_wrap, 1024);
+
   start_scheduler();
 
   // Not reached.
