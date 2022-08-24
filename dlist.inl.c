@@ -1,7 +1,7 @@
 #ifndef RTOS_DLIST_INL_C
 #define RTOS_DLIST_INL_C
 
-#include "dlist.struct.h"
+#include "dlist.internal.h"
 
 inline void init_dlist(struct DList* list) {
   init_dnode(&list->sentinel);

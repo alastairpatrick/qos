@@ -2,7 +2,7 @@
 #define RTOS_SYNC_UTIL_H
 
 #include "scheduler.h"
-#include "scheduler.struct.h"
+#include "scheduler.internal.h"
 #include "scheduler.inl.c"
 
 void internal_insert_sync_list(TaskSchedulingDList* list, Task* task);

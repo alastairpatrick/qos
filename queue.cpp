@@ -1,5 +1,5 @@
 #include "queue.h"
-#include "queue.struct.h"
+#include "queue.internal.h"
 
 #include "scheduler.h"
 #include "semaphore.h"

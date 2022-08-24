@@ -1,10 +1,10 @@
 #include "mutex.h"
-#include "mutex.struct.h"
+#include "mutex.internal.h"
 
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
-#include "internal_sync.h"
+#include "sync.internal.h"
 
 void internal_insert_delayed_task(Task* task, int32_t quanta);
 

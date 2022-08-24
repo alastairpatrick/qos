@@ -3,7 +3,7 @@
 
 #include "dlist.h"
 #include "dlist.inl.c"
-#include "dlist.struct.h"
+#include "dlist.internal.h"
 
 #include <iterator>
 

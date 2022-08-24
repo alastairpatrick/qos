@@ -36,7 +36,6 @@ void ready_blocked_tasks();
 // May only be called from critical section
 bool critical_ready_task(struct Task* task);
 
-
 END_EXTERN_C
 
 #endif  // RTOS_SCHEDULER_H

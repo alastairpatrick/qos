@@ -11,7 +11,7 @@ add_executable(rtos
   c.c
   critical.s
   dlist.cpp
-  internal_sync.cpp
+  sync.internal.cpp
   mutex.cpp
   queue.cpp
   scheduler.cpp

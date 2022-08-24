@@ -1,5 +1,5 @@
-#ifndef RTOS_DLIST_STRUCT_H
-#define RTOS_DLIST_STRUCT_H
+#ifndef RTOS_DLIST_INTERNAL_H
+#define RTOS_DLIST_INTERNAL_H
 
 typedef struct DNode {
   struct DNode* next;
@@ -10,4 +10,4 @@ typedef struct DList {
   DNode sentinel;
 } DList;
 
-#endif  // RTOS_DLIST_STRUCT_H
+#endif  // RTOS_DLIST_INTERNAL_H

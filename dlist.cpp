@@ -1,5 +1,5 @@
 #include "dlist.h"
-#include "dlist.struct.h"
+#include "dlist.internal.h"
 #include "dlist.inl.c"
 
 #include <cassert>

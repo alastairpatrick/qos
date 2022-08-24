@@ -1,10 +1,10 @@
 #include "semaphore.h"
-#include "semaphore.struct.h"
+#include "semaphore.internal.h"
 
 #include "atomic.h"
 #include "critical.inl.c"
 #include "dlist_it.h"
-#include "internal_sync.h"
+#include "sync.internal.h"
 
 #include <cassert>
 

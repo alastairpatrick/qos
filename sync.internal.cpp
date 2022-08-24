@@ -1,7 +1,7 @@
-#include "internal_sync.h"
+#include "sync.internal.h"
 
 #include "dlist_it.h"
-#include "scheduler.struct.h"
+#include "scheduler.internal.h"
 #include "scheduler.inl.c"
 
 // Insert current task into linked list, maintaining descending priority order.

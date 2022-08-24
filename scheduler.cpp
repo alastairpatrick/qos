@@ -1,5 +1,5 @@
 #include "scheduler.h"
-#include "scheduler.struct.h"
+#include "scheduler.internal.h"
 #include "scheduler.inl.c"
 
 #include "atomic.h"

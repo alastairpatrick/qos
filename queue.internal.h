@@ -1,8 +1,8 @@
-#ifndef RTOS_QUEUE_STRUCT_H
-#define RTOS_QUEUE_STRUCT_H
+#ifndef RTOS_QUEUE_INTERNAL_H
+#define RTOS_QUEUE_INTERNAL_H
 
-#include "semaphore.struct.h"
-#include "mutex.struct.h"
+#include "semaphore.internal.h"
+#include "mutex.internal.h"
 
 BEGIN_EXTERN_C
 
@@ -18,4 +18,4 @@ typedef struct Queue {
 
 END_EXTERN_C
 
-#endif  // RTOS_QUEUE_STRUCT_H
+#endif  // RTOS_QUEUE_INTERNAL_H

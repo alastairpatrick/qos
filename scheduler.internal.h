@@ -1,9 +1,9 @@
-#ifndef RTOS_TASK_STRUCT_H
-#define RTOS_TASK_STRUCT_H
+#ifndef RTOS_TASK_INTERNAL_H
+#define RTOS_TASK_INTERNAL_H
 
 #include "scheduler.h"
 
-#include "dlist.struct.h"
+#include "dlist.internal.h"
 
 #include <stdint.h>
 
@@ -38,4 +38,4 @@ typedef struct TaskTimeoutDList {
   DList tasks;
 } TaskTimeoutDList;
 
-#endif  // RTOS_TASK_STRUCT_H
+#endif  // RTOS_TASK_INTERNAL_H

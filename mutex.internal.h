@@ -1,8 +1,8 @@
-#ifndef RTOS_MUTEX_STRUCT_H
-#define RTOS_MUTEX_STRUCT_H
+#ifndef RTOS_MUTEX_INTERNAL_H
+#define RTOS_MUTEX_INTERNAL_H
 
 #include "base.h"
-#include "scheduler.struct.h"
+#include "scheduler.internal.h"
 
 typedef struct Mutex {
   // Combines pointer to owning task and mutex state into a single 32-bit
@@ -17,4 +17,4 @@ typedef struct ConditionVar {
   TaskSchedulingDList waiting;
 } ConditionVar;
 
-#endif  // RTOS_MUTEX_STRUCT_H
+#endif  // RTOS_MUTEX_INTERNAL_H
