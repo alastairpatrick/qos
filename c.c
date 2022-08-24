@@ -5,6 +5,7 @@
 #include "dlist.h"
 #include "dlist.inl.c"
 #include "dlist.internal.h"
+#include "interrupt.h"
 #include "mutex.h"
 #include "mutex.internal.h"
 #include "queue.h"
