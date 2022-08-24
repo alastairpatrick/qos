@@ -170,14 +170,14 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   return should_yield;
 }
 
-void STRIPED_RAM internal_insert_delayed_task(Task* task, int32_t quanta) {
-  assert(quanta > 0);
-
+void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_t tick_count) {
   auto core_num = get_core_num();
   auto& scheduler = g_schedulers[core_num];
   auto& delayed = scheduler.delayed;
 
-  task->awaken_tick_count = g_internal_tick_counts[core_num] + quanta;
+  assert(tick_count > g_internal_tick_counts[core_num]);
+
+  task->awaken_tick_count = tick_count;
   auto position = begin(delayed);
   for (; position != end(delayed); ++position) {
     if (position->awaken_tick_count >= task->awaken_tick_count) {
@@ -188,13 +188,13 @@ void STRIPED_RAM internal_insert_delayed_task(Task* task, int32_t quanta) {
 }
 
 TaskState STRIPED_RAM internal_sleep_critical(void* p) {
-  auto quanta = *(int32_t*) p;
+  auto duration = *(int32_t*) p;
 
-  if (quanta == 0) {
+  if (duration == 0) {
     return TASK_READY;
   }
 
-  internal_insert_delayed_task(current_task, quanta);
+  internal_insert_delayed_task(current_task, g_internal_tick_counts[get_core_num()] + duration);
 
   return TASK_SYNC_BLOCKED;
 }

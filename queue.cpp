@@ -27,12 +27,15 @@ void init_queue(Queue* queue, void* buffer, int32_t capacity) {
   queue->buffer = (char*) buffer;
 }
 
-bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, int32_t timeout) {
+bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, tick_t timeout) {
   if (!acquire_semaphore(&queue->write_semaphore, size, timeout)) {
     return false;
   }
 
-  acquire_mutex(&queue->mutex, NO_TIMEOUT);
+  if (!acquire_mutex(&queue->mutex, timeout)) {
+    release_semaphore(&queue->write_semaphore, size);
+    return false;
+  }
 
   auto copy_bytes = std::min(size, queue->capacity - queue->write_idx);
   memcpy(&queue->buffer[queue->write_idx], data, copy_bytes);
@@ -50,12 +53,15 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, int32
   return true;
 }
 
-bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, int32_t timeout) {
+bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, tick_t timeout) {
   if (!acquire_semaphore(&queue->read_semaphore, size, timeout)) {
     return false;
   }
 
-  acquire_mutex(&queue->mutex, NO_TIMEOUT);
+  if (!acquire_mutex(&queue->mutex, timeout)) {
+    release_semaphore(&queue->write_semaphore, size);
+    return false;
+  }
 
   auto copy_bytes = std::min(size, queue->capacity - queue->read_idx);
   memcpy(data, &queue->buffer[queue->read_idx], copy_bytes);

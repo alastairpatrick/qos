@@ -24,7 +24,7 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
 static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
-  auto timeout = va_arg(args, int32_t);
+  auto timeout = va_arg(args, tick_t);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
@@ -49,8 +49,9 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, int32_t timeout) {
+bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_t timeout) {
   assert(count >= 0);
+  assert(timeout <= 0 || timeout >= MIN_TICK_COUNT);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;

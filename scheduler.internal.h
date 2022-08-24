@@ -35,7 +35,7 @@ typedef struct Task {
   UnblockTaskProc sync_unblock_task_proc;
 
   DNode timeout_node;
-  uint64_t awaken_tick_count;
+  tick_t awaken_tick_count;
 } Task;
 
 typedef struct TaskSchedulingDList {
@@ -46,6 +46,6 @@ typedef struct TaskTimeoutDList {
   DList tasks;
 } TaskTimeoutDList;
 
-void internal_insert_delayed_task(Task* task, int32_t quanta);
+void internal_insert_delayed_task(Task* task, tick_t tick_count);
 
 #endif  // RTOS_TASK_INTERNAL_H

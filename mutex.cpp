@@ -40,7 +40,7 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
 
 static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
   auto mutex = va_arg(args, Mutex*);
-  auto timeout = va_arg(args, int32_t);
+  auto timeout = va_arg(args, tick_t);
 
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
@@ -68,9 +68,10 @@ static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM acquire_mutex(Mutex* mutex, int32_t timeout) {
+bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_t timeout) {
   assert(!owns_mutex(mutex));
-
+  assert(timeout <= 0 || timeout >= MIN_TICK_COUNT);
+  
   if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
     return true;
   }
@@ -139,13 +140,13 @@ void init_condition_var(ConditionVar* var, Mutex* mutex) {
   init_dlist(&var->waiting.tasks);
 }
 
-void acquire_condition_var(struct ConditionVar* var, int32_t timeout) {
+void acquire_condition_var(struct ConditionVar* var, tick_t timeout) {
   acquire_mutex(var->mutex, timeout);
 }
 
 TaskState wait_condition_var_critical(va_list args) {
   auto var = va_arg(args, ConditionVar*);
-  auto timeout = va_arg(args, int32_t);
+  auto timeout = va_arg(args, tick_t);
 
   // _Atomically_ release mutex and add to condition variable waiting list.
 
@@ -160,9 +161,9 @@ TaskState wait_condition_var_critical(va_list args) {
   return TASK_SYNC_BLOCKED;
 }
 
-bool wait_condition_var(ConditionVar* var, int32_t timeout) {
+bool wait_condition_var(ConditionVar* var, tick_t timeout) {
   assert(owns_mutex(var->mutex));
-  assert(timeout != 0);
+  assert(timeout < 0 || timeout >= MIN_TICK_COUNT);
   return critical_section_va(wait_condition_var_critical, var, timeout);
 }
 

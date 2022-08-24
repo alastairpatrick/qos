@@ -3,6 +3,7 @@
 
 #include "scheduler.h"
 
+#include "atomic.h"
 #include "critical.h"
 #include "critical.inl.c"
 
@@ -17,12 +18,16 @@ TaskState internal_sleep_critical(void* p);
 END_EXTERN_C
 
 inline void yield() {
-  int32_t quanta = 0;
-  critical_section(internal_sleep_critical, &quanta);
+  int32_t duration = 0;
+  critical_section(internal_sleep_critical, &duration);
 }
 
-inline void sleep(int32_t quanta) {
-  critical_section(internal_sleep_critical, &quanta);
+inline void sleep(int32_t duration) {
+  critical_section(internal_sleep_critical, &duration);
+}
+
+inline tick_t timeout_in(int32_t duration) {
+  return atomic_tick_count() + duration;
 }
 
 #ifdef __cplusplus

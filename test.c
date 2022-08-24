@@ -52,7 +52,7 @@ void do_producer_task1() {
 
 void do_producer_task2() {
   for(;;) {
-    write_queue(g_queue, "world", 6, 100);
+    write_queue(g_queue, "world", 6, timeout_in(100));
     sleep(10);
   }
 }
@@ -70,7 +70,7 @@ void do_consumer_task2() {
   for(;;) {
     char buffer[10];
     memset(buffer, 0, sizeof(buffer));
-    if (read_queue(g_queue, buffer, 6, 100)) {
+    if (read_queue(g_queue, buffer, 6, timeout_in(100))) {
       assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
     }
   }
