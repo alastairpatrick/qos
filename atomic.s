@@ -6,9 +6,8 @@
 
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //
-// On context switch, if a task is found to be executing an atomic function
-// at a byte offset of 24 or less, it is rolled back to offset 0. Otherwise,
-// no action is taken.
+// On context switch, if the return address is byte offset 24 or less, it is rolled
+// back to offset 0. Otherwise, no action is taken.
 
 .BALIGN 32
 .GLOBAL atomic_start

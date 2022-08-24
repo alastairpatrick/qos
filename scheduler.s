@@ -121,7 +121,7 @@ context_switch:
         LDM     R0!, {R2, R4-R7}
         MSR     PSP, R2
 
-        // Get pointer to instruction task was executing.
+        // Get return address.
         LDR     R1, [R2, #return_addr_offset]
 
         // Was task running an atomic operation?
