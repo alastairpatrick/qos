@@ -2,12 +2,12 @@
 #include "semaphore.internal.h"
 
 #include "atomic.h"
-#include "critical.inl.c"
+#include "critical.h"
 #include "dlist_it.h"
-#include "scheduler.inl.c"
 #include "scheduler.internal.h"
 
 #include <cassert>
+#include <cstdarg>
 
 Semaphore* new_semaphore(int32_t initial_count) {
   auto semaphore = new Semaphore;

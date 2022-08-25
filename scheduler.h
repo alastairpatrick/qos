@@ -1,11 +1,12 @@
 #ifndef RTOS_SCHEDULER_H
 #define RTOS_SCHEDULER_H
 
+#include "base.h"
+#include "atomic.h"
+
 #include <stdint.h>
 
 #include "hardware/structs/systick.h"
-
-#include "base.h"
 
 #ifndef QUANTUM
 #define QUANTUM 1250000
@@ -28,9 +29,12 @@ extern struct Task* current_task;
 struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
-inline void yield();
-inline void sleep(int32_t duration);
-inline tick_count_t timeout_in(int32_t duration);
+void yield();
+void sleep(int32_t duration);
+
+inline tick_count_t timeout_in(int32_t duration) {
+  return atomic_tick_count() + duration;
+}
 
 // May be called from thead mode, critical section or interrupt service routine.
 void ready_busy_blocked_tasks();

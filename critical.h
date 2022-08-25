@@ -43,7 +43,17 @@ typedef TaskState (*CriticalSectionProc)(void*);
 typedef TaskState (*CriticalSectionVAProc)(va_list args);
 
 int32_t critical_section(CriticalSectionProc proc, void*);
-inline int32_t critical_section_va(CriticalSectionVAProc proc, ...);
+
+inline int32_t critical_section_va(CriticalSectionVAProc proc, ...) {
+  int32_t critical_section_va_internal(CriticalSectionVAProc proc, va_list args);
+
+  va_list args;
+  va_start(args, proc);
+  int32_t r = critical_section_va_internal(proc, args);
+  va_end(args);
+  return r; 
+}
+
 void critical_set_critical_section_result(struct Task* task, int32_t result);
 void critical_set_current_critical_section_result(int32_t result);
 

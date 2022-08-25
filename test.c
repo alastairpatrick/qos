@@ -2,7 +2,6 @@
 #include "interrupt.h"
 #include "mutex.h"
 #include "queue.h"
-#include "scheduler.inl.c"
 
 #include <assert.h>
 #include <string.h>
@@ -148,9 +147,6 @@ void init_pwm_interrupt() {
 }
 
 int main() {
-  // Enable deep sleep at the proc
-  scb_hw->scr |= M0PLUS_SCR_SLEEPDEEP_BITS;
-
   alarm_pool_init_default();
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 

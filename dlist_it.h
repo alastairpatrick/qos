@@ -2,8 +2,6 @@
 #define RTOS_DLIST_IT_H
 
 #include "dlist.h"
-#include "dlist.inl.c"
-#include "dlist.internal.h"
 
 #include <iterator>
 

@@ -4,7 +4,6 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
-#include "scheduler.inl.c"
 #include "scheduler.internal.h"
 
 //////// Mutex ////////

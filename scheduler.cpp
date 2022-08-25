@@ -1,11 +1,9 @@
 #include "scheduler.h"
 #include "scheduler.internal.h"
-#include "scheduler.inl.c"
 
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
-#include "dlist.inl.c"
 
 #include <algorithm>
 #include <cassert>
@@ -197,6 +195,15 @@ TaskState STRIPED_RAM internal_sleep_critical(void* p) {
   internal_insert_delayed_task(current_task, g_internal_tick_counts[get_core_num()] + duration);
 
   return TASK_SYNC_BLOCKED;
+}
+
+void yield() {
+  int32_t duration = 0;
+  critical_section(internal_sleep_critical, &duration);
+}
+
+void sleep(int32_t duration) {
+  critical_section(internal_sleep_critical, &duration);
 }
 
 Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {

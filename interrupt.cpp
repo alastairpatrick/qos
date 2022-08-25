@@ -3,7 +3,6 @@
 #include "critical.h"
 #include "dlist.h"
 #include "dlist_it.h"
-#include "scheduler.inl.c"
 #include "scheduler.internal.h"
 #include "hardware/irq.h"
 

@@ -3,7 +3,11 @@
 
 #include "scheduler.h"
 
-#include "dlist.internal.h"
+#include "dlist.h"
+
+#ifdef __cplusplus
+#include "dlist_it.h"
+#endif
 
 #include <stdint.h>
 
@@ -51,5 +55,25 @@ void internal_insert_delayed_task(Task* task, tick_count_t tick_count);
 
 // Insert task into linked list, maintaining descending priority order.
 void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task);
+
+#ifdef __cplusplus
+
+inline DListIterator<Task, &Task::scheduling_node> begin(TaskSchedulingDList& list) {
+  return DListIterator<Task, &Task::scheduling_node>::begin(list.tasks);
+}
+
+inline DListIterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list) {
+  return DListIterator<Task, &Task::scheduling_node>::end(list.tasks);
+}
+
+inline DListIterator<Task, &Task::timeout_node> begin(TaskTimeoutDList& list) {
+  return DListIterator<Task, &Task::timeout_node>::begin(list.tasks);
+}
+
+inline DListIterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
+  return DListIterator<Task, &Task::timeout_node>::end(list.tasks);
+}
+
+#endif   // __cplusplus
 
 #endif  // RTOS_TASK_INTERNAL_H

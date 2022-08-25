@@ -1,6 +1,4 @@
 #include "dlist.h"
-#include "dlist.internal.h"
-#include "dlist.inl.c"
 
 #include <cassert>
 
