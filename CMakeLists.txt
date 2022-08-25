@@ -14,6 +14,7 @@ add_executable(rtos
   critical.s
   dlist.cpp
   interrupt.cpp
+  interrupt.s
   live_core.cpp
   mutex.cpp
   queue.cpp

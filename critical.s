@@ -16,10 +16,10 @@ critical_section_va_internal:
     BX      R3
 
 
-// void critical_set_current_critical_section_result(int32_t result)
-.GLOBAL critical_set_current_critical_section_result
-.TYPE critical_set_current_critical_section_result, %function
-critical_set_current_critical_section_result:
+// void set_current_critical_section_result(Scheduler*, int32_t result)
+.GLOBAL set_current_critical_section_result
+.TYPE set_current_critical_section_result, %function
+set_current_critical_section_result:
     MRS     R3, PSP
-    STR     R0, [R3, #r0_offset]
+    STR     R1, [R3, #r0_offset]
     BX      LR

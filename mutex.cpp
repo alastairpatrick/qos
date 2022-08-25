@@ -38,9 +38,11 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
   return int32_t(owner) | state;
 }
 
-static TaskState STRIPED_RAM acquire_mutex_critical(Task* current_task, va_list args) {
+static TaskState STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_list args) {
   auto mutex = va_arg(args, Mutex*);
   auto timeout = va_arg(args, tick_count_t);
+  
+  auto current_task = scheduler->current_task;
 
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
@@ -48,7 +50,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(Task* current_task, va_list 
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-    critical_set_current_critical_section_result(true);
+    set_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -59,7 +61,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(Task* current_task, va_list 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
   internal_insert_scheduled_task(&mutex->waiting, current_task);
-  internal_insert_delayed_task(current_task, timeout);
+  internal_insert_delayed_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -81,8 +83,11 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
   return critical_section_va(acquire_mutex_critical, mutex, timeout);
 }
 
-TaskState STRIPED_RAM release_mutex_critical(Task* current_task, void* m) {
+TaskState STRIPED_RAM release_mutex_critical(Scheduler* scheduler, void* m) {
   auto mutex = (Mutex*) m;
+
+  auto current_task = scheduler->current_task;
+
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
@@ -95,8 +100,8 @@ TaskState STRIPED_RAM release_mutex_critical(Task* current_task, void* m) {
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
-  critical_set_critical_section_result(resumed, true);
-  bool should_yield = critical_ready_task(resumed);
+  set_critical_section_result(scheduler, resumed, true);
+  bool should_yield = ready_task(scheduler, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(resumed, state);
@@ -144,16 +149,18 @@ void acquire_condition_var(struct ConditionVar* var, tick_count_t timeout) {
   acquire_mutex(var->mutex, timeout);
 }
 
-TaskState wait_condition_var_critical(Task* current_task, va_list args) {
+TaskState wait_condition_var_critical(Scheduler* scheduler, va_list args) {
   auto var = va_arg(args, ConditionVar*);
   auto timeout = va_arg(args, tick_count_t);
 
+  auto current_task = scheduler->current_task;
+
   // _Atomically_ release mutex and add to condition variable waiting list.
 
-  release_mutex_critical(current_task, var->mutex);
+  release_mutex_critical(scheduler, var->mutex);
 
   internal_insert_scheduled_task(&var->waiting, current_task);
-  internal_insert_delayed_task(current_task, timeout);
+  internal_insert_delayed_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -170,8 +177,10 @@ void release_condition_var(ConditionVar* var) {
   release_mutex(var->mutex);
 }
 
-TaskState release_and_signal_condition_var_critical(Task* current_task, void* v) {
+TaskState release_and_signal_condition_var_critical(Scheduler* scheduler, void* v) {
   auto var = (ConditionVar*) v;
+
+  auto current_task = scheduler->current_task;
 
   auto signalled_it = begin(var->waiting);
   if (!empty(signalled_it)) {
@@ -188,7 +197,7 @@ TaskState release_and_signal_condition_var_critical(Task* current_task, void* v)
     remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(current_task, var->mutex);
+  return release_mutex_critical(scheduler, var->mutex);
 }
 
 void release_and_signal_condition_var(ConditionVar* var) {
@@ -196,8 +205,10 @@ void release_and_signal_condition_var(ConditionVar* var) {
   critical_section(release_and_signal_condition_var_critical, var);
 }
 
-TaskState release_and_broadcast_condition_var_critical(Task* current_task, void* v) {
+TaskState release_and_broadcast_condition_var_critical(Scheduler* scheduler, void* v) {
   auto var = (ConditionVar*) v;
+
+  auto current_task = scheduler->current_task;
 
   while (!empty(begin(var->waiting))) {
     auto signalled_task = &*begin(var->waiting);
@@ -213,7 +224,7 @@ TaskState release_and_broadcast_condition_var_critical(Task* current_task, void*
     remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(current_task, var->mutex);
+  return release_mutex_critical(scheduler, var->mutex);
 }
 
 void release_and_broadcast_condition_var(ConditionVar* var) {

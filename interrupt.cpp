@@ -18,6 +18,11 @@ struct WaitIRQScheduler {
 
 static WaitIRQScheduler g_schedulers[NUM_CORES];
 
+extern "C" {
+  void rtos_supervisor_wait_irq_handler();
+  void rtos_supervisor_wait_irq(Scheduler* scheduler);
+}
+
 static void init_scheduler() {
   auto& scheduler = g_schedulers[get_core_num()];
 
@@ -30,21 +35,19 @@ static void init_scheduler() {
   }
 }
 
-static void STRIPED_RAM wait_irq_isr() {
+void STRIPED_RAM rtos_supervisor_wait_irq(Scheduler* scheduler) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
 
   auto& tasks = g_schedulers[get_core_num()].tasks_by_irq[irq];
-
+  
   // Atomically disable IRQ but leave it pending.
   *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICER_OFFSET)) = 1 << irq;
 
   bool should_preempt = false;
   while (!empty(begin(tasks))) {
-    // This ISR can safely call critical_ready_task, despite not being in a critical section,
-    // because it runs at the same exception priority as critical sections.
-    should_preempt |= critical_ready_task(&*begin(tasks));
+    should_preempt |= ready_task(scheduler, &*begin(tasks));
   }
 
   if (should_preempt) {
@@ -57,7 +60,7 @@ void init_wait_irq(int32_t irq) {
 
   init_scheduler();
 
-  irq_set_exclusive_handler(irq, wait_irq_isr);
+  irq_set_exclusive_handler(irq, rtos_supervisor_wait_irq_handler);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
@@ -68,13 +71,14 @@ static void STRIPED_RAM unblock_wait_irq(Task* task) {
   }
 }
 
-TaskState STRIPED_RAM wait_irq_critical(Task* current_task, va_list args) {
+TaskState STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
   auto timeout = va_arg(args, tick_count_t);
+  auto current_task = scheduler->current_task;
 
-  auto& scheduler = g_schedulers[get_core_num()];
+  auto& tasks_by_irq = g_schedulers[get_core_num()].tasks_by_irq;
   auto irq_mask = 1 << irq;
 
   // Enable interrupt.
@@ -102,8 +106,8 @@ TaskState STRIPED_RAM wait_irq_critical(Task* current_task, va_list args) {
   current_task->sync_state = mask;
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
-  internal_insert_scheduled_task(&scheduler.tasks_by_irq[irq], current_task);
-  internal_insert_delayed_task(current_task, timeout);
+  internal_insert_scheduled_task(&tasks_by_irq[irq], current_task);
+  internal_insert_delayed_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }

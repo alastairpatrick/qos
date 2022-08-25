@@ -30,22 +30,6 @@ struct ExceptionFrame {
   int32_t xpsr;
 };
 
-struct Scheduler {
-  // Must be the first field of Scheduler so that MSP points to it when the
-  // exception stack is empty.
-  volatile Task* current_task;
-
-  // Must be second field of Scheduler so that atomic_tick_count() addresses it correctly.
-  volatile int64_t tick_count;
-
-  Task idle_task;
-  TaskSchedulingDList ready;         // Always in descending priority order
-  TaskSchedulingDList busy_blocked;  // Always in descending priority order
-  TaskSchedulingDList pending;       // Always in descending priority order
-  TaskTimeoutDList delayed;
-  volatile bool ready_busy_blocked_tasks;
-};
-
 struct Supervisor {
   char exception_stack[SUPERVISOR_SIZE - sizeof(Scheduler)];
   Scheduler scheduler;
@@ -59,9 +43,9 @@ extern "C" {
   void rtos_supervisor_svc_handler();
   void rtos_supervisor_systick_handler();
   void rtos_supervisor_pendsv_handler();
-  bool rtos_supervisor_systick();
-  void rtos_supervisor_pendsv();
-  Task* rtos_supervisor_context_switch(TaskState new_state, Task* current);
+  bool rtos_supervisor_systick(Scheduler* scheduler);
+  void rtos_supervisor_pendsv(Scheduler* scheduler);
+  Task* rtos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current);
 }
 
 static Scheduler& STRIPED_RAM get_scheduler() {
@@ -156,9 +140,8 @@ void STRIPED_RAM ready_busy_blocked_tasks() {
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }
 
-bool STRIPED_RAM ready_busy_blocked_tasks_supervisor() {
-  auto& scheduler = get_scheduler();
-  auto& busy_blocked = scheduler.busy_blocked;
+bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
+  auto& busy_blocked = scheduler->busy_blocked;
 
   bool should_yield = false;
   auto position = begin(busy_blocked);
@@ -166,49 +149,49 @@ bool STRIPED_RAM ready_busy_blocked_tasks_supervisor() {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= critical_ready_task(task);
+    should_yield |= ready_task(scheduler, task);
   }
 
   return should_yield;
 }
 
-void STRIPED_RAM rtos_supervisor_pendsv() {
-  auto& scheduler = get_scheduler();
-  if (scheduler.ready_busy_blocked_tasks) {
-    scheduler.ready_busy_blocked_tasks = false;
+void STRIPED_RAM rtos_supervisor_pendsv(Scheduler* scheduler) {
+  if (scheduler->ready_busy_blocked_tasks) {
+    scheduler->ready_busy_blocked_tasks = false;
 
-    ready_busy_blocked_tasks_supervisor();
+    ready_busy_blocked_tasks_supervisor(scheduler);
   }
 }
 
-bool STRIPED_RAM rtos_supervisor_systick() {
-  auto& scheduler = get_scheduler();
-  auto& delayed = scheduler.delayed;
+bool STRIPED_RAM rtos_supervisor_systick(Scheduler* scheduler) {
+  auto& delayed = scheduler->delayed;
   
-  int64_t tick_count = scheduler.tick_count + 1;
-  scheduler.tick_count = tick_count;
+  int64_t tick_count = scheduler->tick_count + 1;
+  scheduler->tick_count = tick_count;
 
-  bool should_yield = ready_busy_blocked_tasks_supervisor();
+  bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler);
 
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_tick_count <= tick_count) {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= critical_ready_task(task);
+    should_yield |= ready_task(scheduler, task);
   }
 
   return should_yield;
 }
 
-static TaskState STRIPED_RAM sleep_critical(Task* current_task, void* p) {
+static TaskState STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
   auto timeout = *(tick_count_t*) p;
+
+  auto current_task = scheduler->current_task;
 
   if (timeout == 0) {
     return TASK_READY;
   }
 
-  internal_insert_delayed_task(current_task, timeout);
+  internal_insert_delayed_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -223,13 +206,11 @@ void STRIPED_RAM sleep(tick_count_t timeout) {
   critical_section(sleep_critical, &timeout);
 }
 
-Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current_task) {
-  auto& scheduler = get_scheduler();
-  auto& ready = scheduler.ready;
-  auto& busy_blocked = scheduler.busy_blocked;
-  auto& pending = scheduler.pending;
-  auto& idle_task = scheduler.idle_task;
-
+Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current_task) {
+  auto& ready = scheduler->ready;
+  auto& busy_blocked = scheduler->busy_blocked;
+  auto& pending = scheduler->pending;
+  auto& idle_task = scheduler->idle_task;
   auto current_priority = current_task->priority;
 
   if (current_task != &idle_task) {
@@ -264,9 +245,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
   return current_task;
 }
 
-bool STRIPED_RAM critical_ready_task(Task* task) {
-  auto& scheduler = get_scheduler();
- 
+bool STRIPED_RAM ready_task(Scheduler* scheduler, Task* task) {
   if (task->sync_unblock_task_proc) {
     task->sync_unblock_task_proc(task);
   }
@@ -277,31 +256,28 @@ bool STRIPED_RAM critical_ready_task(Task* task) {
 
   remove_dnode(&task->timeout_node);
 
-  internal_insert_scheduled_task(&scheduler.ready, task);
+  internal_insert_scheduled_task(&scheduler->ready, task);
 
-  return task->priority > scheduler.current_task->priority;
+  return task->priority > scheduler->current_task->priority;
 }
 
-void STRIPED_RAM critical_set_critical_section_result(Task* task, int32_t result) {
-  auto& scheduler = get_scheduler();
- 
-  if (task == scheduler.current_task) {
-    critical_set_current_critical_section_result(result);
+void STRIPED_RAM set_critical_section_result(Scheduler* scheduler, Task* task, int32_t result) {
+  if (task == scheduler->current_task) {
+    set_current_critical_section_result(scheduler, result);
   } else {
     ExceptionFrame* frame = (ExceptionFrame*) task->sp;
     frame->r0 = result;
   }
 }
 
-void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_count) {
+void STRIPED_RAM internal_insert_delayed_task(Scheduler* scheduler, Task* task, tick_count_t tick_count) {
   if (tick_count == NO_TIMEOUT) {
     return;
   }
   
-  auto& scheduler = get_scheduler();
-  auto& delayed = scheduler.delayed;
+  auto& delayed = scheduler->delayed;
 
-  assert(tick_count < 0 && tick_count > scheduler.tick_count);
+  assert(tick_count < 0 && tick_count > scheduler->tick_count);
 
   task->awaken_tick_count = tick_count;
   auto position = begin(delayed);

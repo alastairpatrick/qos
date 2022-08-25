@@ -24,6 +24,8 @@ typedef enum TaskState {
 
 typedef void (*TaskEntry)();
 
+struct Scheduler;
+
 struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
@@ -52,7 +54,7 @@ static inline void check_tick_count(tick_count_t* tick_count) {
 void ready_busy_blocked_tasks();
 
 // May only be called from critical section
-bool critical_ready_task(struct Task* task);
+bool ready_task(struct Scheduler* scheduler, struct Task* task);
 
 END_EXTERN_C
 

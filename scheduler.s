@@ -33,9 +33,6 @@ rtos_internal_init_stacks:
 rtos_supervisor_svc_handler:
         PUSH    {LR}
 
-        // Load current TCB.
-        LDR     R0, [SP, #4]
-
         // Load proc to call.
         MRS     R3, PSP
         LDR     R2, [R3, #r0_offset]
@@ -48,6 +45,7 @@ rtos_supervisor_svc_handler:
         LDR     R1, [R3, #r1_offset]
 
         // Invoke critical section callback.
+        ADD     R0, SP, #4
         BLX     R2
 
         // Context switch if running state not wanted.
@@ -57,16 +55,17 @@ rtos_supervisor_svc_handler:
         POP     {PC}
         
 
-// void rtos_supervisor_systick_handler()
+// void rtos_supervisor_systick_handler
 .GLOBAL rtos_supervisor_systick_handler
 .TYPE rtos_supervisor_systick_handler, %function
 rtos_supervisor_systick_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool rtos_supervisor_systick()
-        LDR     R0, =rtos_supervisor_systick
-        BLX     R0
+        // bool rtos_supervisor_systick(Scheduler*)
+        LDR     R3, =rtos_supervisor_systick
+        ADD     R0, SP, #4
+        BLX     R3
         CMP     R0, #0
         BNE     context_switch_ready
 
@@ -79,9 +78,10 @@ rtos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool rtos_supervisor_pendsv()
-        LDR     R0, =rtos_supervisor_pendsv
-        BLX     R0
+        // bool rtos_supervisor_pendsv(Scheduler*)
+        LDR     R3, =rtos_supervisor_pendsv
+        ADD     R0, SP, #4
+        BLX     R3
 
 context_switch_ready:
         // R0 becomes the first parameter of rtos_internal_switch_tasks.
@@ -89,23 +89,24 @@ context_switch_ready:
 
 context_switch:
         // Get yielding task's SP.
-        MRS     R2, PSP
+        MRS     R3, PSP
 
         // Get yielding task's TCB.
-        LDR     R3, [SP, #4]
-        MOVS    R1, R3
+        LDR     R1, [SP, #4]
+        MOVS    R2, R1
 
         // Save SP, R4-R7 in TCB
-        STM     R3!, {R2, R4-R7}
+        STM     R1!, {R3, R4-R7}
 
         // Save R8-R11 & LR in TCB.
         MOV     R4, R8
         MOV     R5, R9
         MOV     R6, R10
         MOV     R7, R11
-        STM     R3!, {R4-R7}
+        STM     R1!, {R4-R7}
 
-        // TCB* rtos_supervisor_context_switch(TaskState new_state, TCB* current);
+        // Task* rtos_supervisor_context_switch(TaskState new_state, Scheduler*, Task* current);
+        ADD     R1, SP, #4
         BL      rtos_supervisor_context_switch
 
         // Store new TCB.

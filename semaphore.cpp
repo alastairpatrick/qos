@@ -22,16 +22,18 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   init_dlist(&semaphore->waiting.tasks);
 }
 
-static TaskState STRIPED_RAM acquire_semaphore_critical(Task* current_task, va_list args) {
+static TaskState STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, tick_count_t);
+
+  auto current_task = scheduler->current_task;
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
   if (new_count >= 0) {
     semaphore->count = new_count;
-    critical_set_current_critical_section_result(true);
+    set_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -41,7 +43,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(Task* current_task, va_l
 
   current_task->sync_state = count;
   internal_insert_scheduled_task(&semaphore->waiting, current_task);
-  internal_insert_delayed_task(current_task, timeout);
+  internal_insert_delayed_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -63,7 +65,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_cou
   return critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
 }
 
-TaskState STRIPED_RAM release_semaphore_critical(Task* current_task, va_list args) {
+TaskState STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
 
@@ -79,8 +81,8 @@ TaskState STRIPED_RAM release_semaphore_critical(Task* current_task, va_list arg
 
       position = remove(position);
 
-      critical_set_critical_section_result(task, true);
-      should_yield |= critical_ready_task(task);
+      set_critical_section_result(scheduler, task, true);
+      should_yield |= ready_task(scheduler, task);
     } else {
       ++position;
     }

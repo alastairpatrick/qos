@@ -50,8 +50,24 @@ typedef struct TaskTimeoutDList {
   DList tasks;
 } TaskTimeoutDList;
 
+typedef struct Scheduler {
+  // Must be the first field of Scheduler so that MSP points to it when the
+  // exception stack is empty.
+  Task* current_task;
+
+  // Must be second field of Scheduler so that atomic_tick_count() addresses it correctly.
+  volatile int64_t tick_count;
+
+  Task idle_task;
+  TaskSchedulingDList ready;         // Always in descending priority order
+  TaskSchedulingDList busy_blocked;  // Always in descending priority order
+  TaskSchedulingDList pending;       // Always in descending priority order
+  TaskTimeoutDList delayed;
+  volatile bool ready_busy_blocked_tasks;
+} Scheduler;
+
 // Insert task into delayed task list, ordered by ascending wake-up time.
-void internal_insert_delayed_task(Task* task, tick_count_t tick_count);
+void internal_insert_delayed_task(Scheduler* scheduler, Task* task, tick_count_t tick_count);
 
 // Insert task into linked list, maintaining descending priority order.
 void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task);
