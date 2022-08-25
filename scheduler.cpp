@@ -157,7 +157,7 @@ bool STRIPED_RAM ready_busy_blocked_tasks_supervisor() {
   return should_yield;
 }
 
-void rtos_supervisor_pendsv() {
+void STRIPED_RAM rtos_supervisor_pendsv() {
   auto& scheduler = g_schedulers[get_core_num()];
   if (scheduler.ready_busy_blocked_tasks) {
     scheduler.ready_busy_blocked_tasks = false;
@@ -283,7 +283,7 @@ void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_coun
   splice(position, task);
 }
 
-void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task) {
+void STRIPED_RAM internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {
