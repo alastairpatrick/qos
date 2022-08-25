@@ -107,7 +107,7 @@ TaskState STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list args) {
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
   internal_insert_scheduled_task(&tasks_by_irq[irq], current_task);
-  internal_insert_delayed_task(scheduler, current_task, timeout);
+  delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }

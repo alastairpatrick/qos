@@ -37,7 +37,7 @@ static inline bool is_scheduler_started() {
 static inline struct Task* get_current_task() {
   struct Task** pp;
   __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to Scheduler in thread mode
-  return *pp;  // scheduler->current_task
+  return *pp;                         // scheduler->current_task
 }
 
 void yield();
@@ -55,6 +55,7 @@ void ready_busy_blocked_tasks();
 
 // May only be called from critical section
 bool ready_task(struct Scheduler* scheduler, struct Task* task);
+void delay_task(struct Scheduler* scheduler, struct Task* task, tick_count_t tick_count);
 
 END_EXTERN_C
 

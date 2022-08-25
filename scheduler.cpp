@@ -191,7 +191,7 @@ static TaskState STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
     return TASK_READY;
   }
 
-  internal_insert_delayed_task(scheduler, current_task, timeout);
+  delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -270,7 +270,7 @@ void STRIPED_RAM set_critical_section_result(Scheduler* scheduler, Task* task, i
   }
 }
 
-void STRIPED_RAM internal_insert_delayed_task(Scheduler* scheduler, Task* task, tick_count_t tick_count) {
+void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, tick_count_t tick_count) {
   if (tick_count == NO_TIMEOUT) {
     return;
   }

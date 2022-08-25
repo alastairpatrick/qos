@@ -43,7 +43,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va
 
   current_task->sync_state = count;
   internal_insert_scheduled_task(&semaphore->waiting, current_task);
-  internal_insert_delayed_task(scheduler, current_task, timeout);
+  delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }

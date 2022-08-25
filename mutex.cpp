@@ -61,7 +61,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_lis
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
   internal_insert_scheduled_task(&mutex->waiting, current_task);
-  internal_insert_delayed_task(scheduler, current_task, timeout);
+  delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -160,7 +160,7 @@ TaskState wait_condition_var_critical(Scheduler* scheduler, va_list args) {
   release_mutex_critical(scheduler, var->mutex);
 
   internal_insert_scheduled_task(&var->waiting, current_task);
-  internal_insert_delayed_task(scheduler, current_task, timeout);
+  delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
