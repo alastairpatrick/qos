@@ -54,13 +54,9 @@ atomic_compare_and_set_ptr:
         B       0f
 .SPACE  22 - (1f - 0f)
 atomic_tick_count:
-0:      LDR     R2, =sio_cpuid_offset
-        LDR     R2, [R2]
-        LSLS    R2, R2, #3
-        LDR     R3, =g_internal_tick_counts
-        ADDS    R3, R3, R2
-        LDR     R0, [R3]
-1:      LDR     R1, [R3, #4]    // byte offset 24
+0:      MRS     R3, MSP         // MSP points to Scheduler in thread mode
+        LDR     R0, [R3, #8]    // tick_count at byte offset 8 of Scheduler
+1:      LDR     R1, [R3, #12]   // byte offset 24
         BX      LR
 
 

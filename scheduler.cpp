@@ -33,7 +33,10 @@ struct ExceptionFrame {
 struct Scheduler {
   // Must be the first field of Scheduler so that MSP points to it when the
   // exception stack is empty.
-  Task* current_task;
+  volatile Task* current_task;
+
+  // Must be second field of Scheduler so that atomic_tick_count() addresses it correctly.
+  volatile int64_t tick_count;
 
   Task idle_task;
   TaskSchedulingDList ready;         // Always in descending priority order
@@ -49,7 +52,6 @@ struct Supervisor {
 };
 
 Supervisor g_supervisors[NUM_CORES];
-volatile int64_t g_internal_tick_counts[NUM_CORES];
 bool g_internal_is_scheduler_started;
 
 extern "C" {
@@ -73,7 +75,7 @@ static void init_scheduler() {
     return;
   }
 
-  g_internal_tick_counts[get_core_num()] = INT64_MIN;
+  scheduler.tick_count = INT64_MIN;
 
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
@@ -183,8 +185,8 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   auto& scheduler = get_scheduler();
   auto& delayed = scheduler.delayed;
   
-  int64_t tick_count = g_internal_tick_counts[get_core_num()] + 1;
-  g_internal_tick_counts[get_core_num()] = tick_count;
+  int64_t tick_count = scheduler.tick_count + 1;
+  scheduler.tick_count = tick_count;
 
   bool should_yield = ready_busy_blocked_tasks_supervisor();
 
@@ -299,7 +301,7 @@ void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_coun
   auto& scheduler = get_scheduler();
   auto& delayed = scheduler.delayed;
 
-  assert(tick_count < 0 && tick_count > g_internal_tick_counts[get_core_num()]);
+  assert(tick_count < 0 && tick_count > scheduler.tick_count);
 
   task->awaken_tick_count = tick_count;
   auto position = begin(delayed);
