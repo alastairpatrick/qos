@@ -17,7 +17,9 @@ struct WaitIRQScheduler {
 
 static WaitIRQScheduler g_schedulers[NUM_CORES];
 
-static void init_scheduler(WaitIRQScheduler& scheduler) {
+static void init_scheduler() {
+  auto& scheduler = g_schedulers[get_core_num()];
+
   if (scheduler.tasks_by_irq[0].tasks.sentinel.next) {
     return;
   }
@@ -29,8 +31,8 @@ static void init_scheduler(WaitIRQScheduler& scheduler) {
 
 static void STRIPED_RAM wait_irq_isr() {
   int32_t ipsr;
-  __asm volatile ("mrs %0, ipsr" : "=r" (ipsr)::);
-  auto irq = (ipsr & 0x3fu) - 16;
+  __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
+  auto irq = (ipsr & 0x3F) - 16;
 
   auto& tasks = g_schedulers[get_core_num()].tasks_by_irq[irq];
 
@@ -52,14 +54,14 @@ static void STRIPED_RAM wait_irq_isr() {
 void init_wait_irq(int32_t irq) {
   assert(irq >= 0 && irq < MAX_IRQS);
 
-  auto& scheduler = g_schedulers[get_core_num()];
-  init_scheduler(scheduler);
+  init_scheduler();
 
   irq_set_exclusive_handler(irq, wait_irq_isr);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
 static void STRIPED_RAM unblock_wait_irq(Task* task) {
+  // Disable interrupt.
   if (task->sync_ptr) {
     hw_clear_bits((io_rw_32*) task->sync_ptr, task->sync_state);
   }
@@ -74,11 +76,13 @@ TaskState STRIPED_RAM wait_irq_critical(va_list args) {
   auto& scheduler = g_schedulers[get_core_num()];
   auto irq_mask = 1 << irq;
 
+  // Enable interrupt.
   if (enable) {
     hw_set_bits(enable, mask);
   }
 
-  // Continue running if the interrupt is pending.
+  // Yield if the interrupt is pending. Yield rather than run so other tasks
+  // waiting on the same IRQ are not starved.
   *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICPR_OFFSET)) = irq_mask;
   auto pending = *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICPR_OFFSET));
   if (pending & irq_mask) {

@@ -9,8 +9,6 @@ void live_core_busy_block();
 bool live_core_busy_block_until(absolute_time_t until);
 void live_core_ready_busy_blocked_tasks();
 
-END_EXTERN_C
-
 static TaskState busy_block_critical(void*) {
   return TASK_BUSY_BLOCKED;
 }
@@ -27,3 +25,5 @@ bool live_core_busy_block_until(absolute_time_t until) {
 void live_core_ready_busy_blocked_tasks() {
   ready_busy_blocked_tasks();
 }
+
+END_EXTERN_C

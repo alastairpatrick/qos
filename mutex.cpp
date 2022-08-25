@@ -46,7 +46,6 @@ static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
   auto state = unpack_state(owner_state);
 
   if (state == AVAILABLE) {
-    assert(is_dlist_empty(&mutex->waiting.tasks));
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
     critical_set_current_critical_section_result(true);
     return TASK_RUNNING;
@@ -97,7 +96,7 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
   bool should_yield = critical_ready_task(resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
-  mutex->owner_state = pack_owner_state(&*resumed, state);
+  mutex->owner_state = pack_owner_state(resumed, state);
 
   if (should_yield) {
     return TASK_READY;
