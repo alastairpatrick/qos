@@ -4,6 +4,7 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
+#include "scheduler.h"
 #include "scheduler.internal.h"
 
 //////// Mutex ////////
@@ -37,7 +38,7 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
   return int32_t(owner) | state;
 }
 
-static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
+static TaskState STRIPED_RAM acquire_mutex_critical(Task* current_task, va_list args) {
   auto mutex = va_arg(args, Mutex*);
   auto timeout = va_arg(args, tick_count_t);
 
@@ -67,6 +68,8 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
   assert(!owns_mutex(mutex));
   check_tick_count(&timeout);
 
+  auto current_task = get_current_task();
+
   if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
     return true;
   }
@@ -78,7 +81,7 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
   return critical_section_va(acquire_mutex_critical, mutex, timeout);
 }
 
-TaskState STRIPED_RAM release_mutex_critical(void* m) {
+TaskState STRIPED_RAM release_mutex_critical(Task* current_task, void* m) {
   auto mutex = (Mutex*) m;
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
@@ -108,6 +111,8 @@ TaskState STRIPED_RAM release_mutex_critical(void* m) {
 void STRIPED_RAM release_mutex(Mutex* mutex) {
   assert(owns_mutex(mutex));
 
+  auto current_task = get_current_task();
+
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
   if (atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
@@ -118,7 +123,7 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
 }
 
 bool STRIPED_RAM owns_mutex(Mutex* mutex) {
-  return unpack_owner(mutex->owner_state) == current_task;
+  return unpack_owner(mutex->owner_state) == get_current_task();
 }
 
 
@@ -139,13 +144,13 @@ void acquire_condition_var(struct ConditionVar* var, tick_count_t timeout) {
   acquire_mutex(var->mutex, timeout);
 }
 
-TaskState wait_condition_var_critical(va_list args) {
+TaskState wait_condition_var_critical(Task* current_task, va_list args) {
   auto var = va_arg(args, ConditionVar*);
   auto timeout = va_arg(args, tick_count_t);
 
   // _Atomically_ release mutex and add to condition variable waiting list.
 
-  release_mutex_critical(var->mutex);
+  release_mutex_critical(current_task, var->mutex);
 
   internal_insert_scheduled_task(&var->waiting, current_task);
   internal_insert_delayed_task(current_task, timeout);
@@ -165,7 +170,7 @@ void release_condition_var(ConditionVar* var) {
   release_mutex(var->mutex);
 }
 
-TaskState release_and_signal_condition_var_critical(void* v) {
+TaskState release_and_signal_condition_var_critical(Task* current_task, void* v) {
   auto var = (ConditionVar*) v;
 
   auto signalled_it = begin(var->waiting);
@@ -183,7 +188,7 @@ TaskState release_and_signal_condition_var_critical(void* v) {
     remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(var->mutex);
+  return release_mutex_critical(current_task, var->mutex);
 }
 
 void release_and_signal_condition_var(ConditionVar* var) {
@@ -191,7 +196,7 @@ void release_and_signal_condition_var(ConditionVar* var) {
   critical_section(release_and_signal_condition_var_critical, var);
 }
 
-TaskState release_and_broadcast_condition_var_critical(void* v) {
+TaskState release_and_broadcast_condition_var_critical(Task* current_task, void* v) {
   auto var = (ConditionVar*) v;
 
   while (!empty(begin(var->waiting))) {
@@ -208,7 +213,7 @@ TaskState release_and_broadcast_condition_var_critical(void* v) {
     remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(var->mutex);
+  return release_mutex_critical(current_task, var->mutex);
 }
 
 void release_and_broadcast_condition_var(ConditionVar* var) {

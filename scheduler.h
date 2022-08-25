@@ -24,14 +24,18 @@ typedef enum TaskState {
 
 typedef void (*TaskEntry)();
 
-extern struct Task* current_task;
-
 struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
 static inline bool is_scheduler_started() {
   extern bool g_internal_is_scheduler_started;
   return g_internal_is_scheduler_started;
+}
+
+static inline struct Task* get_current_task() {
+  struct Task** pp;
+  __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to Scheduler in thread mode
+  return *pp;  // scheduler->current_task
 }
 
 void yield();

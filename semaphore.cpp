@@ -4,6 +4,7 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
+#include "scheduler.h"
 #include "scheduler.internal.h"
 
 #include <cassert>
@@ -21,7 +22,7 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   init_dlist(&semaphore->waiting.tasks);
 }
 
-static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
+static TaskState STRIPED_RAM acquire_semaphore_critical(Task* current_task, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, tick_count_t);
@@ -62,7 +63,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_cou
   return critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
 }
 
-TaskState STRIPED_RAM release_semaphore_critical(va_list args) {
+TaskState STRIPED_RAM release_semaphore_critical(Task* current_task, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
 

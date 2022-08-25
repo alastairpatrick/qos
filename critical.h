@@ -39,8 +39,8 @@
 
 BEGIN_EXTERN_C
 
-typedef TaskState (*CriticalSectionProc)(void*);
-typedef TaskState (*CriticalSectionVAProc)(va_list args);
+typedef TaskState (*CriticalSectionProc)(struct Task* current_task, void*);
+typedef TaskState (*CriticalSectionVAProc)(struct Task* current_task, va_list args);
 
 int32_t critical_section(CriticalSectionProc proc, void*);
 

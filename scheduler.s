@@ -11,21 +11,17 @@
 
 .EXTERN atomic_start, atomic_end
 
-main_stack_start:
-        .SPACE  1024, 0
-main_stack_end:
-
+// void rtos_internal_init_stacks(Scheduler* exception_stack_top)
 .GLOBAL rtos_internal_init_stacks
 .TYPE rtos_internal_init_stacks, %function
 rtos_internal_init_stacks:
         // Thread mode continues to use current main stack but as processor stack.
-        MOV     R0, SP
-        MSR     PSP, R0
-        MOVS    R0, #task_CONTROL
-        MSR     CONTROL, R0
+        MOV     R3, SP
+        MSR     PSP, R3
+        MOVS    R3, #task_CONTROL
+        MSR     CONTROL, R3
 
         // Exception mode uses new main stack.
-        LDR     R0, =main_stack_end
         MSR     MSP, R0
 
         BX      LR
@@ -36,17 +32,20 @@ rtos_internal_init_stacks:
 .TYPE rtos_supervisor_svc_handler, %function
 rtos_supervisor_svc_handler:
         PUSH    {LR}
-        MRS     R3, PSP
+
+        // Load current TCB.
+        LDR     R0, [SP, #4]
 
         // Load proc to call.
+        MRS     R3, PSP
         LDR     R2, [R3, #r0_offset]
 
         // Store 0 as default return value
-        MOVS    R0, #0
-        STR     R0, [R3, #r0_offset]
+        MOVS    R1, #0
+        STR     R1, [R3, #r0_offset]
 
         // Load call context.
-        LDR     R0, [R3, #r1_offset]
+        LDR     R1, [R3, #r1_offset]
 
         // Invoke critical section callback.
         BLX     R2
@@ -93,7 +92,7 @@ context_switch:
         MRS     R2, PSP
 
         // Get yielding task's TCB.
-        LDR     R3, current_task
+        LDR     R3, [SP, #4]
         MOVS    R1, R3
 
         // Save SP, R4-R7 in TCB
@@ -110,8 +109,7 @@ context_switch:
         BL      rtos_supervisor_context_switch
 
         // Store new TCB.
-        ADR     R1, current_task
-        STR     R0, [R1]
+        STR     R0, [SP, #4]
 
         // Restore R8-R11 & LR from TCB.
         MOVS    R1, R0

@@ -3,6 +3,7 @@
 #include "critical.h"
 #include "dlist.h"
 #include "dlist_it.h"
+#include "scheduler.h"
 #include "scheduler.internal.h"
 #include "hardware/irq.h"
 
@@ -67,7 +68,7 @@ static void STRIPED_RAM unblock_wait_irq(Task* task) {
   }
 }
 
-TaskState STRIPED_RAM wait_irq_critical(va_list args) {
+TaskState STRIPED_RAM wait_irq_critical(Task* current_task, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
