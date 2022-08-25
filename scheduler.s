@@ -66,7 +66,8 @@ rtos_supervisor_systick_handler:
         PUSH    {LR}
 
         // bool rtos_supervisor_systick()
-        BL      rtos_supervisor_systick
+        LDR     R0, =rtos_supervisor_systick
+        BLX     R0
         CMP     R0, #0
         BNE     context_switch_ready
 
@@ -78,6 +79,10 @@ rtos_supervisor_systick_handler:
 rtos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
+
+        // bool rtos_supervisor_pendsv()
+        LDR     R0, =rtos_supervisor_pendsv
+        BLX     R0
 
 context_switch_ready:
         // R0 becomes the first parameter of rtos_internal_switch_tasks.

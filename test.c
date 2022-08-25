@@ -126,7 +126,7 @@ void do_wait_pwm_wrap() {
 void do_live_core_mutex_task1() {
   for(;;) {
     mutex_enter_blocking(&g_live_core_mutex);
-    sleep(1000);
+    sleep_ms(5000);
     mutex_exit(&g_live_core_mutex);
   }
 }
@@ -134,7 +134,7 @@ void do_live_core_mutex_task1() {
 void do_live_core_mutex_task2() {
   for(;;) {
     mutex_enter_blocking(&g_live_core_mutex);
-    sleep(1000);
+    sleep_ms(5000);
     mutex_exit(&g_live_core_mutex);
   }
 }

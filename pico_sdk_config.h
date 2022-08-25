@@ -10,7 +10,6 @@ extern "C" {
 void live_core_busy_block();
 bool live_core_busy_block_until(absolute_time_t until);
 void live_core_ready_busy_blocked_tasks();
-void live_core_sleep_until(absolute_time_t until);
 
 #ifdef __cplusplus
 }
@@ -88,7 +87,7 @@ void live_core_sleep_until(absolute_time_t until);
  */
 #define lock_internal_spin_unlock_with_best_effort_wait_or_timeout(lock, save, until) ({ \
     spin_unlock((lock)->spin_lock, save);                                                \
-    live_core_busy_block_until(until);                                                        \
+    live_core_busy_block_until(until);                                                   \
 })
 #endif
 
@@ -105,7 +104,7 @@ void live_core_sleep_until(absolute_time_t until);
  *
  * \param until the \ref absolute_time_t value
  */
-#define sync_internal_yield_until_before(until) live_core_sleep_until(until)
+#define sync_internal_yield_until_before(until) void(0)
 #endif
 
 #endif  // __ASSEMBLER__

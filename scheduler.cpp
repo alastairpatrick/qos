@@ -36,6 +36,7 @@ struct Scheduler {
   TaskSchedulingDList busy_blocked;  // Always in descending priority order
   TaskSchedulingDList pending;       // Always in descending priority order
   TaskTimeoutDList delayed;
+  volatile bool ready_busy_blocked_tasks;
 };
 
 volatile int64_t g_internal_tick_counts[NUM_CORES];
@@ -47,6 +48,7 @@ extern "C" {
   void rtos_supervisor_systick_handler();
   void rtos_supervisor_pendsv_handler();
   bool rtos_supervisor_systick();
+  void rtos_supervisor_pendsv();
   Task* rtos_supervisor_context_switch(TaskState new_state, Task* current);
 }
 
@@ -144,7 +146,13 @@ void start_scheduler() {
   }
 }
 
-TaskState STRIPED_RAM ready_busy_blocked_tasks_critical(void*) {
+void STRIPED_RAM ready_busy_blocked_tasks() {
+  auto& scheduler = g_schedulers[get_core_num()];
+  scheduler.ready_busy_blocked_tasks = true;
+  scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
+}
+
+bool STRIPED_RAM ready_busy_blocked_tasks_supervisor() {
   auto& scheduler = g_schedulers[get_core_num()];
   auto& busy_blocked = scheduler.busy_blocked;
 
@@ -157,11 +165,16 @@ TaskState STRIPED_RAM ready_busy_blocked_tasks_critical(void*) {
     should_yield |= critical_ready_task(task);
   }
 
-  return should_yield ? TASK_READY : TASK_RUNNING;
+  return should_yield;
 }
 
-void STRIPED_RAM ready_busy_blocked_tasks() {
-  critical_section(ready_busy_blocked_tasks_critical, nullptr);
+void rtos_supervisor_pendsv() {
+  auto& scheduler = g_schedulers[get_core_num()];
+  if (scheduler.ready_busy_blocked_tasks) {
+    scheduler.ready_busy_blocked_tasks = false;
+
+    ready_busy_blocked_tasks_supervisor();
+  }
 }
 
 bool STRIPED_RAM rtos_supervisor_systick() {
@@ -172,7 +185,7 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   int64_t tick_count = g_internal_tick_counts[core_num] + 1;
   g_internal_tick_counts[core_num] = tick_count;
 
-  bool should_yield = ready_busy_blocked_tasks_critical(nullptr) == TASK_READY;
+  bool should_yield = ready_busy_blocked_tasks_supervisor();
 
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_tick_count <= tick_count) {
