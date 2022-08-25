@@ -149,10 +149,3 @@ context_switch:
 
         // EXC_RETURN value.
 0:      POP     {PC}
-
-
-.BALIGN 4
-.GLOBAL current_task
-.TYPE current_task, %object
-current_task:
-        .WORD   0
