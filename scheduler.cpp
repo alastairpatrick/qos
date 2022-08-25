@@ -39,6 +39,7 @@ struct Scheduler {
 
 volatile int64_t g_internal_tick_counts[NUM_CORES];
 static Scheduler g_schedulers[NUM_CORES];
+bool g_internal_is_scheduler_started;
 
 extern "C" {
   void rtos_internal_init_stacks();
@@ -121,6 +122,8 @@ void start_scheduler() {
   systick_hw->rvr = QUANTUM;
   systick_hw->cvr = 0;
   systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
+
+  g_internal_is_scheduler_started = true;
 
   yield();
 

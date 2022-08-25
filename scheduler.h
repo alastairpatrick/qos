@@ -29,10 +29,15 @@ extern struct Task* current_task;
 struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
+static inline bool is_scheduler_started() {
+  extern bool g_internal_is_scheduler_started;
+  return g_internal_is_scheduler_started;
+}
+
 void yield();
 void sleep(tick_count_t timeout);
 
-inline void check_tick_count(tick_count_t* tick_count) {
+static inline void check_tick_count(tick_count_t* tick_count) {
   // Convert duration into absolute tick count.
   if (*tick_count > 0) {
     *tick_count += atomic_tick_count();

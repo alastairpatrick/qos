@@ -1,7 +1,8 @@
 #include "critical.h"
 #include "scheduler.h"
 
-#include "hardware/timer.h"
+#include "hardware/sync.h"
+#include "pico/time.h"
 
 BEGIN_EXTERN_C
 
@@ -14,16 +15,28 @@ static TaskState busy_block_critical(void*) {
 }
 
 void live_core_busy_block() {
-  critical_section(busy_block_critical, nullptr);
+  if (is_scheduler_started()) {
+    critical_section(busy_block_critical, nullptr);
+  } else {
+    __wfe();
+  }
 }
 
 bool live_core_busy_block_until(absolute_time_t until) {
-  critical_section(busy_block_critical, nullptr);
-  return time_reached(until);
+  if (is_scheduler_started()) {
+    critical_section(busy_block_critical, nullptr);
+    return time_reached(until);
+  } else {
+    return best_effort_wfe_or_timeout(until);       
+  }
 }
 
 void live_core_ready_busy_blocked_tasks() {
-  ready_busy_blocked_tasks();
+  if (is_scheduler_started()) {
+    ready_busy_blocked_tasks();
+  } else {
+    __sev();
+  }
 }
 
 END_EXTERN_C
