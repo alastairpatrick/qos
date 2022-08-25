@@ -10,8 +10,8 @@
 //////// Mutex ////////
 
 enum MutexState {
-  AVAILABLE,
   ACQUIRED_UNCONTENDED,
+  AVAILABLE,
   ACQUIRED_CONTENDED,
 };
 
@@ -22,7 +22,7 @@ Mutex* new_mutex() {
 }
 
 void init_mutex(Mutex* mutex) {
-  mutex->owner_state = 0;
+  mutex->owner_state = AVAILABLE;
   init_dlist(&mutex->waiting.tasks);
 }
 
