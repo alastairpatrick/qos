@@ -36,7 +36,6 @@ struct Scheduler {
   TaskSchedulingDList busy_blocked;  // Always in descending priority order
   TaskSchedulingDList pending;       // Always in descending priority order
   TaskTimeoutDList delayed;
-  volatile bool ready_blocked_tasks;
 };
 
 volatile int64_t g_internal_tick_counts[NUM_CORES];
@@ -73,7 +72,7 @@ static void init_scheduler() {
 static void insert_task(TaskSchedulingDList& list, Task* task) {
   auto position = begin(list);
   for (; position != end(list); ++position) {
-    if (position->priority < task->priority) {
+    if (position->priority <= task->priority) {
       break;
     }
   }
@@ -145,9 +144,24 @@ void start_scheduler() {
   }
 }
 
-void STRIPED_RAM ready_blocked_tasks() {
+TaskState STRIPED_RAM ready_busy_blocked_tasks_critical(void*) {
   auto& scheduler = g_schedulers[get_core_num()];
-  scheduler.ready_blocked_tasks = true;
+  auto& busy_blocked = scheduler.busy_blocked;
+
+  bool should_yield = false;
+  auto position = begin(busy_blocked);
+  while (position != end(busy_blocked)) {
+    auto task = &*position;
+    position = remove(position);
+
+    should_yield |= critical_ready_task(task);
+  }
+
+  return should_yield ? TASK_READY : TASK_RUNNING;
+}
+
+void STRIPED_RAM ready_busy_blocked_tasks() {
+  critical_section(ready_busy_blocked_tasks_critical, nullptr);
 }
 
 bool STRIPED_RAM rtos_supervisor_systick() {
@@ -158,7 +172,8 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   int64_t tick_count = g_internal_tick_counts[core_num] + 1;
   g_internal_tick_counts[core_num] = tick_count;
 
-  bool should_yield = false;
+  bool should_yield = ready_busy_blocked_tasks_critical(nullptr) == TASK_READY;
+
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_tick_count <= tick_count) {
     auto task = &*position;
@@ -208,28 +223,6 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
 
   assert(current == current_task);
   auto current_priority = current->priority;
-
-  // If some tasks might be able to transition from blocked to ready, make all blocked tasks ready.
-  if (scheduler.ready_blocked_tasks) {
-    scheduler.ready_blocked_tasks = false;
-
-    if (begin(busy_blocked) != end(busy_blocked)) {
-      // The blocked tasks are in descending order and all have >= priority than any pending task
-      // so could just insert the blocked tasks at the beginning of the pending list. However,
-      // to give tasks with equal priority round robin scheduling, skip any already pending
-      // tasks with priority equal to the highest priority blocked task.
-      auto blocked_priority = begin(busy_blocked)->priority;
-
-      auto position = begin(pending);
-      for (; position != end(pending); ++position) {
-        if (position->priority < blocked_priority) {
-          break;
-        }
-      }
-      splice(position, begin(busy_blocked), end(busy_blocked));
-      assert(is_dlist_empty(&busy_blocked.tasks));
-    }
-  }
 
   if (current_task != &idle_task) {
     if (new_state == TASK_BUSY_BLOCKED) {

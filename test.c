@@ -10,6 +10,7 @@
 
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
+#include "pico/sync.h"
 #include "pico/time.h"
 
 #define PWM_SLICE 0
@@ -18,6 +19,8 @@ struct Queue* g_queue;
 struct Mutex* g_mutex;
 struct ConditionVar* g_cond_var;
 repeating_timer_t g_repeating_timer;
+mutex_t g_live_core_mutex;
+
 struct Task* g_delay_task;
 struct Task* g_producer_task1;
 struct Task* g_producer_task2;
@@ -27,6 +30,8 @@ struct Task* g_update_cond_var_task;
 struct Task* g_observe_cond_var_task1;
 struct Task* g_observe_cond_var_task2;
 struct Task* g_wait_pwm_task;
+struct Task* g_live_core_mutex_task1;
+struct Task* g_live_core_mutex_task2;
 
 int g_observed_count;
 
@@ -118,6 +123,22 @@ void do_wait_pwm_wrap() {
   }
 }
 
+void do_live_core_mutex_task1() {
+  for(;;) {
+    mutex_enter_blocking(&g_live_core_mutex);
+    sleep(1000);
+    mutex_exit(&g_live_core_mutex);
+  }
+}
+
+void do_live_core_mutex_task2() {
+  for(;;) {
+    mutex_enter_blocking(&g_live_core_mutex);
+    sleep(1000);
+    mutex_exit(&g_live_core_mutex);
+  }
+}
+
 void init_pwm_interrupt() {
   pwm_config cfg = pwm_get_default_config();
   pwm_config_set_clkdiv_int(&cfg, 255);
@@ -127,6 +148,9 @@ void init_pwm_interrupt() {
 }
 
 int main() {
+  // Enable deep sleep at the proc
+  scb_hw->scr |= M0PLUS_SCR_SLEEPDEEP_BITS;
+
   alarm_pool_init_default();
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
@@ -135,6 +159,8 @@ int main() {
   g_queue = new_queue(100);
   g_mutex = new_mutex();
   g_cond_var = new_condition_var(g_mutex);
+
+  mutex_init(&g_live_core_mutex);
 
   g_delay_task = new_task(100, do_delay_task, 1024);
   g_producer_task1 = new_task(1, do_producer_task1, 1024);
@@ -145,7 +171,9 @@ int main() {
   g_observe_cond_var_task2 = new_task(1, do_observe_cond_var_task2, 1024);
   g_update_cond_var_task = new_task(1, do_update_cond_var_task, 1024);
   g_wait_pwm_task = new_task(1, do_wait_pwm_wrap, 1024);
-
+  g_live_core_mutex_task1 = new_task(100, do_live_core_mutex_task1, 1024);
+  g_live_core_mutex_task2 = new_task(100, do_live_core_mutex_task2, 1024);
+  
   start_scheduler();
 
   // Not reached.

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
+list(APPEND PICO_CONFIG_HEADER_FILES ${CMAKE_CURRENT_LIST_DIR}/pico_sdk_config.h)
+
 include(pico-sdk/pico_sdk_init.cmake)
 
 project(rtos C CXX ASM)
@@ -12,6 +14,7 @@ add_executable(rtos
   critical.s
   dlist.cpp
   interrupt.cpp
+  live_core.cpp
   mutex.cpp
   queue.cpp
   scheduler.cpp
@@ -31,6 +34,8 @@ target_link_libraries(rtos
   hardware_exception
   hardware_irq
   hardware_pwm
+  hardware_timer
   pico_stdlib
   pico_time
+  pico_sync
 )

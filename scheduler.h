@@ -32,7 +32,7 @@ inline void yield();
 inline void sleep(int32_t duration);
 inline tick_t timeout_in(int32_t duration);
 
-void ready_blocked_tasks();
+void ready_busy_blocked_tasks();
 
 // May only be called from critical section
 bool critical_ready_task(struct Task* task);
