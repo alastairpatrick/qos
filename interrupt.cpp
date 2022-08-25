@@ -98,16 +98,15 @@ TaskState STRIPED_RAM wait_irq_critical(va_list args) {
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
   internal_insert_scheduled_task(&scheduler.tasks_by_irq[irq], current_task);
-
-  if (timeout > 0) {
-    internal_insert_delayed_task(current_task, timeout);
-  }
+  internal_insert_delayed_task(current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, tick_count_t timeout) {
   assert(irq >= 0 && irq < MAX_IRQS);
-  assert(timeout < 0 || timeout >= MIN_TICK_COUNT);
+  check_tick_count(&timeout);
+  assert(timeout != 0);
+
   return critical_section_va(wait_irq_critical, irq, enable, mask, timeout);
 }

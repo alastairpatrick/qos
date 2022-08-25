@@ -30,10 +30,13 @@ struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
 void start_scheduler();
 
 void yield();
-void sleep(int32_t duration);
+void sleep(tick_count_t timeout);
 
-inline tick_count_t timeout_in(int32_t duration) {
-  return atomic_tick_count() + duration;
+inline void check_tick_count(tick_count_t* tick_count) {
+  // Convert duration into absolute tick count.
+  if (*tick_count > 0) {
+    *tick_count += atomic_tick_count();
+  }
 }
 
 // May be called from thead mode, critical section or interrupt service routine.

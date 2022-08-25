@@ -57,10 +57,7 @@ static void init_scheduler() {
     return;
   }
 
-  // Avoid starting at a large number so that durations and absolute times never have the same value.
-  // No need for the the extra range an unsigned 64-bit time would provide. Depending on how the
-  // duration of a tick is considered, signed-64 bit offers millions of years of range.
-  g_internal_tick_counts[get_core_num()] = MIN_TICK_COUNT;
+  g_internal_tick_counts[get_core_num()] = INT64_MIN;
 
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
@@ -185,25 +182,26 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   return should_yield;
 }
 
-TaskState STRIPED_RAM internal_sleep_critical(void* p) {
-  auto duration = *(int32_t*) p;
+static TaskState STRIPED_RAM sleep_critical(void* p) {
+  auto timeout = *(tick_count_t*) p;
 
-  if (duration == 0) {
+  if (timeout == 0) {
     return TASK_READY;
   }
 
-  internal_insert_delayed_task(current_task, g_internal_tick_counts[get_core_num()] + duration);
+  internal_insert_delayed_task(current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
-void yield() {
-  int32_t duration = 0;
-  critical_section(internal_sleep_critical, &duration);
+void STRIPED_RAM yield() {
+  tick_count_t timeout = 0;
+  critical_section(sleep_critical, &timeout);
 }
 
-void sleep(int32_t duration) {
-  critical_section(internal_sleep_critical, &duration);
+void STRIPED_RAM sleep(tick_count_t timeout) {
+  check_tick_count(&timeout);
+  critical_section(sleep_critical, &timeout);
 }
 
 Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* current) {
@@ -276,11 +274,15 @@ void STRIPED_RAM critical_set_critical_section_result(Task* task, int32_t result
 }
 
 void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_count) {
+  if (tick_count == NO_TIMEOUT) {
+    return;
+  }
+  
   auto core_num = get_core_num();
   auto& scheduler = g_schedulers[core_num];
   auto& delayed = scheduler.delayed;
 
-  assert(tick_count > g_internal_tick_counts[core_num]);
+  assert(tick_count < 0 && tick_count > g_internal_tick_counts[core_num]);
 
   task->awaken_tick_count = tick_count;
   auto position = begin(delayed);

@@ -59,18 +59,15 @@ static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
   internal_insert_scheduled_task(&mutex->waiting, current_task);
-
-  if (timeout > 0) {
-    internal_insert_delayed_task(current_task, timeout);
-  }
+  internal_insert_delayed_task(current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
   assert(!owns_mutex(mutex));
-  assert(timeout <= 0 || timeout >= MIN_TICK_COUNT);
-  
+  check_tick_count(&timeout);
+
   if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
     return true;
   }
@@ -152,17 +149,16 @@ TaskState wait_condition_var_critical(va_list args) {
   release_mutex_critical(var->mutex);
 
   internal_insert_scheduled_task(&var->waiting, current_task);
-
-  if (timeout > 0) {
-    internal_insert_delayed_task(current_task, timeout);
-  }
+  internal_insert_delayed_task(current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
 bool wait_condition_var(ConditionVar* var, tick_count_t timeout) {
   assert(owns_mutex(var->mutex));
-  assert(timeout < 0 || timeout >= MIN_TICK_COUNT);
+  assert(timeout != 0);
+  check_tick_count(&timeout);
+
   return critical_section_va(wait_condition_var_critical, var, timeout);
 }
 

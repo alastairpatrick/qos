@@ -14,11 +14,12 @@
 
 #define STRIPED_RAM __attribute__((section(".time_critical")))
 
-#define NO_TIMEOUT -1
-#define MIN_TICK_COUNT (INT64_MAX / 2)
+#define NO_TIMEOUT -1LL
 
 typedef volatile int32_t atomic32_t;
 typedef volatile void* atomic_ptr_t;
+
+// Absolute tick counts are negative and grow towards zero. Durations are non-negative.
 typedef int64_t tick_count_t;
 
 #endif  // RTOS_BASE_H

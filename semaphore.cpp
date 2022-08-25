@@ -38,20 +38,16 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
     return TASK_RUNNING;
   }
 
-  // Insert current task into linked list, maintaining descending priority order.
-  internal_insert_scheduled_task(&semaphore->waiting, current_task);
   current_task->sync_state = count;
-
-  if (timeout > 0) {
-    internal_insert_delayed_task(current_task, timeout);
-  }
+  internal_insert_scheduled_task(&semaphore->waiting, current_task);
+  internal_insert_delayed_task(current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_count_t timeout) {
   assert(count >= 0);
-  assert(timeout <= 0 || timeout >= MIN_TICK_COUNT);
+  check_tick_count(&timeout);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
