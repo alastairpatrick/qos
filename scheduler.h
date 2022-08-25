@@ -30,7 +30,7 @@ void start_scheduler();
 
 inline void yield();
 inline void sleep(int32_t duration);
-inline tick_t timeout_in(int32_t duration);
+inline tick_count_t timeout_in(int32_t duration);
 
 // May be called from thead mode, critical section or interrupt service routine.
 void ready_busy_blocked_tasks();

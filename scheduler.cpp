@@ -198,7 +198,7 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   return should_yield;
 }
 
-void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_t tick_count) {
+void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_count) {
   auto core_num = get_core_num();
   auto& scheduler = g_schedulers[core_num];
   auto& delayed = scheduler.delayed;

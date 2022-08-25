@@ -69,7 +69,7 @@ TaskState STRIPED_RAM wait_irq_critical(va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
-  auto timeout = va_arg(args, tick_t);
+  auto timeout = va_arg(args, tick_count_t);
 
   auto& scheduler = g_schedulers[get_core_num()];
   auto irq_mask = 1 << irq;
@@ -106,7 +106,7 @@ TaskState STRIPED_RAM wait_irq_critical(va_list args) {
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, tick_t timeout) {
+bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, tick_count_t timeout) {
   assert(irq >= 0 && irq < MAX_IRQS);
   assert(timeout < 0 || timeout >= MIN_TICK_COUNT);
   return critical_section_va(wait_irq_critical, irq, enable, mask, timeout);

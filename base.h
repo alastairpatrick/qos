@@ -19,6 +19,6 @@
 
 typedef volatile int32_t atomic32_t;
 typedef volatile void* atomic_ptr_t;
-typedef int64_t tick_t;
+typedef int64_t tick_count_t;
 
 #endif  // RTOS_BASE_H

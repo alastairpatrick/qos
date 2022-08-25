@@ -26,7 +26,7 @@ inline void sleep(int32_t duration) {
   critical_section(internal_sleep_critical, &duration);
 }
 
-inline tick_t timeout_in(int32_t duration) {
+inline tick_count_t timeout_in(int32_t duration) {
   return atomic_tick_count() + duration;
 }
 
