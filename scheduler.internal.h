@@ -46,6 +46,10 @@ typedef struct TaskTimeoutDList {
   DList tasks;
 } TaskTimeoutDList;
 
+// Insert task into delayed task list, ordered by ascending wake-up time.
 void internal_insert_delayed_task(Task* task, tick_count_t tick_count);
+
+// Insert task into linked list, maintaining descending priority order.
+void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task);
 
 #endif  // RTOS_TASK_INTERNAL_H

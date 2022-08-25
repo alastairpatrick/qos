@@ -2,6 +2,7 @@
 #define SCHEDULER_INL_C
 
 #include "scheduler.h"
+#include "scheduler.internal.h"
 
 #include "atomic.h"
 #include "critical.h"

@@ -2,9 +2,10 @@
 
 #include "critical.h"
 #include "dlist.h"
+#include "dlist_it.h"
+#include "scheduler.inl.c"
 #include "scheduler.internal.h"
 #include "hardware/irq.h"
-#include "sync.internal.h"
 
 #include "hardware/regs/m0plus.h"
 #include "hardware/structs/scb.h"
@@ -97,7 +98,7 @@ TaskState STRIPED_RAM wait_irq_critical(va_list args) {
   current_task->sync_state = mask;
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
-  internal_insert_sync_list(&scheduler.tasks_by_irq[irq], current_task);
+  internal_insert_scheduled_task(&scheduler.tasks_by_irq[irq], current_task);
 
   if (timeout > 0) {
     internal_insert_delayed_task(current_task, timeout);

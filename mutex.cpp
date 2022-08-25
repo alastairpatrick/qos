@@ -4,8 +4,8 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
+#include "scheduler.inl.c"
 #include "scheduler.internal.h"
-#include "sync.internal.h"
 
 //////// Mutex ////////
 
@@ -59,7 +59,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(va_list args) {
 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
-  internal_insert_sync_list(&mutex->waiting, current_task);
+  internal_insert_scheduled_task(&mutex->waiting, current_task);
 
   if (timeout > 0) {
     internal_insert_delayed_task(current_task, timeout);
@@ -152,7 +152,7 @@ TaskState wait_condition_var_critical(va_list args) {
 
   release_mutex_critical(var->mutex);
 
-  internal_insert_sync_list(&var->waiting, current_task);
+  internal_insert_scheduled_task(&var->waiting, current_task);
 
   if (timeout > 0) {
     internal_insert_delayed_task(current_task, timeout);
@@ -181,7 +181,7 @@ TaskState release_and_signal_condition_var_critical(void* v) {
     // ready. Rather it is moved from the condition variable's waiting list to
     // the mutex's.
     auto signalled_task = &*signalled_it;
-    internal_insert_sync_list(&var->mutex->waiting, signalled_task);
+    internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
     
     // Both the current task and the signalled task are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
@@ -206,7 +206,7 @@ TaskState release_and_broadcast_condition_var_critical(void* v) {
     // The current task owns the mutex so the signalled task is not immediately
     // ready. Rather it is moved from the condition variable's waiting list to
     // the mutex's.
-    internal_insert_sync_list(&var->mutex->waiting, signalled_task);
+    internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
     
     // Both the current task and one or more signalled tasks are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);

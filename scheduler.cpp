@@ -70,17 +70,6 @@ static void init_scheduler() {
   init_dlist(&scheduler.delayed.tasks);
 }
 
-// Insert task into ordered list.
-static void insert_task(TaskSchedulingDList& list, Task* task) {
-  auto position = begin(list);
-  for (; position != end(list); ++position) {
-    if (position->priority <= task->priority) {
-      break;
-    }
-  }
-  splice(position, task);
-}
-
 Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   auto& scheduler = g_schedulers[get_core_num()];
   init_scheduler();
@@ -90,7 +79,7 @@ Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   Task* task = new Task;
   init_dnode(&task->scheduling_node);
   init_dnode(&task->timeout_node);
-  insert_task(ready, task);
+  internal_insert_scheduled_task(&ready, task);
 
   task->entry = entry;
   task->priority = priority;
@@ -198,23 +187,6 @@ bool STRIPED_RAM rtos_supervisor_systick() {
   return should_yield;
 }
 
-void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_count) {
-  auto core_num = get_core_num();
-  auto& scheduler = g_schedulers[core_num];
-  auto& delayed = scheduler.delayed;
-
-  assert(tick_count > g_internal_tick_counts[core_num]);
-
-  task->awaken_tick_count = tick_count;
-  auto position = begin(delayed);
-  for (; position != end(delayed); ++position) {
-    if (position->awaken_tick_count >= task->awaken_tick_count) {
-      break;
-    }
-  }
-  splice(position, task);
-}
-
 TaskState STRIPED_RAM internal_sleep_critical(void* p) {
   auto duration = *(int32_t*) p;
 
@@ -248,7 +220,7 @@ Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Task* curr
         // Fast path for common case.
         splice(end(ready), current);
       } else {
-        insert_task(ready, current);
+        internal_insert_scheduled_task(&ready, current);
       }
     } else {
       assert(new_state == TASK_SYNC_BLOCKED);
@@ -282,7 +254,7 @@ bool STRIPED_RAM critical_ready_task(Task* task) {
 
   remove_dnode(&task->timeout_node);
 
-  insert_task(scheduler.ready, task);
+  internal_insert_scheduled_task(&scheduler.ready, task);
 
   return task->priority > current_task->priority;
 }
@@ -295,3 +267,28 @@ void STRIPED_RAM critical_set_critical_section_result(Task* task, int32_t result
     frame->r0 = result;
   }
 }
+
+void STRIPED_RAM internal_insert_delayed_task(Task* task, tick_count_t tick_count) {
+  auto core_num = get_core_num();
+  auto& scheduler = g_schedulers[core_num];
+  auto& delayed = scheduler.delayed;
+
+  assert(tick_count > g_internal_tick_counts[core_num]);
+
+  task->awaken_tick_count = tick_count;
+  auto position = begin(delayed);
+  while (position != end(delayed) && position->awaken_tick_count < tick_count) {
+    ++position;
+  }
+  splice(position, task);
+}
+
+void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task) {
+  auto priority = task->priority;
+  auto position = begin(*list);
+  while (position != end(*list) && position->priority >= priority) {
+    ++position;
+  }
+  splice(position, task);
+}
+

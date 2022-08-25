@@ -4,8 +4,8 @@
 #include "atomic.h"
 #include "critical.inl.c"
 #include "dlist_it.h"
+#include "scheduler.inl.c"
 #include "scheduler.internal.h"
-#include "sync.internal.h"
 
 #include <cassert>
 
@@ -39,7 +39,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(va_list args) {
   }
 
   // Insert current task into linked list, maintaining descending priority order.
-  internal_insert_sync_list(&semaphore->waiting, current_task);
+  internal_insert_scheduled_task(&semaphore->waiting, current_task);
   current_task->sync_state = count;
 
   if (timeout > 0) {

@@ -20,7 +20,6 @@ add_executable(rtos
   scheduler.cpp
   scheduler.s
   semaphore.cpp
-  sync.internal.cpp
   test.c
 )
 
