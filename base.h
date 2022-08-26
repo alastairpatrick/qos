@@ -5,16 +5,16 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-#define BEGIN_EXTERN_C extern "C" {
-#define END_EXTERN_C }
+#define QOS_BEGIN_EXTERN_C extern "C" {
+#define QOS_END_EXTERN_C }
 #else
-#define BEGIN_EXTERN_C
-#define END_EXTERN_C
+#define QOS_BEGIN_EXTERN_C
+#define QOS_END_EXTERN_C
 #endif
 
 #define STRIPED_RAM __attribute__((section(".time_critical")))
 
-#define NO_TIMEOUT -1LL
+#define QOS_NO_TIMEOUT -1LL
 
 typedef volatile int32_t qos_atomic32_t;
 typedef volatile void* qos_atomic_ptr_t;

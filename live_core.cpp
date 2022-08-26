@@ -4,7 +4,7 @@
 #include "hardware/sync.h"
 #include "pico/time.h"
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 void live_core_busy_block();
 bool live_core_busy_block_until(absolute_time_t until);
@@ -39,4 +39,4 @@ void live_core_ready_busy_blocked_tasks() {
   }
 }
 
-END_EXTERN_C
+QOS_END_EXTERN_C

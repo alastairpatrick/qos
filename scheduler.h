@@ -13,7 +13,7 @@
 //#define QUANTUM 1000
 #endif
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 struct Scheduler;
 
@@ -48,6 +48,6 @@ void ready_busy_blocked_tasks();
 bool ready_task(struct Scheduler* scheduler, struct Task* task);
 void delay_task(struct Scheduler* scheduler, struct Task* task, qos_tick_count_t tick_count);
 
-END_EXTERN_C
+QOS_END_EXTERN_C
 
 #endif  // QOS_SCHEDULER_H

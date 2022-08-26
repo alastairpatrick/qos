@@ -12,11 +12,11 @@
 
 #define MAX_IRQS 32
 
-struct WaitIRQScheduler {
-  TaskSchedulingqos_dlist_t tasks_by_irq[MAX_IRQS];
+struct wait_irq_scheduler_t {
+  qos_task_scheduling_dlist_t tasks_by_irq[MAX_IRQS];
 };
 
-static WaitIRQScheduler g_schedulers[NUM_CORES];
+static wait_irq_scheduler_t g_schedulers[NUM_CORES];
 
 extern "C" {
   void qos_supervisor_wait_irq_handler();
@@ -55,7 +55,7 @@ void STRIPED_RAM qos_supervisor_wait_irq(Scheduler* scheduler) {
   }
 }
 
-void init_wait_irq(int32_t irq) {
+void qos_init_wait_irq(int32_t irq) {
   assert(irq >= 0 && irq < MAX_IRQS);
 
   init_scheduler();
@@ -71,7 +71,7 @@ static void STRIPED_RAM unblock_wait_irq(Task* task) {
   }
 }
 
-qos_task_state_t STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM qos_wait_irq_critical(Scheduler* scheduler, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
@@ -112,10 +112,10 @@ qos_task_state_t STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list arg
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
   assert(irq >= 0 && irq < MAX_IRQS);
   check_tick_count(&timeout);
   assert(timeout != 0);
 
-  return qos_critical_section_va(wait_irq_critical, irq, enable, mask, timeout);
+  return qos_critical_section_va(qos_wait_irq_critical, irq, enable, mask, timeout);
 }

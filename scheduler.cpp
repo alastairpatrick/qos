@@ -309,7 +309,7 @@ void STRIPED_RAM qos_set_critical_section_result(Scheduler* scheduler, Task* tas
 }
 
 void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t tick_count) {
-  if (tick_count == NO_TIMEOUT) {
+  if (tick_count == QOS_NO_TIMEOUT) {
     return;
   }
   
@@ -325,7 +325,7 @@ void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t t
   splice(position, task);
 }
 
-void STRIPED_RAM internal_insert_scheduled_task(TaskSchedulingqos_dlist_t* list, Task* task) {
+void STRIPED_RAM internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {

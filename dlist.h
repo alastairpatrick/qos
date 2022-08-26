@@ -4,7 +4,7 @@
 #include "base.h"
 #include <stdbool.h>
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 typedef struct qos_dnode_t {
   struct qos_dnode_t* next;
@@ -54,6 +54,6 @@ inline void qos_remove_dnode(struct qos_dnode_t* node) {
   node->prev = node;
 }
 
-END_EXTERN_C
+QOS_END_EXTERN_C
 
 #endif  // QOS_DLIST_H

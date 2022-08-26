@@ -37,7 +37,7 @@
 
 #include "scheduler.h"
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 typedef qos_task_state_t (*critical_section_proc_t)(struct Scheduler* scheduler, void*);
 typedef qos_task_state_t (*critical_section_va_proc_t)(struct Scheduler* scheduler, va_list args);
@@ -57,6 +57,6 @@ inline int32_t qos_critical_section_va(critical_section_va_proc_t proc, ...) {
 void qos_set_critical_section_result(struct Scheduler* scheduler, struct Task* task, int32_t result);
 void qos_set_current_critical_section_result(struct Scheduler* scheduler, int32_t result);
 
-END_EXTERN_C
+QOS_END_EXTERN_C
 
 #endif  // QOS_CRITICAL__H

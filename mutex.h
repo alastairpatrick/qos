@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 struct Mutex* new_mutex();
 void init_mutex(struct Mutex* mutex);
@@ -21,6 +21,6 @@ void release_condition_var(struct ConditionVar* var);
 void release_and_signal_condition_var(struct ConditionVar* var);
 void release_and_broadcast_condition_var(struct ConditionVar* var);
 
-END_EXTERN_C
+QOS_END_EXTERN_C
 
 #endif  // QOS_MUTEX_H

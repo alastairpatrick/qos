@@ -4,7 +4,7 @@
 #include "semaphore.internal.h"
 #include "mutex.internal.h"
 
-BEGIN_EXTERN_C
+QOS_BEGIN_EXTERN_C
 
 typedef struct Queue {
   Semaphore read_semaphore;
@@ -16,6 +16,6 @@ typedef struct Queue {
   char *buffer;
 } Queue;
 
-END_EXTERN_C
+QOS_END_EXTERN_C
 
 #endif  // QOS_QUEUE_INTERNAL_H

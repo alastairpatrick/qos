@@ -43,13 +43,13 @@ typedef struct Task {
   qos_tick_count_t awaken_tick_count;
 } Task;
 
-typedef struct TaskSchedulingqos_dlist_t {
+typedef struct qos_task_scheduling_dlist_t {
   qos_dlist_t tasks;
-} TaskSchedulingqos_dlist_t;
+} qos_task_scheduling_dlist_t;
 
-typedef struct TaskTimeoutqos_dlist_t {
+typedef struct qos_task_timout_dlist_t {
   qos_dlist_t tasks;
-} TaskTimeoutqos_dlist_t;
+} qos_task_timout_dlist_t;
 
 typedef struct Scheduler {
   // Must be the first field of Scheduler so that MSP points to it when the
@@ -61,31 +61,31 @@ typedef struct Scheduler {
 
   int8_t core;
   Task idle_task;
-  TaskSchedulingqos_dlist_t ready;         // Always in descending priority order
-  TaskSchedulingqos_dlist_t busy_blocked;  // Always in descending priority order
-  TaskSchedulingqos_dlist_t pending;       // Always in descending priority order
-  TaskTimeoutqos_dlist_t delayed;
+  qos_task_scheduling_dlist_t ready;         // Always in descending priority order
+  qos_task_scheduling_dlist_t busy_blocked;  // Always in descending priority order
+  qos_task_scheduling_dlist_t pending;       // Always in descending priority order
+  qos_task_timout_dlist_t delayed;
   volatile bool ready_busy_blocked_tasks;
 } Scheduler;
 
 // Insert task into linked list, maintaining descending priority order.
-void internal_insert_scheduled_task(TaskSchedulingqos_dlist_t* list, Task* task);
+void internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task);
 
 #ifdef __cplusplus
 
-inline qos_dlist_iterator<Task, &Task::scheduling_node> begin(TaskSchedulingqos_dlist_t& list) {
+inline qos_dlist_iterator<Task, &Task::scheduling_node> begin(qos_task_scheduling_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::scheduling_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::scheduling_node> end(TaskSchedulingqos_dlist_t& list) {
+inline qos_dlist_iterator<Task, &Task::scheduling_node> end(qos_task_scheduling_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::scheduling_node>::end(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::timeout_node> begin(TaskTimeoutqos_dlist_t& list) {
+inline qos_dlist_iterator<Task, &Task::timeout_node> begin(qos_task_timout_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::timeout_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::timeout_node> end(TaskTimeoutqos_dlist_t& list) {
+inline qos_dlist_iterator<Task, &Task::timeout_node> end(qos_task_timout_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::timeout_node>::end(list.tasks);
 }
 

@@ -49,7 +49,7 @@ void do_delay_task() {
 
 void do_producer_task1() {
   for(;;) {
-    write_queue(g_queue, "hello", 6, NO_TIMEOUT);
+    write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
     sleep(10);
   }
 }
@@ -65,7 +65,7 @@ void do_consumer_task1() {
   for(;;) {
     char buffer[10];
     memset(buffer, 0, sizeof(buffer));
-    read_queue(g_queue, buffer, 6, NO_TIMEOUT);
+    read_queue(g_queue, buffer, 6, QOS_NO_TIMEOUT);
     assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
   }
 }
@@ -82,7 +82,7 @@ void do_consumer_task2() {
 
 void do_update_cond_var_task() {
   for (;;) {
-    acquire_condition_var(g_cond_var, NO_TIMEOUT);
+    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     ++g_observed_count;
     release_and_broadcast_condition_var(g_cond_var);
     sleep(10);
@@ -91,9 +91,9 @@ void do_update_cond_var_task() {
 
 void do_observe_cond_var_task1() {
   for (;;) {
-    acquire_condition_var(g_cond_var, NO_TIMEOUT);
+    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     while ((g_observed_count & 1) != 1) {
-      wait_condition_var(g_cond_var, NO_TIMEOUT);
+      wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     }
     //printf("count is odd: %d\n", g_observed_count);
     release_condition_var(g_cond_var);
@@ -104,9 +104,9 @@ void do_observe_cond_var_task1() {
 
 void do_observe_cond_var_task2() {
   for (;;) {
-    acquire_condition_var(g_cond_var, NO_TIMEOUT);
+    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     while ((g_observed_count & 1) != 0) {
-      wait_condition_var(g_cond_var, NO_TIMEOUT);
+      wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     }
     //printf("count is even: %d\n", g_observed_count);
     release_condition_var(g_cond_var);
@@ -117,7 +117,7 @@ void do_observe_cond_var_task2() {
 
 void do_wait_pwm_wrap() {
   for (;;) {
-    wait_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, NO_TIMEOUT);
+    qos_wait_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
     pwm_clear_irq(PWM_SLICE);
   }
 }
@@ -143,7 +143,7 @@ void init_pwm_interrupt() {
   pwm_config_set_clkdiv_int(&cfg, 255);
   pwm_config_set_wrap(&cfg, 65535);
   pwm_init(PWM_SLICE, &cfg, true);
-  init_wait_irq(PWM_IRQ_WRAP);
+  qos_init_wait_irq(PWM_IRQ_WRAP);
 }
 
 void init_core0() {
