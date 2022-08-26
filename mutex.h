@@ -11,7 +11,7 @@ struct Mutex* qos_new_mutex();
 void qos_init_mutex(struct Mutex* mutex);
 bool qos_acquire_mutex(struct Mutex* mutex, qos_tick_count_t timeout);
 void qos_release_mutex(struct Mutex* mutex);
-bool owns_mutex(struct Mutex* mutex);
+bool qos_owns_mutex(struct Mutex* mutex);
 
 struct ConditionVar* qos_new_condition_var(struct Mutex* mutex);
 void qos_init_condition_var(struct ConditionVar* var, struct Mutex* mutex);

@@ -69,7 +69,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler,
 
 bool STRIPED_RAM qos_acquire_mutex(Mutex* mutex, qos_tick_count_t timeout) {
   assert(mutex->core == get_core_num());
-  assert(!owns_mutex(mutex));
+  assert(!qos_owns_mutex(mutex));
   check_tick_count(&timeout);
 
   auto current_task = get_current_task();
@@ -116,7 +116,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_critical(Scheduler* scheduler,
 }
 
 void STRIPED_RAM qos_release_mutex(Mutex* mutex) {
-  assert(owns_mutex(mutex));
+  assert(qos_owns_mutex(mutex));
 
   auto current_task = get_current_task();
 
@@ -129,7 +129,7 @@ void STRIPED_RAM qos_release_mutex(Mutex* mutex) {
   qos_critical_section(release_mutex_critical, mutex);
 }
 
-bool STRIPED_RAM owns_mutex(Mutex* mutex) {
+bool STRIPED_RAM qos_owns_mutex(Mutex* mutex) {
   return unpack_owner(mutex->owner_state) == get_current_task();
 }
 
@@ -168,7 +168,7 @@ qos_task_state_t qos_wait_condition_var_critical(Scheduler* scheduler, va_list a
 }
 
 bool qos_wait_condition_var(ConditionVar* var, qos_tick_count_t timeout) {
-  assert(owns_mutex(var->mutex));
+  assert(qos_owns_mutex(var->mutex));
   assert(timeout != 0);
   check_tick_count(&timeout);
 
@@ -203,7 +203,7 @@ static qos_task_state_t release_and_signal_condition_var_critical(Scheduler* sch
 }
 
 void qos_release_and_signal_condition_var(ConditionVar* var) {
-  assert(owns_mutex(var->mutex));
+  assert(qos_owns_mutex(var->mutex));
   qos_critical_section(release_and_signal_condition_var_critical, var);
 }
 
@@ -230,6 +230,6 @@ static qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* 
 }
 
 void qos_release_and_broadcast_condition_var(ConditionVar* var) {
-  assert(owns_mutex(var->mutex));
+  assert(qos_owns_mutex(var->mutex));
   qos_critical_section(release_and_broadcast_condition_var_critical, var);
 }
