@@ -51,7 +51,7 @@ qos_supervisor_svc_handler:
         BNE     context_switch
 
         POP     {PC}
-        
+
 
 // void qos_supervisor_systick_handler
 .GLOBAL qos_supervisor_systick_handler
@@ -67,7 +67,9 @@ qos_supervisor_systick_handler:
         CMP     R0, #0
         BNE     context_switch_ready
 
-        POP     {PC}
+        // SysTick handler might have preempted an atomic qos_time().
+        MRS     R3, PSP
+        B       roll_back_atomic
 
 // void qos_supervisor_pendsv_handler()
 .GLOBAL qos_supervisor_pendsv_handler
@@ -120,30 +122,31 @@ context_switch:
         MOV     R11, R5
 
         // Restore SP, R4-R7 from TCB.
-        LDM     R0!, {R2, R4-R7}
-        MSR     PSP, R2
+        LDM     R0!, {R3, R4-R7}
+        MSR     PSP, R3
 
+roll_back_atomic:
         // Get return address.
-        LDR     R1, [R2, #return_addr_offset]
+        LDR     R1, [R3, #return_addr_offset]
 
         // Was task running an atomic operation?
-        LDR     R3, =qos_internal_atomic_start
-        CMP     R1, R3
+        LDR     R2, =qos_internal_atomic_start
+        CMP     R1, R2
         BLT     0f
-        LDR     R3, =qos_internal_atomic_end
-        CMP     R1, R3
+        LDR     R2, =qos_internal_atomic_end
+        CMP     R1, R2
         BGE     0f
 
         // Was the task in a rollback region?
-        LSLS    R3, R1, #27
-        LSRS    R3, R3, #27
-        CMP     R3, #24
+        LSLS    R2, R1, #27
+        LSRS    R2, R2, #27
+        CMP     R2, #24
         BGT     0f
 
         // Rollback atomic operation in progress to beginning.
         LSRS    R1, R1, #5
         LSLS    R1, R1, #5
-        STR     R1, [R2, #return_addr_offset]
+        STR     R1, [R3, #return_addr_offset]
 
         // EXC_RETURN value.
 0:      POP     {PC}
