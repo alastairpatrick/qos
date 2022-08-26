@@ -4,22 +4,22 @@
 
 .EQU    r0_offset, 0
 
-// qos_task_state_t STRIPED_RAM critical_section(CriticalSectionProc proc, void* ctx)
-.GLOBAL critical_section
+// qos_task_state_t STRIPED_RAM qos_critical_section(critical_section_proc_t proc, void* ctx)
+.GLOBAL qos_critical_section
 .GLOBAL critical_section_va_internal
-.TYPE critical_section, %function
+.TYPE qos_critical_section, %function
 .TYPE critical_section_va_internal, %function
-critical_section:
+qos_critical_section:
 critical_section_va_internal:
     MOV     R3, LR
     SVC     #0
     BX      R3
 
 
-// void set_current_critical_section_result(Scheduler*, int32_t result)
-.GLOBAL set_current_critical_section_result
-.TYPE set_current_critical_section_result, %function
-set_current_critical_section_result:
+// void qos_set_current_critical_section_result(Scheduler*, int32_t result)
+.GLOBAL qos_set_current_critical_section_result
+.TYPE qos_set_current_critical_section_result, %function
+qos_set_current_critical_section_result:
     MRS     R3, PSP
     STR     R1, [R3, #r0_offset]
     BX      LR

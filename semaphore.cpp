@@ -34,7 +34,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* schedu
   auto new_count = old_count - count;
   if (new_count >= 0) {
     semaphore->count = new_count;
-    set_current_critical_section_result(scheduler, true);
+    qos_set_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -64,7 +64,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick
     return false;
   }
 
-  return critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
+  return qos_critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
 }
 
 qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list args) {
@@ -83,7 +83,7 @@ qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va
 
       position = remove(position);
 
-      set_critical_section_result(scheduler, task, true);
+      qos_set_critical_section_result(scheduler, task, true);
       should_yield |= ready_task(scheduler, task);
     } else {
       ++position;
@@ -100,5 +100,5 @@ qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va
 void STRIPED_RAM release_semaphore(Semaphore* semaphore, int32_t count) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
-  critical_section_va(release_semaphore_critical, semaphore, count);
+  qos_critical_section_va(release_semaphore_critical, semaphore, count);
 }

@@ -51,7 +51,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler,
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-    set_current_critical_section_result(scheduler, true);
+    qos_set_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -82,7 +82,7 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, qos_tick_count_t timeout) {
     return false;
   }
 
-  return critical_section_va(acquire_mutex_critical, mutex, timeout);
+  return qos_critical_section_va(acquire_mutex_critical, mutex, timeout);
 }
 
 qos_task_state_t STRIPED_RAM release_mutex_critical(Scheduler* scheduler, void* m) {
@@ -102,7 +102,7 @@ qos_task_state_t STRIPED_RAM release_mutex_critical(Scheduler* scheduler, void* 
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
-  set_critical_section_result(scheduler, resumed, true);
+  qos_set_critical_section_result(scheduler, resumed, true);
   bool should_yield = ready_task(scheduler, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
@@ -126,7 +126,7 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
     return;
   }
 
-  critical_section(release_mutex_critical, mutex);
+  qos_critical_section(release_mutex_critical, mutex);
 }
 
 bool STRIPED_RAM owns_mutex(Mutex* mutex) {
@@ -172,7 +172,7 @@ bool wait_condition_var(ConditionVar* var, qos_tick_count_t timeout) {
   assert(timeout != 0);
   check_tick_count(&timeout);
 
-  return critical_section_va(wait_condition_var_critical, var, timeout);
+  return qos_critical_section_va(wait_condition_var_critical, var, timeout);
 }
 
 void release_condition_var(ConditionVar* var) {
@@ -204,7 +204,7 @@ qos_task_state_t release_and_signal_condition_var_critical(Scheduler* scheduler,
 
 void release_and_signal_condition_var(ConditionVar* var) {
   assert(owns_mutex(var->mutex));
-  critical_section(release_and_signal_condition_var_critical, var);
+  qos_critical_section(release_and_signal_condition_var_critical, var);
 }
 
 qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* scheduler, void* v) {
@@ -231,5 +231,5 @@ qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* schedul
 
 void release_and_broadcast_condition_var(ConditionVar* var) {
   assert(owns_mutex(var->mutex));
-  critical_section(release_and_broadcast_condition_var_critical, var);
+  qos_critical_section(release_and_broadcast_condition_var_critical, var);
 }

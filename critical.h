@@ -39,13 +39,13 @@
 
 BEGIN_EXTERN_C
 
-typedef qos_task_state_t (*CriticalSectionProc)(struct Scheduler* scheduler, void*);
-typedef qos_task_state_t (*CriticalSectionVAProc)(struct Scheduler* scheduler, va_list args);
+typedef qos_task_state_t (*critical_section_proc_t)(struct Scheduler* scheduler, void*);
+typedef qos_task_state_t (*critical_section_va_proc_t)(struct Scheduler* scheduler, va_list args);
 
-int32_t critical_section(CriticalSectionProc proc, void*);
+int32_t qos_critical_section(critical_section_proc_t proc, void*);
 
-inline int32_t critical_section_va(CriticalSectionVAProc proc, ...) {
-  int32_t critical_section_va_internal(CriticalSectionVAProc proc, va_list args);
+inline int32_t qos_critical_section_va(critical_section_va_proc_t proc, ...) {
+  int32_t critical_section_va_internal(critical_section_va_proc_t proc, va_list args);
 
   va_list args;
   va_start(args, proc);
@@ -54,8 +54,8 @@ inline int32_t critical_section_va(CriticalSectionVAProc proc, ...) {
   return r; 
 }
 
-void set_critical_section_result(struct Scheduler* scheduler, struct Task* task, int32_t result);
-void set_current_critical_section_result(struct Scheduler* scheduler, int32_t result);
+void qos_set_critical_section_result(struct Scheduler* scheduler, struct Task* task, int32_t result);
+void qos_set_current_critical_section_result(struct Scheduler* scheduler, int32_t result);
 
 END_EXTERN_C
 

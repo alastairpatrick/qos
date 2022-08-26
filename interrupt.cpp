@@ -117,5 +117,5 @@ bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_
   check_tick_count(&timeout);
   assert(timeout != 0);
 
-  return critical_section_va(wait_irq_critical, irq, enable, mask, timeout);
+  return qos_critical_section_va(wait_irq_critical, irq, enable, mask, timeout);
 }

@@ -236,12 +236,12 @@ static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p
 
 void STRIPED_RAM yield() {
   qos_tick_count_t timeout = 0;
-  critical_section(sleep_critical, &timeout);
+  qos_critical_section(sleep_critical, &timeout);
 }
 
 void STRIPED_RAM sleep(qos_tick_count_t timeout) {
   check_tick_count(&timeout);
-  critical_section(sleep_critical, &timeout);
+  qos_critical_section(sleep_critical, &timeout);
 }
 
 Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler* scheduler, Task* current_task) {
@@ -299,9 +299,9 @@ bool STRIPED_RAM ready_task(Scheduler* scheduler, Task* task) {
   return task->priority > scheduler->current_task->priority;
 }
 
-void STRIPED_RAM set_critical_section_result(Scheduler* scheduler, Task* task, int32_t result) {
+void STRIPED_RAM qos_set_critical_section_result(Scheduler* scheduler, Task* task, int32_t result) {
   if (task == scheduler->current_task) {
-    set_current_critical_section_result(scheduler, result);
+    qos_set_current_critical_section_result(scheduler, result);
   } else {
     ExceptionFrame* frame = (ExceptionFrame*) task->sp;
     frame->r0 = result;
