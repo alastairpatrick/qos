@@ -15,14 +15,13 @@
 
 QOS_BEGIN_EXTERN_C
 
-struct qos_scheduler_t;
-
 struct qos_task_t* qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size);
-void qos_start_schedulers(int32_t num_cores, const qos_entry_t* init_procs);
 
-static inline bool qos_are_schedulers_started() {
-  extern bool g_qos_internal_are_schedulers_started;
-  return g_qos_internal_are_schedulers_started;
+void qos_start(int32_t num_cores, const qos_entry_t* init_procs);
+
+static inline bool qos_is_started() {
+  extern bool g_qos_internal_started;
+  return g_qos_internal_started;
 }
 
 static inline struct qos_task_t* qos_current_task() {
@@ -45,6 +44,7 @@ static inline void qos_normalize_tick_count(qos_tick_count_t* tick_count) {
 void qos_ready_busy_blocked_tasks();
 
 // May only be called from critical section
+struct qos_scheduler_t;
 bool qos_ready_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task);
 void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, qos_tick_count_t tick_count);
 

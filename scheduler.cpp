@@ -37,7 +37,7 @@ struct supervisor_t {
 };
 
 static supervisor_t g_supervisors[NUM_CORES];
-bool g_qos_internal_are_schedulers_started;
+bool g_qos_internal_started;
 
 extern "C" {
   void qos_internal_init_stacks(qos_scheduler_t* exception_stack_top);
@@ -130,7 +130,7 @@ static void core_start_scheduler() {
   systick_hw->cvr = 0;
   systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
 
-  g_qos_internal_are_schedulers_started = true;
+  g_qos_internal_started = true;
 
   qos_yield();
 
@@ -144,11 +144,11 @@ static volatile qos_entry_t g_init_core1;
 
 static void start_core1_scheduler() {
   g_init_core1();
-  g_qos_internal_are_schedulers_started = true;
+  g_qos_internal_started = true;
   core_start_scheduler();
 }
 
-void qos_start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
+void qos_start(int32_t num_cores, const qos_entry_t* init_procs) {
   assert(num_cores >= 0 && num_cores <= NUM_CORES);
 
   if (get_core_num() == 0) {
@@ -159,9 +159,9 @@ void qos_start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
     if (init_procs[1]) {
       g_init_core1 = init_procs[1];
       multicore_launch_core1(start_core1_scheduler);
-      while (!g_qos_internal_are_schedulers_started) {}
+      while (!g_qos_internal_started) {}
     } else {
-      g_qos_internal_are_schedulers_started = true;
+      g_qos_internal_started = true;
     }
 
     if (init_procs[0]) {
