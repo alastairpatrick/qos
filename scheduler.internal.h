@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+#define QOS_MAX_IRQS 32
+
 typedef void (*qos_task_proc_t)(struct qos_task_t*);
 
 typedef struct qos_task_t {
@@ -64,6 +66,7 @@ typedef struct qos_scheduler_t {
   qos_task_scheduling_dlist_t ready;         // Always in descending priority order
   qos_task_scheduling_dlist_t busy_blocked;  // Always in descending priority order
   qos_task_scheduling_dlist_t pending;       // Always in descending priority order
+  qos_task_scheduling_dlist_t awaiting_irq[QOS_MAX_IRQS];
   qos_task_timout_dlist_t delayed;
   volatile bool ready_busy_blocked_tasks;
 } qos_scheduler_t;

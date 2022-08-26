@@ -10,29 +10,9 @@
 #include "hardware/regs/m0plus.h"
 #include "hardware/structs/scb.h"
 
-#define MAX_IRQS 32
-
-struct wait_irq_scheduler_t {
-  qos_task_scheduling_dlist_t tasks_by_irq[MAX_IRQS];
-};
-
-static wait_irq_scheduler_t g_schedulers[NUM_CORES];
-
 extern "C" {
   void qos_supervisor_wait_irq_handler();
   void qos_supervisor_wait_irq(qos_scheduler_t* scheduler);
-}
-
-static void init_scheduler() {
-  auto& scheduler = g_schedulers[get_core_num()];
-
-  if (scheduler.tasks_by_irq[0].tasks.sentinel.next) {
-    return;
-  }
-
-  for (auto& list : scheduler.tasks_by_irq) {
-    qos_init_dlist(&list.tasks);
-  }
 }
 
 void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
@@ -40,7 +20,7 @@ void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
 
-  auto& tasks = g_schedulers[get_core_num()].tasks_by_irq[irq];
+  auto& tasks = scheduler->awaiting_irq[irq];
   
   // Atomically disable IRQ but leave it pending.
   *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICER_OFFSET)) = 1 << irq;
@@ -56,9 +36,7 @@ void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
 }
 
 void qos_init_wait_irq(int32_t irq) {
-  assert(irq >= 0 && irq < MAX_IRQS);
-
-  init_scheduler();
+  assert(irq >= 0 && irq < QOS_MAX_IRQS);
 
   irq_set_exclusive_handler(irq, qos_supervisor_wait_irq_handler);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
@@ -78,7 +56,7 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, v
   auto timeout = va_arg(args, qos_tick_count_t);
   auto current_task = scheduler->current_task;
 
-  auto& tasks_by_irq = g_schedulers[get_core_num()].tasks_by_irq;
+  auto& awaiting_irq = scheduler->awaiting_irq;
   auto irq_mask = 1 << irq;
 
   // Enable interrupt.
@@ -106,14 +84,14 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, v
   current_task->sync_state = mask;
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
-  qos_internal_insert_scheduled_task(&tasks_by_irq[irq], current_task);
+  qos_internal_insert_scheduled_task(&awaiting_irq[irq], current_task);
   qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM qos_wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
-  assert(irq >= 0 && irq < MAX_IRQS);
+  assert(irq >= 0 && irq < QOS_MAX_IRQS);
   qos_normalize_tick_count(&timeout);
   assert(timeout != 0);
 

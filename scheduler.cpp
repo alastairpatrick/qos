@@ -66,6 +66,10 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   qos_init_dlist(&scheduler.pending.tasks);
   qos_init_dlist(&scheduler.delayed.tasks);
 
+  for (auto& awaiting : scheduler.awaiting_irq) {
+    qos_init_dlist(&awaiting.tasks);
+  }
+
   qos_init_dnode(&scheduler.idle_task.scheduling_node);
   qos_init_dnode(&scheduler.idle_task.timeout_node);
   scheduler.idle_task.core = get_core_num();
