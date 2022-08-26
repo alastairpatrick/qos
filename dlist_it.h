@@ -6,7 +6,7 @@
 #include <iterator>
 
 template <typename T, DNode T::*NODE>
-struct DListIterator {
+struct qos_dlist_iterator {
   using iterator_category = std::bidirectional_iterator_tag;
   using difference_type   = std::ptrdiff_t;
   using value_type        = T;
@@ -18,14 +18,14 @@ struct DListIterator {
     return pointer(uintptr_t(node) - node_offset);
   }
 
-  explicit DListIterator(T* object): node(&object->*NODE) {}
+  explicit qos_dlist_iterator(T* object): node(&object->*NODE) {}
 
-  static inline DListIterator begin(DList& list) {
-    return DListIterator(list.sentinel.next);
+  static inline qos_dlist_iterator begin(DList& list) {
+    return qos_dlist_iterator(list.sentinel.next);
   }
 
-  static inline DListIterator end(DList& list) {
-    return DListIterator(&list.sentinel);
+  static inline qos_dlist_iterator end(DList& list) {
+    return qos_dlist_iterator(&list.sentinel);
   }
 
   reference operator*() {
@@ -36,62 +36,62 @@ struct DListIterator {
     return node_to_object(node);
   }
 
-  DListIterator& operator++() {
+  qos_dlist_iterator& operator++() {
     node = node->next;
     return *this;
   }
 
-  DListIterator operator++(int) {
-    DListIterator t = *this;
+  qos_dlist_iterator operator++(int) {
+    qos_dlist_iterator t = *this;
     node = node->next;
     return t;
   }
 
-  DListIterator& operator--() {
+  qos_dlist_iterator& operator--() {
     node = node->prev;
     return *this;
   }
 
-  DListIterator operator--(int) {
-    DListIterator t = *this;
+  qos_dlist_iterator operator--(int) {
+    qos_dlist_iterator t = *this;
     node = node->prev;
     return t;
   }
 
-  friend bool operator==(const DListIterator& a, const DListIterator& b) {
+  friend bool operator==(const qos_dlist_iterator& a, const qos_dlist_iterator& b) {
     return a.node == b.node;
   }
 
-  friend bool operator!=(const DListIterator& a, const DListIterator& b) {
+  friend bool operator!=(const qos_dlist_iterator& a, const qos_dlist_iterator& b) {
     return a.node != b.node;
   }
 
-  friend bool empty(DListIterator it) {
+  friend bool empty(qos_dlist_iterator it) {
     return it.node == it.node->next;
   }
 
   // Removes referenced node and returns pointer to next.
-  friend DListIterator remove(DListIterator it) {
-    DListIterator t(it.node->next);
+  friend qos_dlist_iterator remove(qos_dlist_iterator it) {
+    qos_dlist_iterator t(it.node->next);
     remove_dnode(it.node);
     return t;
   }
 
-  friend inline void splice(DListIterator dest, DListIterator begin, DListIterator end) {
+  friend inline void splice(qos_dlist_iterator dest, qos_dlist_iterator begin, qos_dlist_iterator end) {
     splice_dlist(dest.node, begin.node, end.node);
   }
 
-  friend inline void splice(DListIterator dest, DListIterator source) {
+  friend inline void splice(qos_dlist_iterator dest, qos_dlist_iterator source) {
     splice_dnode(dest.node, source.node);
   }
 
-  friend inline void splice(DListIterator dest, T* source) {
+  friend inline void splice(qos_dlist_iterator dest, T* source) {
     splice_dnode(dest.node, &(source->*NODE));
   }
 
 private:
   DNode* node;
-  explicit DListIterator(DNode* node): node(node) {}
+  explicit qos_dlist_iterator(DNode* node): node(node) {}
 };
 
 #endif  // QOS_DLIST_IT_H

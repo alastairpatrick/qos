@@ -73,20 +73,20 @@ void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task);
 
 #ifdef __cplusplus
 
-inline DListIterator<Task, &Task::scheduling_node> begin(TaskSchedulingDList& list) {
-  return DListIterator<Task, &Task::scheduling_node>::begin(list.tasks);
+inline qos_dlist_iterator<Task, &Task::scheduling_node> begin(TaskSchedulingDList& list) {
+  return qos_dlist_iterator<Task, &Task::scheduling_node>::begin(list.tasks);
 }
 
-inline DListIterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list) {
-  return DListIterator<Task, &Task::scheduling_node>::end(list.tasks);
+inline qos_dlist_iterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list) {
+  return qos_dlist_iterator<Task, &Task::scheduling_node>::end(list.tasks);
 }
 
-inline DListIterator<Task, &Task::timeout_node> begin(TaskTimeoutDList& list) {
-  return DListIterator<Task, &Task::timeout_node>::begin(list.tasks);
+inline qos_dlist_iterator<Task, &Task::timeout_node> begin(TaskTimeoutDList& list) {
+  return qos_dlist_iterator<Task, &Task::timeout_node>::begin(list.tasks);
 }
 
-inline DListIterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
-  return DListIterator<Task, &Task::timeout_node>::end(list.tasks);
+inline qos_dlist_iterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
+  return qos_dlist_iterator<Task, &Task::timeout_node>::end(list.tasks);
 }
 
 #endif   // __cplusplus
