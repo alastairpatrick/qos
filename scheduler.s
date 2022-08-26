@@ -9,8 +9,6 @@
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
 .EQU    task_ready, 1               // Must match enum TastState.
 
-.EXTERN atomic_start, atomic_end
-
 // void qos_internal_init_stacks(Scheduler* exception_stack_top)
 .GLOBAL qos_internal_init_stacks
 .TYPE qos_internal_init_stacks, %function
@@ -129,10 +127,10 @@ context_switch:
         LDR     R1, [R2, #return_addr_offset]
 
         // Was task running an atomic operation?
-        LDR     R3, =atomic_start
+        LDR     R3, =qos_internal_atomic_start
         CMP     R1, R3
         BLT     0f
-        LDR     R3, =atomic_end
+        LDR     R3, =qos_internal_atomic_end
         CMP     R1, R3
         BGE     0f
 

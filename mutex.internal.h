@@ -6,7 +6,7 @@
 
 typedef struct Mutex {
   int8_t core;
-  atomic32_t owner_state;
+  qos_atomic32_t owner_state;
   TaskSchedulingDList waiting;
 } Mutex;
 

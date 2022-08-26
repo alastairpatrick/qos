@@ -74,7 +74,7 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
 
   auto current_task = get_current_task();
 
-  if (atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
+  if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
     return true;
   }
   
@@ -122,7 +122,7 @@ void STRIPED_RAM release_mutex(Mutex* mutex) {
 
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-  if (atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
+  if (qos_atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
     return;
   }
 

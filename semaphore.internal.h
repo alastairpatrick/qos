@@ -6,7 +6,7 @@
 
 typedef struct Semaphore {
   int8_t core;
-  atomic32_t count;
+  qos_atomic32_t count;
   TaskSchedulingDList waiting;
 } Semaphore;
 

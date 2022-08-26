@@ -10,18 +10,18 @@
 // back to offset 0. Otherwise, no action is taken.
 
 .BALIGN 32
-.GLOBAL atomic_start
-.TYPE atomic_start, %function
-atomic_start:
+.GLOBAL qos_internal_atomic_start
+.TYPE qos_internal_atomic_start, %function
+qos_internal_atomic_start:
 
 
-// int32_t atomic_add(atomic_t* atomic, int32_t addend)
+// int32_t qos_atomic_add(qos_atomic_t* atomic, int32_t addend)
 .BALIGN 32
-.GLOBAL atomic_add
-.TYPE atomic_add, %function
+.GLOBAL qos_atomic_add
+.TYPE qos_atomic_add, %function
         B       0f
 .SPACE  22 - (1f - 0f)
-atomic_add:
+qos_atomic_add:
 0:      LDR     R3, [R0]
         ADDS    R3, R3, R1
 1:      STR     R3, [R0]      // byte offset 24
@@ -29,16 +29,16 @@ atomic_add:
         BX      LR
 
 
-// int32_t atomic_compare_and_set(atomic_t* atomic, int32_t expected, int32_t new_value)
+// int32_t qos_atomic_compare_and_set(qos_atomic_t* atomic, int32_t expected, int32_t new_value)
 .BALIGN 32
-.GLOBAL atomic_compare_and_set
-.GLOBAL atomic_compare_and_set_ptr
-.TYPE atomic_compare_and_set, %function
-.TYPE atomic_compare_and_set_ptr, %function
+.GLOBAL qos_atomic_compare_and_set
+.GLOBAL qos_atomic_compare_and_set_ptr
+.TYPE qos_atomic_compare_and_set, %function
+.TYPE qos_atomic_compare_and_set_ptr, %function
         B       0f
 .SPACE  22 - (1f - 0f)
-atomic_compare_and_set:
-atomic_compare_and_set_ptr:
+qos_atomic_compare_and_set:
+qos_atomic_compare_and_set_ptr:
 0:      LDR     R3, [R0]
         CMP     R3, R1
         BNE     2f
@@ -47,13 +47,13 @@ atomic_compare_and_set_ptr:
         BX      LR
 
 
-// int64_t atomic_tick_count()
+// int64_t qos_atomic_tick_count()
 .BALIGN 32
-.GLOBAL atomic_tick_count
-.TYPE atomic_tick_count, %function
+.GLOBAL qos_atomic_tick_count
+.TYPE qos_atomic_tick_count, %function
         B       0f
 .SPACE  22 - (1f - 0f)
-atomic_tick_count:
+qos_atomic_tick_count:
 0:      MRS     R3, MSP         // MSP points to Scheduler in thread mode
         LDR     R0, [R3, #8]    // tick_count at byte offset 8 of Scheduler
 1:      LDR     R1, [R3, #12]   // byte offset 24
@@ -61,6 +61,6 @@ atomic_tick_count:
 
 
 .BALIGN 32
-.GLOBAL atomic_end
-.TYPE atomic_end, %function
-atomic_end:
+.GLOBAL qos_internal_atomic_end
+.TYPE qos_internal_atomic_end, %function
+qos_internal_atomic_end:

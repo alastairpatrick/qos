@@ -37,7 +37,7 @@ void sleep(tick_count_t timeout);
 static inline void check_tick_count(tick_count_t* tick_count) {
   // Convert duration into absolute tick count.
   if (*tick_count > 0) {
-    *tick_count += atomic_tick_count();
+    *tick_count += qos_atomic_tick_count();
   }
 }
 

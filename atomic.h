@@ -1,16 +1,16 @@
-#ifndef RTOS_ATOMIC_H
-#define RTOS_ATOMIC_H
+#ifndef QOS_ATOMIC_H
+#define QOS_ATOMIC_H
 
 #include "base.h"
 
 BEGIN_EXTERN_C
 
-int32_t atomic_add(atomic32_t* atomic, int32_t addend);
-int32_t atomic_compare_and_set(atomic32_t* atomic, int32_t expected, int32_t new_value);
-void* atomic_compare_and_set_ptr(atomic_ptr_t* atomic, void* expected, void* new_value);
-int64_t atomic_tick_count();
+int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
+int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int32_t new_value);
+void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
+int64_t qos_atomic_tick_count();
 
 END_EXTERN_C
 
-#endif  // RTOS_ATOMIC_H
+#endif  // QOS_ATOMIC_H
 

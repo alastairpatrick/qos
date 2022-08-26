@@ -16,8 +16,8 @@
 
 #define NO_TIMEOUT -1LL
 
-typedef volatile int32_t atomic32_t;
-typedef volatile void* atomic_ptr_t;
+typedef volatile int32_t qos_atomic32_t;
+typedef volatile void* qos_atomic_ptr_t;
 
 // Absolute tick counts are negative and grow towards zero. Durations are non-negative.
 typedef int64_t tick_count_t;

@@ -56,7 +56,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_cou
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
-  if (new_count >= 0 && atomic_compare_and_set(&semaphore->count, old_count, new_count) == old_count) {
+  if (new_count >= 0 && qos_atomic_compare_and_set(&semaphore->count, old_count, new_count) == old_count) {
     return true;
   }
 

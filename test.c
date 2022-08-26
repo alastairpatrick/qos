@@ -42,7 +42,7 @@ int64_t tick_count;
 
 void do_delay_task() {
   for(;;) {
-    tick_count = atomic_tick_count();
+    tick_count = qos_atomic_tick_count();
     sleep(1000);
   }
 }
