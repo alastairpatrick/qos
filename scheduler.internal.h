@@ -1,5 +1,5 @@
-#ifndef RTOS_TASK_INTERNAL_H
-#define RTOS_TASK_INTERNAL_H
+#ifndef QOS_TASK_INTERNAL_H
+#define QOS_TASK_INTERNAL_H
 
 #include "scheduler.h"
 
@@ -91,4 +91,4 @@ inline DListIterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
 
 #endif   // __cplusplus
 
-#endif  // RTOS_TASK_INTERNAL_H
+#endif  // QOS_TASK_INTERNAL_H

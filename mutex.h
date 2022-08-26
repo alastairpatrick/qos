@@ -1,5 +1,5 @@
-#ifndef RTOS_MUTEX_H
-#define RTOS_MUTEX_H
+#ifndef QOS_MUTEX_H
+#define QOS_MUTEX_H
 
 #include "base.h"
 
@@ -23,4 +23,4 @@ void release_and_broadcast_condition_var(struct ConditionVar* var);
 
 END_EXTERN_C
 
-#endif  // RTOS_MUTEX_H
+#endif  // QOS_MUTEX_H

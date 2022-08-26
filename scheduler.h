@@ -1,5 +1,5 @@
-#ifndef RTOS_SCHEDULER_H
-#define RTOS_SCHEDULER_H
+#ifndef QOS_SCHEDULER_H
+#define QOS_SCHEDULER_H
 
 #include "base.h"
 #include "atomic.h"
@@ -50,4 +50,4 @@ void delay_task(struct Scheduler* scheduler, struct Task* task, qos_tick_count_t
 
 END_EXTERN_C
 
-#endif  // RTOS_SCHEDULER_H
+#endif  // QOS_SCHEDULER_H

@@ -1,5 +1,5 @@
-#ifndef RTOS_INTERRUPT_H
-#define RTOS_INTERRUPT_H
+#ifndef QOS_INTERRUPT_H
+#define QOS_INTERRUPT_H
 
 #include "base.h"
 #include "scheduler.h"
@@ -11,4 +11,4 @@ bool wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t time
 
 END_EXTERN_C
 
-#endif  // RTOS_INTERRUPT_H
+#endif  // QOS_INTERRUPT_H

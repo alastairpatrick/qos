@@ -1,5 +1,5 @@
-#ifndef RTOS_QUEUE_INTERNAL_H
-#define RTOS_QUEUE_INTERNAL_H
+#ifndef QOS_QUEUE_INTERNAL_H
+#define QOS_QUEUE_INTERNAL_H
 
 #include "semaphore.internal.h"
 #include "mutex.internal.h"
@@ -18,4 +18,4 @@ typedef struct Queue {
 
 END_EXTERN_C
 
-#endif  // RTOS_QUEUE_INTERNAL_H
+#endif  // QOS_QUEUE_INTERNAL_H

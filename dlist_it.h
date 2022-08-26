@@ -1,5 +1,5 @@
-#ifndef RTOS_DLIST_IT_H
-#define RTOS_DLIST_IT_H
+#ifndef QOS_DLIST_IT_H
+#define QOS_DLIST_IT_H
 
 #include "dlist.h"
 
@@ -94,4 +94,4 @@ private:
   explicit DListIterator(DNode* node): node(node) {}
 };
 
-#endif  // RTOS_DLIST_IT_H
+#endif  // QOS_DLIST_IT_H

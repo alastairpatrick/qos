@@ -1,5 +1,5 @@
-#ifndef RTOS_SEMAPHORE_H
-#define RTOS_SEMAPHORE_H
+#ifndef QOS_SEMAPHORE_H
+#define QOS_SEMAPHORE_H
 
 #include "base.h"
 
@@ -12,4 +12,4 @@ void release_semaphore(struct Semaphore* semaphore, int32_t count);
 
 END_EXTERN_C
 
-#endif  // RTOS_SEMAPHORE_H
+#endif  // QOS_SEMAPHORE_H

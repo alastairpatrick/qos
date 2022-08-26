@@ -1,5 +1,5 @@
-#ifndef RTOS_MUTEX_INTERNAL_H
-#define RTOS_MUTEX_INTERNAL_H
+#ifndef QOS_MUTEX_INTERNAL_H
+#define QOS_MUTEX_INTERNAL_H
 
 #include "base.h"
 #include "scheduler.internal.h"
@@ -15,4 +15,4 @@ typedef struct ConditionVar {
   TaskSchedulingDList waiting;
 } ConditionVar;
 
-#endif  // RTOS_MUTEX_INTERNAL_H
+#endif  // QOS_MUTEX_INTERNAL_H

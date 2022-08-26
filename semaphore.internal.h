@@ -1,5 +1,5 @@
-#ifndef RTOS_SEMAPHORE_INTERNAL_H
-#define RTOS_SEMAPHORE_INTERNAL_H
+#ifndef QOS_SEMAPHORE_INTERNAL_H
+#define QOS_SEMAPHORE_INTERNAL_H
 
 #include "base.h"
 #include "scheduler.internal.h"
@@ -10,4 +10,4 @@ typedef struct Semaphore {
   TaskSchedulingDList waiting;
 } Semaphore;
 
-#endif  // RTOS_SEMAPHORE_INTERNAL_H
+#endif  // QOS_SEMAPHORE_INTERNAL_H

@@ -1,5 +1,5 @@
-#ifndef RTOS_QUEUE_H
-#define RTOS_QUEUE_H
+#ifndef QOS_QUEUE_H
+#define QOS_QUEUE_H
 
 #include "base.h"
 
@@ -14,4 +14,4 @@ bool read_queue(struct Queue* queue, void* data, int32_t size, qos_tick_count_t 
 
 END_EXTERN_C
 
-#endif  // RTOS_QUEUE_H
+#endif  // QOS_QUEUE_H

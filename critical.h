@@ -1,5 +1,5 @@
-#ifndef RTOS_CRITICAL__H
-#define RTOS_CRITICAL__H
+#ifndef QOS_CRITICAL__H
+#define QOS_CRITICAL__H
 
 #include "base.h"
 
@@ -59,4 +59,4 @@ void qos_set_current_critical_section_result(struct Scheduler* scheduler, int32_
 
 END_EXTERN_C
 
-#endif  // RTOS_CRITICAL__H
+#endif  // QOS_CRITICAL__H

@@ -1,5 +1,5 @@
-#ifndef RTOS_DLIST_H
-#define RTOS_DLIST_H
+#ifndef QOS_DLIST_H
+#define QOS_DLIST_H
 
 #include "base.h"
 #include <stdbool.h>
@@ -56,4 +56,4 @@ inline void remove_dnode(struct DNode* node) {
 
 END_EXTERN_C
 
-#endif  // RTOS_DLIST_H
+#endif  // QOS_DLIST_H

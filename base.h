@@ -1,5 +1,5 @@
-#ifndef RTOS_BASE_H
-#define RTOS_BASE_H
+#ifndef QOS_BASE_H
+#define QOS_BASE_H
 
 #include <limits.h>
 #include <stdint.h>
@@ -31,4 +31,4 @@ typedef enum qos_task_state_t {
 
 typedef void (*qos_entry_t)();
 
-#endif  // RTOS_BASE_H
+#endif  // QOS_BASE_H
