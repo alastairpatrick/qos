@@ -51,7 +51,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(qos_scheduler_t* sche
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-    qos_set_current_critical_section_result(scheduler, true);
+    qos_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -102,7 +102,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_critical(qos_scheduler_t* sche
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
-  qos_set_critical_section_result(scheduler, resumed, true);
+  qos_critical_section_result(scheduler, resumed, true);
   bool should_yield = qos_ready_task(scheduler, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;

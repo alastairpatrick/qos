@@ -34,7 +34,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   auto new_count = old_count - count;
   if (new_count >= 0) {
     semaphore->count = new_count;
-    qos_set_current_critical_section_result(scheduler, true);
+    qos_current_critical_section_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -83,7 +83,7 @@ static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* 
 
       position = remove(position);
 
-      qos_set_critical_section_result(scheduler, task, true);
+      qos_critical_section_result(scheduler, task, true);
       should_yield |= qos_ready_task(scheduler, task);
     } else {
       ++position;

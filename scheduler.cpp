@@ -299,9 +299,9 @@ bool STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_t* task) {
   return task->priority > scheduler->current_task->priority;
 }
 
-void STRIPED_RAM qos_set_critical_section_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {
+void STRIPED_RAM qos_critical_section_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {
   if (task == scheduler->current_task) {
-    qos_set_current_critical_section_result(scheduler, result);
+    qos_current_critical_section_result(scheduler, result);
   } else {
     exception_frame_t* frame = (exception_frame_t*) task->sp;
     frame->r0 = result;

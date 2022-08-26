@@ -54,8 +54,8 @@ inline int32_t qos_critical_section_va(critical_section_va_proc_t proc, ...) {
   return r; 
 }
 
-void qos_set_critical_section_result(struct qos_scheduler_t* scheduler, struct qos_task_t* task, int32_t result);
-void qos_set_current_critical_section_result(struct qos_scheduler_t* scheduler, int32_t result);
+void qos_critical_section_result(struct qos_scheduler_t* scheduler, struct qos_task_t* task, int32_t result);
+void qos_current_critical_section_result(struct qos_scheduler_t* scheduler, int32_t result);
 
 QOS_END_EXTERN_C
 
