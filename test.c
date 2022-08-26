@@ -82,21 +82,21 @@ void do_consumer_task2() {
 
 void do_update_cond_var_task() {
   for (;;) {
-    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     ++g_observed_count;
-    release_and_broadcast_condition_var(g_cond_var);
+    qos_release_and_broadcast_condition_var(g_cond_var);
     sleep(10);
   }
 }
 
 void do_observe_cond_var_task1() {
   for (;;) {
-    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     while ((g_observed_count & 1) != 1) {
-      wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+      qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     }
     //printf("count is odd: %d\n", g_observed_count);
-    release_condition_var(g_cond_var);
+    qos_release_condition_var(g_cond_var);
 
     sleep(5);
   }
@@ -104,12 +104,12 @@ void do_observe_cond_var_task1() {
 
 void do_observe_cond_var_task2() {
   for (;;) {
-    acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     while ((g_observed_count & 1) != 0) {
-      wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+      qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     }
     //printf("count is even: %d\n", g_observed_count);
-    release_condition_var(g_cond_var);
+    qos_release_condition_var(g_cond_var);
 
     sleep(5);
   }
@@ -161,8 +161,8 @@ void init_core0() {
 void init_core1() {
   init_pwm_interrupt();
   
-  g_mutex = new_mutex();
-  g_cond_var = new_condition_var(g_mutex);
+  g_mutex = qos_new_mutex();
+  g_cond_var = qos_new_condition_var(g_mutex);
 
   g_observe_cond_var_task1 = new_task(1, do_observe_cond_var_task1, 1024);
   g_observe_cond_var_task2 = new_task(1, do_observe_cond_var_task2, 1024);

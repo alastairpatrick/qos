@@ -19,7 +19,7 @@ void init_queue(Queue* queue, void* buffer, int32_t capacity) {
   
   init_semaphore(&queue->read_semaphore, 0);
   init_semaphore(&queue->write_semaphore, capacity);
-  init_mutex(&queue->mutex);
+  qos_init_mutex(&queue->mutex);
 
   queue->capacity = capacity;
   queue->read_idx = 0;
@@ -34,7 +34,7 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, qos_t
     return false;
   }
 
-  if (!acquire_mutex(&queue->mutex, timeout)) {
+  if (!qos_acquire_mutex(&queue->mutex, timeout)) {
     release_semaphore(&queue->write_semaphore, size);
     return false;
   }
@@ -48,7 +48,7 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, qos_t
     memcpy(queue->buffer, copy_bytes + (const char*) data, queue->write_idx);
   }
 
-  release_mutex(&queue->mutex);
+  qos_release_mutex(&queue->mutex);
 
   release_semaphore(&queue->read_semaphore, size);
 
@@ -62,7 +62,7 @@ bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, qos_tick_cou
     return false;
   }
 
-  if (!acquire_mutex(&queue->mutex, timeout)) {
+  if (!qos_acquire_mutex(&queue->mutex, timeout)) {
     release_semaphore(&queue->write_semaphore, size);
     return false;
   }
@@ -76,7 +76,7 @@ bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, qos_tick_cou
     memcpy(copy_bytes + (char*) data, queue->buffer, queue->read_idx);
   }
 
-  release_mutex(&queue->mutex);
+  qos_release_mutex(&queue->mutex);
 
   release_semaphore(&queue->write_semaphore, size);
 
