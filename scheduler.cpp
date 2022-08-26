@@ -132,7 +132,7 @@ static void core_start_scheduler() {
 
   // Become the idle task.
   for (;;) {
-    __wfe();
+    __wfi();
   }
 }
 
