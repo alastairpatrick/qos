@@ -17,8 +17,8 @@ qos_queue_t* qos_new_queue(int32_t capacity) {
 void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   assert(capacity > 0);
   
-  init_semaphore(&queue->read_semaphore, 0);
-  init_semaphore(&queue->write_semaphore, capacity);
+  qos_init_semaphore(&queue->read_semaphore, 0);
+  qos_init_semaphore(&queue->write_semaphore, capacity);
   qos_init_mutex(&queue->mutex);
 
   queue->capacity = capacity;
@@ -28,14 +28,14 @@ void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
 }
 
 bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_tick_count_t timeout) {
-  check_tick_count(&timeout);
+  qos_normalize_tick_count(&timeout);
 
-  if (!acquire_semaphore(&queue->write_semaphore, size, timeout)) {
+  if (!qos_acquire_semaphore(&queue->write_semaphore, size, timeout)) {
     return false;
   }
 
   if (!qos_acquire_mutex(&queue->mutex, timeout)) {
-    release_semaphore(&queue->write_semaphore, size);
+    qos_release_semaphore(&queue->write_semaphore, size);
     return false;
   }
 
@@ -50,20 +50,20 @@ bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t s
 
   qos_release_mutex(&queue->mutex);
 
-  release_semaphore(&queue->read_semaphore, size);
+  qos_release_semaphore(&queue->read_semaphore, size);
 
   return true;
 }
 
 bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_tick_count_t timeout) {
-  check_tick_count(&timeout);
+  qos_normalize_tick_count(&timeout);
 
-  if (!acquire_semaphore(&queue->read_semaphore, size, timeout)) {
+  if (!qos_acquire_semaphore(&queue->read_semaphore, size, timeout)) {
     return false;
   }
 
   if (!qos_acquire_mutex(&queue->mutex, timeout)) {
-    release_semaphore(&queue->write_semaphore, size);
+    qos_release_semaphore(&queue->write_semaphore, size);
     return false;
   }
 
@@ -78,7 +78,7 @@ bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qo
 
   qos_release_mutex(&queue->mutex);
 
-  release_semaphore(&queue->write_semaphore, size);
+  qos_release_semaphore(&queue->write_semaphore, size);
 
   return true;
 }

@@ -20,17 +20,17 @@ struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
 mutex_t g_live_core_mutex;
 
-struct Task* g_delay_task;
-struct Task* g_producer_task1;
-struct Task* g_producer_task2;
-struct Task* g_consumer_task1;
-struct Task* g_consumer_task2;
-struct Task* g_update_cond_var_task;
-struct Task* g_observe_cond_var_task1;
-struct Task* g_observe_cond_var_task2;
-struct Task* g_wait_pwm_task;
-struct Task* g_live_core_mutex_task1;
-struct Task* g_live_core_mutex_task2;
+struct qos_task_t* g_delay_task;
+struct qos_task_t* g_producer_task1;
+struct qos_task_t* g_producer_task2;
+struct qos_task_t* g_consumer_task1;
+struct qos_task_t* g_consumer_task2;
+struct qos_task_t* g_update_cond_var_task;
+struct qos_task_t* g_observe_cond_var_task1;
+struct qos_task_t* g_observe_cond_var_task2;
+struct qos_task_t* g_wait_pwm_task;
+struct qos_task_t* g_live_core_mutex_task1;
+struct qos_task_t* g_live_core_mutex_task2;
 
 int g_observed_count;
 

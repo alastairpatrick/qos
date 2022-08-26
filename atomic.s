@@ -54,8 +54,8 @@ qos_atomic_compare_and_set_ptr:
         B       0f
 .SPACE  22 - (1f - 0f)
 qos_atomic_tick_count:
-0:      MRS     R3, MSP         // MSP points to Scheduler in thread mode
-        LDR     R0, [R3, #8]    // tick_count at byte offset 8 of Scheduler
+0:      MRS     R3, MSP         // MSP points to qos_scheduler_t in thread mode
+        LDR     R0, [R3, #8]    // tick_count at byte offset 8 of qos_scheduler_t
 1:      LDR     R1, [R3, #12]   // byte offset 24
         BX      LR
 

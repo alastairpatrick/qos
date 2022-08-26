@@ -16,7 +16,7 @@ critical_section_va_internal:
     BX      R3
 
 
-// void qos_set_current_critical_section_result(Scheduler*, int32_t result)
+// void qos_set_current_critical_section_result(qos_scheduler_t*, int32_t result)
 .GLOBAL qos_set_current_critical_section_result
 .TYPE qos_set_current_critical_section_result, %function
 qos_set_current_critical_section_result:

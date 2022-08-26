@@ -20,7 +20,7 @@ static wait_irq_scheduler_t g_schedulers[NUM_CORES];
 
 extern "C" {
   void qos_supervisor_wait_irq_handler();
-  void qos_supervisor_wait_irq(Scheduler* scheduler);
+  void qos_supervisor_wait_irq(qos_scheduler_t* scheduler);
 }
 
 static void init_scheduler() {
@@ -35,7 +35,7 @@ static void init_scheduler() {
   }
 }
 
-void STRIPED_RAM qos_supervisor_wait_irq(Scheduler* scheduler) {
+void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
@@ -64,14 +64,14 @@ void qos_init_wait_irq(int32_t irq) {
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
-static void STRIPED_RAM unblock_wait_irq(Task* task) {
+static void STRIPED_RAM unblock_wait_irq(qos_task_t* task) {
   // Disable interrupt.
   if (task->sync_ptr) {
     hw_clear_bits((io_rw_32*) task->sync_ptr, task->sync_state);
   }
 }
 
-qos_task_state_t STRIPED_RAM qos_wait_irq_critical(Scheduler* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
@@ -114,7 +114,7 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(Scheduler* scheduler, va_list
 
 bool STRIPED_RAM qos_wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
   assert(irq >= 0 && irq < MAX_IRQS);
-  check_tick_count(&timeout);
+  qos_normalize_tick_count(&timeout);
   assert(timeout != 0);
 
   return qos_critical_section_va(qos_wait_irq_critical, irq, enable, mask, timeout);

@@ -7,7 +7,7 @@
 qos_supervisor_wait_irq_handler:
         PUSH    {LR}
 
-        // void qos_supervisor_wait_irq(Scheduler* scheduler)
+        // void qos_supervisor_wait_irq(qos_scheduler_t* scheduler)
         ADD     R0, SP, #4
         BLX     qos_supervisor_wait_irq
 

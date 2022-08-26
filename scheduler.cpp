@@ -32,28 +32,28 @@ struct exception_frame_t {
 };
 
 struct supervisor_t {
-  char exception_stack[SUPERVISOR_SIZE - sizeof(Scheduler)];
-  Scheduler scheduler;
+  char exception_stack[SUPERVISOR_SIZE - sizeof(qos_scheduler_t)];
+  qos_scheduler_t scheduler;
 };
 
 static supervisor_t g_supervisors[NUM_CORES];
 bool g_qos_internal_are_schedulers_started;
 
 extern "C" {
-  void qos_internal_init_stacks(Scheduler* exception_stack_top);
+  void qos_internal_init_stacks(qos_scheduler_t* exception_stack_top);
   void qos_supervisor_svc_handler();
   void qos_supervisor_systick_handler();
   void qos_supervisor_pendsv_handler();
-  bool qos_supervisor_systick(Scheduler* scheduler);
-  void qos_supervisor_pendsv(Scheduler* scheduler);
-  Task* qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler* scheduler, Task* current);
+  bool qos_supervisor_systick(qos_scheduler_t* scheduler);
+  void qos_supervisor_pendsv(qos_scheduler_t* scheduler);
+  qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
 }
 
-static Scheduler& STRIPED_RAM get_scheduler() {
+static qos_scheduler_t& STRIPED_RAM get_scheduler() {
   return g_supervisors[get_core_num()].scheduler;
 }
 
-static void init_scheduler(Scheduler& scheduler) {
+static void init_scheduler(qos_scheduler_t& scheduler) {
   if (scheduler.ready.tasks.sentinel.next) {
     return;
   }
@@ -73,13 +73,13 @@ static void init_scheduler(Scheduler& scheduler) {
   scheduler.current_task = &scheduler.idle_task;
 }
 
-Task *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
+qos_task_t *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
   auto& ready = scheduler.ready;
 
-  Task* task = new Task;
+  qos_task_t* task = new qos_task_t;
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
   qos_internal_insert_scheduled_task(&ready, task);
@@ -122,7 +122,7 @@ static void core_start_scheduler() {
   *(io_rw_32 *)(PPB_BASE + M0PLUS_SHPR3_OFFSET) = 0xC0C00000;
 
   // Enable SysTick, processor clock, enable exception
-  systick_hw->rvr = QUANTUM;
+  systick_hw->rvr = QOS_QUANTUM;
   systick_hw->cvr = 0;
   systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
 
@@ -178,7 +178,7 @@ void STRIPED_RAM qos_ready_busy_blocked_tasks() {
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }
 
-static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
+static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler) {
   auto& busy_blocked = scheduler->busy_blocked;
 
   bool should_yield = false;
@@ -193,7 +193,7 @@ static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler
   return should_yield;
 }
 
-void STRIPED_RAM qos_supervisor_pendsv(Scheduler* scheduler) {
+void STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
   if (scheduler->ready_busy_blocked_tasks) {
     scheduler->ready_busy_blocked_tasks = false;
 
@@ -201,7 +201,7 @@ void STRIPED_RAM qos_supervisor_pendsv(Scheduler* scheduler) {
   }
 }
 
-bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
+bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   auto& delayed = scheduler->delayed;
   
   int64_t tick_count = scheduler->tick_count + 1;
@@ -220,7 +220,7 @@ bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
   return should_yield;
 }
 
-static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
+static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, void* p) {
   auto timeout = *(qos_tick_count_t*) p;
 
   auto current_task = scheduler->current_task;
@@ -240,11 +240,11 @@ void STRIPED_RAM qos_yield() {
 }
 
 void STRIPED_RAM qos_sleep(qos_tick_count_t timeout) {
-  check_tick_count(&timeout);
+  qos_normalize_tick_count(&timeout);
   qos_critical_section(sleep_critical, &timeout);
 }
 
-Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler* scheduler, Task* current_task) {
+qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current_task) {
   auto& ready = scheduler->ready;
   auto& busy_blocked = scheduler->busy_blocked;
   auto& pending = scheduler->pending;
@@ -283,7 +283,7 @@ Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Sche
   return current_task;
 }
 
-bool STRIPED_RAM qos_ready_task(Scheduler* scheduler, Task* task) {
+bool STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_t* task) {
   if (task->sync_unblock_task_proc) {
     task->sync_unblock_task_proc(task);
   }
@@ -299,7 +299,7 @@ bool STRIPED_RAM qos_ready_task(Scheduler* scheduler, Task* task) {
   return task->priority > scheduler->current_task->priority;
 }
 
-void STRIPED_RAM qos_set_critical_section_result(Scheduler* scheduler, Task* task, int32_t result) {
+void STRIPED_RAM qos_set_critical_section_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {
   if (task == scheduler->current_task) {
     qos_set_current_critical_section_result(scheduler, result);
   } else {
@@ -308,7 +308,7 @@ void STRIPED_RAM qos_set_critical_section_result(Scheduler* scheduler, Task* tas
   }
 }
 
-void STRIPED_RAM qos_delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t tick_count) {
+void STRIPED_RAM qos_delay_task(qos_scheduler_t* scheduler, qos_task_t* task, qos_tick_count_t tick_count) {
   if (tick_count == QOS_NO_TIMEOUT) {
     return;
   }
@@ -325,7 +325,7 @@ void STRIPED_RAM qos_delay_task(Scheduler* scheduler, Task* task, qos_tick_count
   splice(position, task);
 }
 
-void STRIPED_RAM qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task) {
+void STRIPED_RAM qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_task_t* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {

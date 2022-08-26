@@ -10,12 +10,12 @@ void qos_live_core_busy_block();
 bool qos_live_core_busy_block_until(absolute_time_t until);
 void qos_live_core_ready_busy_blocked_tasks();
 
-static qos_task_state_t busy_block_critical(Scheduler*, void*) {
+static qos_task_state_t busy_block_critical(qos_scheduler_t*, void*) {
   return TASK_BUSY_BLOCKED;
 }
 
 void qos_live_core_busy_block() {
-  if (are_schedulers_started()) {
+  if (qos_are_schedulers_started()) {
     qos_critical_section(busy_block_critical, nullptr);
   } else {
     __wfe();
@@ -23,7 +23,7 @@ void qos_live_core_busy_block() {
 }
 
 bool qos_live_core_busy_block_until(absolute_time_t until) {
-  if (are_schedulers_started()) {
+  if (qos_are_schedulers_started()) {
     qos_critical_section(busy_block_critical, nullptr);
     return time_reached(until);
   } else {
@@ -32,7 +32,7 @@ bool qos_live_core_busy_block_until(absolute_time_t until) {
 }
 
 void qos_live_core_ready_busy_blocked_tasks() {
-  if (are_schedulers_started()) {
+  if (qos_are_schedulers_started()) {
     qos_ready_busy_blocked_tasks();
   } else {
     __sev();

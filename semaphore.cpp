@@ -10,20 +10,20 @@
 #include <cassert>
 #include <cstdarg>
 
-Semaphore* new_semaphore(int32_t initial_count) {
+Semaphore* qos_new_semaphore(int32_t initial_count) {
   auto semaphore = new Semaphore;
-  init_semaphore(semaphore, initial_count);
+  qos_init_semaphore(semaphore, initial_count);
   return semaphore;
 }
 
-void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
+void qos_init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   assert(initial_count >= 0);
   semaphore->core = get_core_num();
   semaphore->count = initial_count;
   qos_init_dlist(&semaphore->waiting.tasks);
 }
 
-static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_tick_count_t);
@@ -49,10 +49,10 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* schedu
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick_count_t timeout) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
-  check_tick_count(&timeout);
+  qos_normalize_tick_count(&timeout);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
@@ -67,7 +67,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick
   return qos_critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
 }
 
-qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
 
@@ -97,7 +97,7 @@ qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va
   }
 }
 
-void STRIPED_RAM release_semaphore(Semaphore* semaphore, int32_t count) {
+void STRIPED_RAM qos_release_semaphore(Semaphore* semaphore, int32_t count) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
   qos_critical_section_va(release_semaphore_critical, semaphore, count);
