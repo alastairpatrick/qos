@@ -4,10 +4,10 @@
 #include "base.h"
 #include "scheduler.internal.h"
 
-typedef struct Semaphore {
+typedef struct qos_semaphore_t {
   int8_t core;
   qos_atomic32_t count;
   qos_task_scheduling_dlist_t waiting;
-} Semaphore;
+} qos_semaphore_t;
 
 #endif  // QOS_SEMAPHORE_INTERNAL_H

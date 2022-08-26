@@ -10,13 +10,13 @@
 #include <cassert>
 #include <cstdarg>
 
-Semaphore* qos_new_semaphore(int32_t initial_count) {
-  auto semaphore = new Semaphore;
+qos_semaphore_t* qos_new_semaphore(int32_t initial_count) {
+  auto semaphore = new qos_semaphore_t;
   qos_init_semaphore(semaphore, initial_count);
   return semaphore;
 }
 
-void qos_init_semaphore(Semaphore* semaphore, int32_t initial_count) {
+void qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
   assert(initial_count >= 0);
   semaphore->core = get_core_num();
   semaphore->count = initial_count;
@@ -24,7 +24,7 @@ void qos_init_semaphore(Semaphore* semaphore, int32_t initial_count) {
 }
 
 static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
-  auto semaphore = va_arg(args, Semaphore*);
+  auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_tick_count_t);
 
@@ -49,7 +49,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_tick_count_t timeout) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
   qos_normalize_tick_count(&timeout);
@@ -68,7 +68,7 @@ bool STRIPED_RAM qos_acquire_semaphore(Semaphore* semaphore, int32_t count, qos_
 }
 
 static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
-  auto semaphore = va_arg(args, Semaphore*);
+  auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
 
   semaphore->count += count;
@@ -97,7 +97,7 @@ static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* 
   }
 }
 
-void STRIPED_RAM qos_release_semaphore(Semaphore* semaphore, int32_t count) {
+void STRIPED_RAM qos_release_semaphore(qos_semaphore_t* semaphore, int32_t count) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
   qos_critical_section_va(release_semaphore_critical, semaphore, count);

@@ -7,8 +7,8 @@
 QOS_BEGIN_EXTERN_C
 
 typedef struct qos_queue_t {
-  Semaphore read_semaphore;
-  Semaphore write_semaphore;
+  qos_semaphore_t read_semaphore;
+  qos_semaphore_t write_semaphore;
   qos_mutex_t mutex;
   int32_t capacity;
   int32_t read_idx;
