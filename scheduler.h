@@ -15,19 +15,10 @@
 
 BEGIN_EXTERN_C
 
-typedef enum TaskState {
-  TASK_RUNNING,
-  TASK_READY,
-  TASK_BUSY_BLOCKED,
-  TASK_SYNC_BLOCKED,
-} TaskState;
-
-typedef void (*TaskEntry)();
-
 struct Scheduler;
 
-struct Task* new_task(core_t core, uint8_t priority, TaskEntry entry, int32_t stack_size);
-void start_schedulers();
+struct Task* new_task(uint8_t priority, entry_t entry, int32_t stack_size);
+void start_schedulers(entry_t init_core0, entry_t init_core1);
 
 static inline bool are_schedulers_started() {
   extern bool g_internal_are_schedulers_started;

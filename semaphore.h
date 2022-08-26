@@ -5,8 +5,8 @@
 
 BEGIN_EXTERN_C
 
-struct Semaphore* new_semaphore(core_t core, int32_t initial_count);
-void init_semaphore(struct Semaphore* semaphore, core_t core, int32_t initial_count);
+struct Semaphore* new_semaphore(int32_t initial_count);
+void init_semaphore(struct Semaphore* semaphore, int32_t initial_count);
 bool acquire_semaphore(struct Semaphore* semaphore, int32_t count, tick_count_t timeout);
 void release_semaphore(struct Semaphore* semaphore, int32_t count);
 

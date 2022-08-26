@@ -15,14 +15,14 @@ enum MutexState {
   ACQUIRED_CONTENDED,
 };
 
-Mutex* new_mutex(core_t core) {
+Mutex* new_mutex() {
   auto mutex = new Mutex;
-  init_mutex(mutex, core);
+  init_mutex(mutex);
   return mutex;
 }
 
-void init_mutex(Mutex* mutex, core_t core) {
-  mutex->core = core;
+void init_mutex(Mutex* mutex) {
+  mutex->core = get_core_num();
   mutex->owner_state = AVAILABLE;
   init_dlist(&mutex->waiting.tasks);
 }

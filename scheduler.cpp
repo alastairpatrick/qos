@@ -27,7 +27,7 @@ struct ExceptionFrame {
   int32_t r3;
   int32_t r12;
   void* lr;
-  TaskEntry return_addr;
+  entry_t return_addr;
   int32_t xpsr;
 };
 
@@ -59,7 +59,7 @@ static void init_scheduler(Scheduler& scheduler) {
   }
 
   scheduler.tick_count = INT64_MIN;
-  scheduler.core = (core_t) get_core_num();
+  scheduler.core = get_core_num();
 
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
@@ -68,13 +68,13 @@ static void init_scheduler(Scheduler& scheduler) {
 
   init_dnode(&scheduler.idle_task.scheduling_node);
   init_dnode(&scheduler.idle_task.timeout_node);
-  scheduler.idle_task.core = (core_t) get_core_num();
+  scheduler.idle_task.core = get_core_num();
   scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
 }
 
-Task *new_task(core_t core, uint8_t priority, TaskEntry entry, int32_t stack_size) {
-  auto& scheduler = g_supervisors[core].scheduler;
+Task *new_task(uint8_t priority, entry_t entry, int32_t stack_size) {
+  auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
   auto& ready = scheduler.ready;
@@ -84,7 +84,7 @@ Task *new_task(core_t core, uint8_t priority, TaskEntry entry, int32_t stack_siz
   init_dnode(&task->timeout_node);
   internal_insert_scheduled_task(&ready, task);
 
-  task->core = core;
+  task->core = get_core_num();
   task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
@@ -136,10 +136,38 @@ static void core_start_scheduler() {
   }
 }
 
-void start_schedulers() {
+static volatile entry_t g_init_core1;
+
+static void start_core1_scheduler() {
+  g_init_core1();
   g_internal_are_schedulers_started = true;
-  multicore_launch_core1(core_start_scheduler);
   core_start_scheduler();
+}
+
+void start_schedulers(entry_t init_core0, entry_t init_core1) {
+  if (get_core_num() == 0) {
+    if (init_core0) {
+      init_core0();
+    }
+
+    if (init_core1) {
+      g_init_core1 = init_core1;
+      multicore_launch_core1(start_core1_scheduler);
+      while (!g_internal_are_schedulers_started) {}
+    } else {
+      g_internal_are_schedulers_started = true;
+    }
+
+    if (init_core0) {
+      core_start_scheduler();
+    }
+  } else {
+    assert(!init_core0);
+    if (init_core1) {
+      init_core1();
+      core_start_scheduler();
+    }
+  }
 }
 
 void STRIPED_RAM ready_busy_blocked_tasks() {

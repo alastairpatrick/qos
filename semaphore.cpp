@@ -10,15 +10,15 @@
 #include <cassert>
 #include <cstdarg>
 
-Semaphore* new_semaphore(core_t core, int32_t initial_count) {
+Semaphore* new_semaphore(int32_t initial_count) {
   auto semaphore = new Semaphore;
-  init_semaphore(semaphore, core, initial_count);
+  init_semaphore(semaphore, initial_count);
   return semaphore;
 }
 
-void init_semaphore(Semaphore* semaphore, core_t core, int32_t initial_count) {
+void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   assert(initial_count >= 0);
-  semaphore->core = core;
+  semaphore->core = get_core_num();
   semaphore->count = initial_count;
   init_dlist(&semaphore->waiting.tasks);
 }

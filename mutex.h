@@ -7,8 +7,8 @@
 
 BEGIN_EXTERN_C
 
-struct Mutex* new_mutex(core_t core);
-void init_mutex(struct Mutex* mutex, core_t core);
+struct Mutex* new_mutex();
+void init_mutex(struct Mutex* mutex);
 bool acquire_mutex(struct Mutex* mutex, tick_count_t timeout);
 void release_mutex(struct Mutex* mutex);
 bool owns_mutex(struct Mutex* mutex);

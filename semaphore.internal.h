@@ -5,7 +5,7 @@
 #include "scheduler.internal.h"
 
 typedef struct Semaphore {
-  core_t core;
+  int8_t core;
   atomic32_t count;
   TaskSchedulingDList waiting;
 } Semaphore;

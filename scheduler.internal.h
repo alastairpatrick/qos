@@ -24,9 +24,9 @@ typedef struct Task {
   int32_t r10;
   int32_t r11;
 
-  core_t core;
+  int8_t core;
   int16_t priority;
-  TaskEntry entry;
+  entry_t entry;
   int32_t* stack;
   int32_t stack_size;
 
@@ -59,7 +59,7 @@ typedef struct Scheduler {
   // Must be second field of Scheduler so that atomic_tick_count() addresses it correctly.
   volatile int64_t tick_count;
 
-  core_t core;
+  int8_t core;
   Task idle_task;
   TaskSchedulingDList ready;         // Always in descending priority order
   TaskSchedulingDList busy_blocked;  // Always in descending priority order

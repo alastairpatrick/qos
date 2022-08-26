@@ -146,41 +146,39 @@ void init_pwm_interrupt() {
   init_wait_irq(PWM_IRQ_WRAP);
 }
 
+void init_core0() {
+  g_queue = new_queue(100);
+
+  g_delay_task = new_task(100, do_delay_task, 1024);
+  g_producer_task1 = new_task(1, do_producer_task1, 1024);
+  g_consumer_task1 = new_task(1, do_consumer_task1, 1024);
+  g_producer_task2 = new_task(1, do_producer_task2, 1024);
+  g_consumer_task2 = new_task(1, do_consumer_task2, 1024);
+
+  g_live_core_mutex_task1 = new_task(100, do_live_core_mutex_task1, 1024);
+}
+
+void init_core1() {
+  init_pwm_interrupt();
+  
+  g_mutex = new_mutex();
+  g_cond_var = new_condition_var(g_mutex);
+
+  g_observe_cond_var_task1 = new_task(1, do_observe_cond_var_task1, 1024);
+  g_observe_cond_var_task2 = new_task(1, do_observe_cond_var_task2, 1024);
+  g_update_cond_var_task = new_task(1, do_update_cond_var_task, 1024);
+  g_wait_pwm_task = new_task(1, do_wait_pwm_wrap, 1024);
+
+  g_live_core_mutex_task2 = new_task(100, do_live_core_mutex_task2, 1024);
+}
+
 int main() {
   alarm_pool_init_default();
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
-  // Both cores
-
   mutex_init(&g_live_core_mutex);
 
-  // Core 0
-
-  init_pwm_interrupt();
-  
-  g_queue = new_queue(CORE_0, 100);
-
-  g_delay_task = new_task(CORE_0, 100, do_delay_task, 1024);
-  g_producer_task1 = new_task(CORE_0, 1, do_producer_task1, 1024);
-  g_consumer_task1 = new_task(CORE_0, 1, do_consumer_task1, 1024);
-  g_producer_task2 = new_task(CORE_0, 1, do_producer_task2, 1024);
-  g_consumer_task2 = new_task(CORE_0, 1, do_consumer_task2, 1024);
-  g_wait_pwm_task = new_task(CORE_0, 1, do_wait_pwm_wrap, 1024);
-
-  g_live_core_mutex_task1 = new_task(CORE_0, 100, do_live_core_mutex_task1, 1024);
-
-  // Core 1
-
-  g_mutex = new_mutex(CORE_1);
-  g_cond_var = new_condition_var(g_mutex);
-
-  g_observe_cond_var_task1 = new_task(CORE_1, 1, do_observe_cond_var_task1, 1024);
-  g_observe_cond_var_task2 = new_task(CORE_1, 1, do_observe_cond_var_task2, 1024);
-  g_update_cond_var_task = new_task(CORE_1, 1, do_update_cond_var_task, 1024);
-
-  g_live_core_mutex_task2 = new_task(CORE_1, 100, do_live_core_mutex_task2, 1024);
-
-  start_schedulers();
+  start_schedulers(init_core0, init_core1);
 
   // Not reached.
   assert(false);
