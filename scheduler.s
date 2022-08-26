@@ -84,7 +84,7 @@ rtos_supervisor_pendsv_handler:
         BLX     R3
 
 context_switch_ready:
-        // R0 becomes the first parameter of rtos_internal_switch_tasks.
+        // R0 becomes the first parameter of rtos_supervisor_context_switch.
         MOVS    R0, #task_ready
 
 context_switch:
