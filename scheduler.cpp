@@ -46,7 +46,7 @@ extern "C" {
   void qos_supervisor_pendsv_handler();
   bool qos_supervisor_systick(Scheduler* scheduler);
   void qos_supervisor_pendsv(Scheduler* scheduler);
-  Task* qos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current);
+  Task* qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler* scheduler, Task* current);
 }
 
 static Scheduler& STRIPED_RAM get_scheduler() {
@@ -220,7 +220,7 @@ bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
   return should_yield;
 }
 
-static TaskState STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
+static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
   auto timeout = *(tick_count_t*) p;
 
   auto current_task = scheduler->current_task;
@@ -244,7 +244,7 @@ void STRIPED_RAM sleep(tick_count_t timeout) {
   critical_section(sleep_critical, &timeout);
 }
 
-Task* STRIPED_RAM qos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current_task) {
+Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler* scheduler, Task* current_task) {
   auto& ready = scheduler->ready;
   auto& busy_blocked = scheduler->busy_blocked;
   auto& pending = scheduler->pending;

@@ -39,7 +39,7 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
   return int32_t(owner) | state;
 }
 
-static TaskState STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_list args) {
   auto mutex = va_arg(args, Mutex*);
   auto timeout = va_arg(args, tick_count_t);
   
@@ -85,7 +85,7 @@ bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
   return critical_section_va(acquire_mutex_critical, mutex, timeout);
 }
 
-TaskState STRIPED_RAM release_mutex_critical(Scheduler* scheduler, void* m) {
+qos_task_state_t STRIPED_RAM release_mutex_critical(Scheduler* scheduler, void* m) {
   auto mutex = (Mutex*) m;
 
   auto current_task = scheduler->current_task;
@@ -151,7 +151,7 @@ void acquire_condition_var(struct ConditionVar* var, tick_count_t timeout) {
   acquire_mutex(var->mutex, timeout);
 }
 
-TaskState wait_condition_var_critical(Scheduler* scheduler, va_list args) {
+qos_task_state_t wait_condition_var_critical(Scheduler* scheduler, va_list args) {
   auto var = va_arg(args, ConditionVar*);
   auto timeout = va_arg(args, tick_count_t);
 
@@ -179,7 +179,7 @@ void release_condition_var(ConditionVar* var) {
   release_mutex(var->mutex);
 }
 
-TaskState release_and_signal_condition_var_critical(Scheduler* scheduler, void* v) {
+qos_task_state_t release_and_signal_condition_var_critical(Scheduler* scheduler, void* v) {
   auto var = (ConditionVar*) v;
 
   auto current_task = scheduler->current_task;
@@ -207,7 +207,7 @@ void release_and_signal_condition_var(ConditionVar* var) {
   critical_section(release_and_signal_condition_var_critical, var);
 }
 
-TaskState release_and_broadcast_condition_var_critical(Scheduler* scheduler, void* v) {
+qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* scheduler, void* v) {
   auto var = (ConditionVar*) v;
 
   auto current_task = scheduler->current_task;

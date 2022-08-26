@@ -39,8 +39,8 @@
 
 BEGIN_EXTERN_C
 
-typedef TaskState (*CriticalSectionProc)(struct Scheduler* scheduler, void*);
-typedef TaskState (*CriticalSectionVAProc)(struct Scheduler* scheduler, va_list args);
+typedef qos_task_state_t (*CriticalSectionProc)(struct Scheduler* scheduler, void*);
+typedef qos_task_state_t (*CriticalSectionVAProc)(struct Scheduler* scheduler, va_list args);
 
 int32_t critical_section(CriticalSectionProc proc, void*);
 

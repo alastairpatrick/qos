@@ -103,7 +103,7 @@ context_switch:
         MOV     R7, R11
         STM     R1!, {R4-R7}
 
-        // Task* qos_supervisor_context_switch(TaskState new_state, Scheduler*, Task* current);
+        // Task* qos_supervisor_context_switch(qos_task_state_t new_state, Scheduler*, Task* current);
         ADD     R1, SP, #4
         BL      qos_supervisor_context_switch
 

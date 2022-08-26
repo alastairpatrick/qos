@@ -23,7 +23,7 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   init_dlist(&semaphore->waiting.tasks);
 }
 
-static TaskState STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, tick_count_t);
@@ -67,7 +67,7 @@ bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_cou
   return critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
 }
 
-TaskState STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
 

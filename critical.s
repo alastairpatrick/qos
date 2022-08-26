@@ -4,7 +4,7 @@
 
 .EQU    r0_offset, 0
 
-// TaskState STRIPED_RAM critical_section(CriticalSectionProc proc, void* ctx)
+// qos_task_state_t STRIPED_RAM critical_section(CriticalSectionProc proc, void* ctx)
 .GLOBAL critical_section
 .GLOBAL critical_section_va_internal
 .TYPE critical_section, %function

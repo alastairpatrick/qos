@@ -10,7 +10,7 @@ void live_core_busy_block();
 bool live_core_busy_block_until(absolute_time_t until);
 void live_core_ready_busy_blocked_tasks();
 
-static TaskState busy_block_critical(Scheduler*, void*) {
+static qos_task_state_t busy_block_critical(Scheduler*, void*) {
   return TASK_BUSY_BLOCKED;
 }
 

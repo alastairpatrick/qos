@@ -71,7 +71,7 @@ static void STRIPED_RAM unblock_wait_irq(Task* task) {
   }
 }
 
-TaskState STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
