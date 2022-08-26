@@ -11,11 +11,11 @@
 #include "hardware/structs/scb.h"
 
 extern "C" {
-  void qos_supervisor_wait_irq_handler();
-  void qos_supervisor_wait_irq(qos_scheduler_t* scheduler);
+  void qos_supervisor_await_irq_handler();
+  void qos_supervisor_await_irq(qos_scheduler_t* scheduler);
 }
 
-void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
+void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
@@ -35,21 +35,21 @@ void STRIPED_RAM qos_supervisor_wait_irq(qos_scheduler_t* scheduler) {
   }
 }
 
-void qos_init_wait_irq(int32_t irq) {
+void qos_init_await_irq(int32_t irq) {
   assert(irq >= 0 && irq < QOS_MAX_IRQS);
 
-  irq_set_exclusive_handler(irq, qos_supervisor_wait_irq_handler);
+  irq_set_exclusive_handler(irq, qos_supervisor_await_irq_handler);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
-static void STRIPED_RAM unblock_wait_irq(qos_task_t* task) {
+static void STRIPED_RAM unblock_await_irq(qos_task_t* task) {
   // Disable interrupt.
   if (task->sync_ptr) {
     hw_clear_bits((io_rw_32*) task->sync_ptr, task->sync_state);
   }
 }
 
-qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM qos_await_irq_critical(qos_scheduler_t* scheduler, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
@@ -82,7 +82,7 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, v
 
   current_task->sync_ptr = enable;
   current_task->sync_state = mask;
-  current_task->sync_unblock_task_proc = unblock_wait_irq;
+  current_task->sync_unblock_task_proc = unblock_await_irq;
 
   qos_internal_insert_scheduled_task(&awaiting_irq[irq], current_task);
   qos_delay_task(scheduler, current_task, timeout);
@@ -90,10 +90,10 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(qos_scheduler_t* scheduler, v
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
   assert(irq >= 0 && irq < QOS_MAX_IRQS);
   qos_normalize_tick_count(&timeout);
   assert(timeout != 0);
 
-  return qos_critical_section_va(qos_wait_irq_critical, irq, enable, mask, timeout);
+  return qos_critical_section_va(qos_await_irq_critical, irq, enable, mask, timeout);
 }

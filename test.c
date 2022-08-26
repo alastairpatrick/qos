@@ -117,7 +117,7 @@ void do_observe_cond_var_task2() {
 
 void do_wait_pwm_wrap() {
   for (;;) {
-    qos_wait_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
+    qos_await_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
     pwm_clear_irq(PWM_SLICE);
   }
 }
@@ -143,7 +143,7 @@ void init_pwm_interrupt() {
   pwm_config_set_clkdiv_int(&cfg, 255);
   pwm_config_set_wrap(&cfg, 65535);
   pwm_init(PWM_SLICE, &cfg, true);
-  qos_init_wait_irq(PWM_IRQ_WRAP);
+  qos_init_await_irq(PWM_IRQ_WRAP);
 }
 
 void init_core0() {
