@@ -43,8 +43,8 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* schedu
   }
 
   current_task->sync_state = count;
-  internal_insert_scheduled_task(&semaphore->waiting, current_task);
-  delay_task(scheduler, current_task, timeout);
+  qos_internal_insert_scheduled_task(&semaphore->waiting, current_task);
+  qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -84,7 +84,7 @@ qos_task_state_t STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va
       position = remove(position);
 
       qos_set_critical_section_result(scheduler, task, true);
-      should_yield |= ready_task(scheduler, task);
+      should_yield |= qos_ready_task(scheduler, task);
     } else {
       ++position;
     }

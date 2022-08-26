@@ -69,7 +69,7 @@ typedef struct Scheduler {
 } Scheduler;
 
 // Insert task into linked list, maintaining descending priority order.
-void internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task);
+void qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task);
 
 #ifdef __cplusplus
 

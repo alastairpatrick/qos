@@ -92,7 +92,7 @@ void qos_live_core_ready_busy_blocked_tasks();
 #endif
 
 #ifndef sync_internal_yield_until_before
-/*! \brief   yield to other processing until some time before the requested time
+/*! \brief   qos_yield to other processing until some time before the requested time
  *  \ingroup lock_core
  *
  * This method is provided for cases where the caller has no useful work to do

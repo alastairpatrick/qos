@@ -43,21 +43,21 @@ int64_t tick_count;
 void do_delay_task() {
   for(;;) {
     tick_count = qos_atomic_tick_count();
-    sleep(1000);
+    qos_sleep(1000);
   }
 }
 
 void do_producer_task1() {
   for(;;) {
     qos_write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
-    sleep(10);
+    qos_sleep(10);
   }
 }
 
 void do_producer_task2() {
   for(;;) {
     qos_write_queue(g_queue, "world", 6, 100);
-    sleep(10);
+    qos_sleep(10);
   }
 }
 
@@ -85,7 +85,7 @@ void do_update_cond_var_task() {
     qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
     ++g_observed_count;
     qos_release_and_broadcast_condition_var(g_cond_var);
-    sleep(10);
+    qos_sleep(10);
   }
 }
 
@@ -98,7 +98,7 @@ void do_observe_cond_var_task1() {
     //printf("count is odd: %d\n", g_observed_count);
     qos_release_condition_var(g_cond_var);
 
-    sleep(5);
+    qos_sleep(5);
   }
 }
 
@@ -111,7 +111,7 @@ void do_observe_cond_var_task2() {
     //printf("count is even: %d\n", g_observed_count);
     qos_release_condition_var(g_cond_var);
 
-    sleep(5);
+    qos_sleep(5);
   }
 }
 
@@ -149,13 +149,13 @@ void init_pwm_interrupt() {
 void init_core0() {
   g_queue = qos_new_queue(100);
 
-  g_delay_task = new_task(100, do_delay_task, 1024);
-  g_producer_task1 = new_task(1, do_producer_task1, 1024);
-  g_consumer_task1 = new_task(1, do_consumer_task1, 1024);
-  g_producer_task2 = new_task(1, do_producer_task2, 1024);
-  g_consumer_task2 = new_task(1, do_consumer_task2, 1024);
+  g_delay_task = qos_new_task(100, do_delay_task, 1024);
+  g_producer_task1 = qos_new_task(1, do_producer_task1, 1024);
+  g_consumer_task1 = qos_new_task(1, do_consumer_task1, 1024);
+  g_producer_task2 = qos_new_task(1, do_producer_task2, 1024);
+  g_consumer_task2 = qos_new_task(1, do_consumer_task2, 1024);
 
-  g_live_core_mutex_task1 = new_task(100, do_live_core_mutex_task1, 1024);
+  g_live_core_mutex_task1 = qos_new_task(100, do_live_core_mutex_task1, 1024);
 }
 
 void init_core1() {
@@ -164,12 +164,12 @@ void init_core1() {
   g_mutex = qos_new_mutex();
   g_cond_var = qos_new_condition_var(g_mutex);
 
-  g_observe_cond_var_task1 = new_task(1, do_observe_cond_var_task1, 1024);
-  g_observe_cond_var_task2 = new_task(1, do_observe_cond_var_task2, 1024);
-  g_update_cond_var_task = new_task(1, do_update_cond_var_task, 1024);
-  g_wait_pwm_task = new_task(1, do_wait_pwm_wrap, 1024);
+  g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
+  g_observe_cond_var_task2 = qos_new_task(1, do_observe_cond_var_task2, 1024);
+  g_update_cond_var_task = qos_new_task(1, do_update_cond_var_task, 1024);
+  g_wait_pwm_task = qos_new_task(1, do_wait_pwm_wrap, 1024);
 
-  g_live_core_mutex_task2 = new_task(100, do_live_core_mutex_task2, 1024);
+  g_live_core_mutex_task2 = qos_new_task(100, do_live_core_mutex_task2, 1024);
 }
 
 int main() {
@@ -178,7 +178,7 @@ int main() {
 
   mutex_init(&g_live_core_mutex);
 
-  start_schedulers(2, (qos_entry_t[]) { init_core0, init_core1 });
+  qos_start_schedulers(2, (qos_entry_t[]) { init_core0, init_core1 });
 
   // Not reached.
   assert(false);

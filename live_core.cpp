@@ -33,7 +33,7 @@ bool qos_live_core_busy_block_until(absolute_time_t until) {
 
 void qos_live_core_ready_busy_blocked_tasks() {
   if (are_schedulers_started()) {
-    ready_busy_blocked_tasks();
+    qos_ready_busy_blocked_tasks();
   } else {
     __sev();
   }

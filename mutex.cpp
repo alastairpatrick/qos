@@ -61,8 +61,8 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler,
 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
-  internal_insert_scheduled_task(&mutex->waiting, current_task);
-  delay_task(scheduler, current_task, timeout);
+  qos_internal_insert_scheduled_task(&mutex->waiting, current_task);
+  qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -103,7 +103,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_critical(Scheduler* scheduler,
 
   auto resumed = &*begin(mutex->waiting);
   qos_set_critical_section_result(scheduler, resumed, true);
-  bool should_yield = ready_task(scheduler, resumed);
+  bool should_yield = qos_ready_task(scheduler, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(resumed, state);
@@ -161,8 +161,8 @@ qos_task_state_t qos_wait_condition_var_critical(Scheduler* scheduler, va_list a
 
   release_mutex_critical(scheduler, var->mutex);
 
-  internal_insert_scheduled_task(&var->waiting, current_task);
-  delay_task(scheduler, current_task, timeout);
+  qos_internal_insert_scheduled_task(&var->waiting, current_task);
+  qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
@@ -191,7 +191,7 @@ static qos_task_state_t release_and_signal_condition_var_critical(Scheduler* sch
     // ready. Rather it is moved from the condition variable's waiting list to
     // the mutex's.
     auto signalled_task = &*signalled_it;
-    internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
+    qos_internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
     
     // Both the current task and the signalled task are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
@@ -218,7 +218,7 @@ static qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* 
     // The current task owns the mutex so the signalled task is not immediately
     // ready. Rather it is moved from the condition variable's waiting list to
     // the mutex's.
-    internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
+    qos_internal_insert_scheduled_task(&var->mutex->waiting, signalled_task);
     
     // Both the current task and one or more signalled tasks are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);

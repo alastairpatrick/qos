@@ -47,7 +47,7 @@ void STRIPED_RAM qos_supervisor_wait_irq(Scheduler* scheduler) {
 
   bool should_preempt = false;
   while (!empty(begin(tasks))) {
-    should_preempt |= ready_task(scheduler, &*begin(tasks));
+    should_preempt |= qos_ready_task(scheduler, &*begin(tasks));
   }
 
   if (should_preempt) {
@@ -106,8 +106,8 @@ qos_task_state_t STRIPED_RAM qos_wait_irq_critical(Scheduler* scheduler, va_list
   current_task->sync_state = mask;
   current_task->sync_unblock_task_proc = unblock_wait_irq;
 
-  internal_insert_scheduled_task(&tasks_by_irq[irq], current_task);
-  delay_task(scheduler, current_task, timeout);
+  qos_internal_insert_scheduled_task(&tasks_by_irq[irq], current_task);
+  qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }

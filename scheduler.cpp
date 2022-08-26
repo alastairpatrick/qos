@@ -18,9 +18,9 @@
 #include "pico/multicore.h"
 #include "pico/platform.h"
 
-const int SUPERVISOR_SIZE = 1024;
+const static int SUPERVISOR_SIZE = 1024;
 
-struct ExceptionFrame {
+struct exception_frame_t {
   int32_t r0;
   int32_t r1;
   int32_t r2;
@@ -31,13 +31,13 @@ struct ExceptionFrame {
   int32_t xpsr;
 };
 
-struct Supervisor {
+struct supervisor_t {
   char exception_stack[SUPERVISOR_SIZE - sizeof(Scheduler)];
   Scheduler scheduler;
 };
 
-Supervisor g_supervisors[NUM_CORES];
-bool g_internal_are_schedulers_started;
+static supervisor_t g_supervisors[NUM_CORES];
+bool g_qos_internal_are_schedulers_started;
 
 extern "C" {
   void qos_internal_init_stacks(Scheduler* exception_stack_top);
@@ -73,7 +73,7 @@ static void init_scheduler(Scheduler& scheduler) {
   scheduler.current_task = &scheduler.idle_task;
 }
 
-Task *new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
+Task *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
@@ -82,7 +82,7 @@ Task *new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   Task* task = new Task;
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
-  internal_insert_scheduled_task(&ready, task);
+  qos_internal_insert_scheduled_task(&ready, task);
 
   task->core = get_core_num();
   task->entry = entry;
@@ -93,8 +93,8 @@ Task *new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   task->sync_state = 0;
   task->sync_unblock_task_proc = 0;
 
-  task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(ExceptionFrame);
-  ExceptionFrame* frame = (ExceptionFrame*) task->sp;
+  task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(exception_frame_t);
+  exception_frame_t* frame = (exception_frame_t*) task->sp;
 
   frame->lr = 0;
   frame->return_addr = entry;
@@ -126,9 +126,9 @@ static void core_start_scheduler() {
   systick_hw->cvr = 0;
   systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
 
-  g_internal_are_schedulers_started = true;
+  g_qos_internal_are_schedulers_started = true;
 
-  yield();
+  qos_yield();
 
   // Become the idle task.
   for (;;) {
@@ -140,11 +140,11 @@ static volatile qos_entry_t g_init_core1;
 
 static void start_core1_scheduler() {
   g_init_core1();
-  g_internal_are_schedulers_started = true;
+  g_qos_internal_are_schedulers_started = true;
   core_start_scheduler();
 }
 
-void start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
+void qos_start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
   assert(num_cores >= 0 && num_cores <= NUM_CORES);
 
   if (get_core_num() == 0) {
@@ -155,9 +155,9 @@ void start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
     if (init_procs[1]) {
       g_init_core1 = init_procs[1];
       multicore_launch_core1(start_core1_scheduler);
-      while (!g_internal_are_schedulers_started) {}
+      while (!g_qos_internal_are_schedulers_started) {}
     } else {
-      g_internal_are_schedulers_started = true;
+      g_qos_internal_are_schedulers_started = true;
     }
 
     if (init_procs[0]) {
@@ -172,13 +172,13 @@ void start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
   }
 }
 
-void STRIPED_RAM ready_busy_blocked_tasks() {
+void STRIPED_RAM qos_ready_busy_blocked_tasks() {
   auto& scheduler = get_scheduler();
   scheduler.ready_busy_blocked_tasks = true;
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }
 
-bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
+static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
   auto& busy_blocked = scheduler->busy_blocked;
 
   bool should_yield = false;
@@ -187,7 +187,7 @@ bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= ready_task(scheduler, task);
+    should_yield |= qos_ready_task(scheduler, task);
   }
 
   return should_yield;
@@ -214,7 +214,7 @@ bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= ready_task(scheduler, task);
+    should_yield |= qos_ready_task(scheduler, task);
   }
 
   return should_yield;
@@ -229,17 +229,17 @@ static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p
     return TASK_READY;
   }
 
-  delay_task(scheduler, current_task, timeout);
+  qos_delay_task(scheduler, current_task, timeout);
 
   return TASK_SYNC_BLOCKED;
 }
 
-void STRIPED_RAM yield() {
+void STRIPED_RAM qos_yield() {
   qos_tick_count_t timeout = 0;
   qos_critical_section(sleep_critical, &timeout);
 }
 
-void STRIPED_RAM sleep(qos_tick_count_t timeout) {
+void STRIPED_RAM qos_sleep(qos_tick_count_t timeout) {
   check_tick_count(&timeout);
   qos_critical_section(sleep_critical, &timeout);
 }
@@ -262,7 +262,7 @@ Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Sche
         // Fast path for common case.
         splice(end(ready), current_task);
       } else {
-        internal_insert_scheduled_task(&ready, current_task);
+        qos_internal_insert_scheduled_task(&ready, current_task);
       }
     } else {
       assert(new_state == TASK_SYNC_BLOCKED);
@@ -283,7 +283,7 @@ Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Sche
   return current_task;
 }
 
-bool STRIPED_RAM ready_task(Scheduler* scheduler, Task* task) {
+bool STRIPED_RAM qos_ready_task(Scheduler* scheduler, Task* task) {
   if (task->sync_unblock_task_proc) {
     task->sync_unblock_task_proc(task);
   }
@@ -294,7 +294,7 @@ bool STRIPED_RAM ready_task(Scheduler* scheduler, Task* task) {
 
   qos_remove_dnode(&task->timeout_node);
 
-  internal_insert_scheduled_task(&scheduler->ready, task);
+  qos_internal_insert_scheduled_task(&scheduler->ready, task);
 
   return task->priority > scheduler->current_task->priority;
 }
@@ -303,12 +303,12 @@ void STRIPED_RAM qos_set_critical_section_result(Scheduler* scheduler, Task* tas
   if (task == scheduler->current_task) {
     qos_set_current_critical_section_result(scheduler, result);
   } else {
-    ExceptionFrame* frame = (ExceptionFrame*) task->sp;
+    exception_frame_t* frame = (exception_frame_t*) task->sp;
     frame->r0 = result;
   }
 }
 
-void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t tick_count) {
+void STRIPED_RAM qos_delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t tick_count) {
   if (tick_count == QOS_NO_TIMEOUT) {
     return;
   }
@@ -325,7 +325,7 @@ void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t t
   splice(position, task);
 }
 
-void STRIPED_RAM internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task) {
+void STRIPED_RAM qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, Task* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {
