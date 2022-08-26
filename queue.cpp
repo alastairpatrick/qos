@@ -8,13 +8,13 @@
 #include <algorithm>
 #include <cstring>
 
-Queue* new_queue(int32_t capacity) {
-  auto queue = new Queue;
-  init_queue(queue, new char[capacity], capacity);
+qos_queue_t* qos_new_queue(int32_t capacity) {
+  auto queue = new qos_queue_t;
+  qos_init_queue(queue, new char[capacity], capacity);
   return queue;
 }
 
-void init_queue(Queue* queue, void* buffer, int32_t capacity) {
+void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   assert(capacity > 0);
   
   init_semaphore(&queue->read_semaphore, 0);
@@ -27,7 +27,7 @@ void init_queue(Queue* queue, void* buffer, int32_t capacity) {
   queue->buffer = (char*) buffer;
 }
 
-bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_tick_count_t timeout) {
   check_tick_count(&timeout);
 
   if (!acquire_semaphore(&queue->write_semaphore, size, timeout)) {
@@ -55,7 +55,7 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, qos_t
   return true;
 }
 
-bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_tick_count_t timeout) {
   check_tick_count(&timeout);
 
   if (!acquire_semaphore(&queue->read_semaphore, size, timeout)) {

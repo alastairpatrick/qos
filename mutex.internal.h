@@ -4,15 +4,15 @@
 #include "base.h"
 #include "scheduler.internal.h"
 
-typedef struct Mutex {
+typedef struct qos_mutex_t {
   int8_t core;
   qos_atomic32_t owner_state;
   qos_task_scheduling_dlist_t waiting;
-} Mutex;
+} qos_mutex_t;
 
-typedef struct ConditionVar {
-  Mutex* mutex;
+typedef struct qos_condition_var_t {
+  qos_mutex_t* mutex;
   qos_task_scheduling_dlist_t waiting;
-} ConditionVar;
+} qos_condition_var_t;
 
 #endif  // QOS_MUTEX_INTERNAL_H

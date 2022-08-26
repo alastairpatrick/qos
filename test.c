@@ -14,9 +14,9 @@
 
 #define PWM_SLICE 0
 
-struct Queue* g_queue;
-struct Mutex* g_mutex;
-struct ConditionVar* g_cond_var;
+struct qos_queue_t* g_queue;
+struct qos_mutex_t* g_mutex;
+struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
 mutex_t g_live_core_mutex;
 
@@ -49,14 +49,14 @@ void do_delay_task() {
 
 void do_producer_task1() {
   for(;;) {
-    write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
+    qos_write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
     sleep(10);
   }
 }
 
 void do_producer_task2() {
   for(;;) {
-    write_queue(g_queue, "world", 6, 100);
+    qos_write_queue(g_queue, "world", 6, 100);
     sleep(10);
   }
 }
@@ -65,7 +65,7 @@ void do_consumer_task1() {
   for(;;) {
     char buffer[10];
     memset(buffer, 0, sizeof(buffer));
-    read_queue(g_queue, buffer, 6, QOS_NO_TIMEOUT);
+    qos_read_queue(g_queue, buffer, 6, QOS_NO_TIMEOUT);
     assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
   }
 }
@@ -74,7 +74,7 @@ void do_consumer_task2() {
   for(;;) {
     char buffer[10];
     memset(buffer, 0, sizeof(buffer));
-    if (read_queue(g_queue, buffer, 6, 100)) {
+    if (qos_read_queue(g_queue, buffer, 6, 100)) {
       assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
     }
   }
@@ -147,7 +147,7 @@ void init_pwm_interrupt() {
 }
 
 void init_core0() {
-  g_queue = new_queue(100);
+  g_queue = qos_new_queue(100);
 
   g_delay_task = new_task(100, do_delay_task, 1024);
   g_producer_task1 = new_task(1, do_producer_task1, 1024);

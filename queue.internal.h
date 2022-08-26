@@ -6,15 +6,15 @@
 
 QOS_BEGIN_EXTERN_C
 
-typedef struct Queue {
+typedef struct qos_queue_t {
   Semaphore read_semaphore;
   Semaphore write_semaphore;
-  Mutex mutex;
+  qos_mutex_t mutex;
   int32_t capacity;
   int32_t read_idx;
   int32_t write_idx;
   char *buffer;
-} Queue;
+} qos_queue_t;
 
 QOS_END_EXTERN_C
 
