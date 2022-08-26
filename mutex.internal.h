@@ -5,10 +5,8 @@
 #include "scheduler.internal.h"
 
 typedef struct Mutex {
-  // Combines pointer to owning task and mutex state into a single 32-bit
-  // variable to it can be transitioned atomically.
+  core_t core;
   atomic32_t owner_state;
-  
   TaskSchedulingDList waiting;
 } Mutex;
 

@@ -35,6 +35,7 @@ target_link_libraries(rtos
   hardware_irq
   hardware_pwm
   hardware_timer
+  pico_multicore
   pico_stdlib
   pico_time
   pico_sync

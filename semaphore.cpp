@@ -10,14 +10,15 @@
 #include <cassert>
 #include <cstdarg>
 
-Semaphore* new_semaphore(int32_t initial_count) {
+Semaphore* new_semaphore(core_t core, int32_t initial_count) {
   auto semaphore = new Semaphore;
-  init_semaphore(semaphore, initial_count);
+  init_semaphore(semaphore, core, initial_count);
   return semaphore;
 }
 
-void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
+void init_semaphore(Semaphore* semaphore, core_t core, int32_t initial_count) {
   assert(initial_count >= 0);
+  semaphore->core = core;
   semaphore->count = initial_count;
   init_dlist(&semaphore->waiting.tasks);
 }
@@ -49,6 +50,7 @@ static TaskState STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va
 }
 
 bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_count_t timeout) {
+  assert(semaphore->core == get_core_num());
   assert(count >= 0);
   check_tick_count(&timeout);
 
@@ -96,6 +98,7 @@ TaskState STRIPED_RAM release_semaphore_critical(Scheduler* scheduler, va_list a
 }
 
 void STRIPED_RAM release_semaphore(Semaphore* semaphore, int32_t count) {
+  assert(semaphore->core == get_core_num());
   assert(count >= 0);
   critical_section_va(release_semaphore_critical, semaphore, count);
 }

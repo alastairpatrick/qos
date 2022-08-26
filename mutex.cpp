@@ -15,13 +15,14 @@ enum MutexState {
   ACQUIRED_CONTENDED,
 };
 
-Mutex* new_mutex() {
+Mutex* new_mutex(core_t core) {
   auto mutex = new Mutex;
-  init_mutex(mutex);
+  init_mutex(mutex, core);
   return mutex;
 }
 
-void init_mutex(Mutex* mutex) {
+void init_mutex(Mutex* mutex, core_t core) {
+  mutex->core = core;
   mutex->owner_state = AVAILABLE;
   init_dlist(&mutex->waiting.tasks);
 }
@@ -67,6 +68,7 @@ static TaskState STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_lis
 }
 
 bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
+  assert(mutex->core == get_core_num());
   assert(!owns_mutex(mutex));
   check_tick_count(&timeout);
 

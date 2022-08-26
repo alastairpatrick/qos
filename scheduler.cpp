@@ -15,6 +15,7 @@
 #include "hardware/structs/scb.h"
 #include "hardware/structs/systick.h"
 #include "hardware/sync.h"
+#include "pico/multicore.h"
 #include "pico/platform.h"
 
 const int SUPERVISOR_SIZE = 1024;
@@ -36,7 +37,7 @@ struct Supervisor {
 };
 
 Supervisor g_supervisors[NUM_CORES];
-bool g_internal_is_scheduler_started;
+bool g_internal_are_schedulers_started;
 
 extern "C" {
   void rtos_internal_init_stacks(Scheduler* exception_stack_top);
@@ -52,14 +53,13 @@ static Scheduler& STRIPED_RAM get_scheduler() {
   return g_supervisors[get_core_num()].scheduler;
 }
 
-static void init_scheduler() {
-  auto& scheduler = get_scheduler();
-
+static void init_scheduler(Scheduler& scheduler) {
   if (scheduler.ready.tasks.sentinel.next) {
     return;
   }
 
   scheduler.tick_count = INT64_MIN;
+  scheduler.core = (core_t) get_core_num();
 
   init_dlist(&scheduler.ready.tasks);
   init_dlist(&scheduler.busy_blocked.tasks);
@@ -68,13 +68,14 @@ static void init_scheduler() {
 
   init_dnode(&scheduler.idle_task.scheduling_node);
   init_dnode(&scheduler.idle_task.timeout_node);
-  scheduler.idle_task.priority = INT_MIN;
+  scheduler.idle_task.core = (core_t) get_core_num();
+  scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
 }
 
-Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
-  auto& scheduler = get_scheduler();
-  init_scheduler();
+Task *new_task(core_t core, uint8_t priority, TaskEntry entry, int32_t stack_size) {
+  auto& scheduler = g_supervisors[core].scheduler;
+  init_scheduler(scheduler);
 
   auto& ready = scheduler.ready;
 
@@ -83,6 +84,7 @@ Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   init_dnode(&task->timeout_node);
   internal_insert_scheduled_task(&ready, task);
 
+  task->core = core;
   task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
@@ -101,11 +103,11 @@ Task *new_task(uint8_t priority, TaskEntry entry, int32_t stack_size) {
   return task;
 }
 
-void start_scheduler() {
+static void core_start_scheduler() {
   auto& scheduler = get_scheduler();
   auto& idle_task = scheduler.idle_task;
 
-  init_scheduler();
+  init_scheduler(scheduler);
 
   rtos_internal_init_stacks(&scheduler);
 
@@ -124,7 +126,7 @@ void start_scheduler() {
   systick_hw->cvr = 0;
   systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
 
-  g_internal_is_scheduler_started = true;
+  g_internal_are_schedulers_started = true;
 
   yield();
 
@@ -132,6 +134,12 @@ void start_scheduler() {
   for (;;) {
     __wfe();
   }
+}
+
+void start_schedulers() {
+  g_internal_are_schedulers_started = true;
+  multicore_launch_core1(core_start_scheduler);
+  core_start_scheduler();
 }
 
 void STRIPED_RAM ready_busy_blocked_tasks() {

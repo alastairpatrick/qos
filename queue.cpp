@@ -8,18 +8,18 @@
 #include <algorithm>
 #include <cstring>
 
-Queue* new_queue(int32_t capacity) {
+Queue* new_queue(core_t core, int32_t capacity) {
   auto queue = new Queue;
-  init_queue(queue, new char[capacity], capacity);
+  init_queue(queue, core, new char[capacity], capacity);
   return queue;
 }
 
-void init_queue(Queue* queue, void* buffer, int32_t capacity) {
+void init_queue(Queue* queue, core_t core, void* buffer, int32_t capacity) {
   assert(capacity > 0);
   
-  init_semaphore(&queue->read_semaphore, 0);
-  init_semaphore(&queue->write_semaphore, capacity);
-  init_mutex(&queue->mutex);
+  init_semaphore(&queue->read_semaphore, core, 0);
+  init_semaphore(&queue->write_semaphore, core, capacity);
+  init_mutex(&queue->mutex, core);
 
   queue->capacity = capacity;
   queue->read_idx = 0;

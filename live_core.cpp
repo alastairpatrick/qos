@@ -15,7 +15,7 @@ static TaskState busy_block_critical(Scheduler*, void*) {
 }
 
 void live_core_busy_block() {
-  if (is_scheduler_started()) {
+  if (are_schedulers_started()) {
     critical_section(busy_block_critical, nullptr);
   } else {
     __wfe();
@@ -23,7 +23,7 @@ void live_core_busy_block() {
 }
 
 bool live_core_busy_block_until(absolute_time_t until) {
-  if (is_scheduler_started()) {
+  if (are_schedulers_started()) {
     critical_section(busy_block_critical, nullptr);
     return time_reached(until);
   } else {
@@ -32,7 +32,7 @@ bool live_core_busy_block_until(absolute_time_t until) {
 }
 
 void live_core_ready_busy_blocked_tasks() {
-  if (is_scheduler_started()) {
+  if (are_schedulers_started()) {
     ready_busy_blocked_tasks();
   } else {
     __sev();

@@ -22,4 +22,9 @@ typedef volatile void* atomic_ptr_t;
 // Absolute tick counts are negative and grow towards zero. Durations are non-negative.
 typedef int64_t tick_count_t;
 
+typedef enum core_t {
+  CORE_0,
+  CORE_1,
+} core_t;
+
 #endif  // RTOS_BASE_H

@@ -26,12 +26,12 @@ typedef void (*TaskEntry)();
 
 struct Scheduler;
 
-struct Task* new_task(uint8_t priority, TaskEntry entry, int32_t stack_size);
-void start_scheduler();
+struct Task* new_task(core_t core, uint8_t priority, TaskEntry entry, int32_t stack_size);
+void start_schedulers();
 
-static inline bool is_scheduler_started() {
-  extern bool g_internal_is_scheduler_started;
-  return g_internal_is_scheduler_started;
+static inline bool are_schedulers_started() {
+  extern bool g_internal_are_schedulers_started;
+  return g_internal_are_schedulers_started;
 }
 
 static inline struct Task* get_current_task() {
