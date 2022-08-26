@@ -221,7 +221,7 @@ bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
 }
 
 static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p) {
-  auto timeout = *(tick_count_t*) p;
+  auto timeout = *(qos_tick_count_t*) p;
 
   auto current_task = scheduler->current_task;
 
@@ -235,11 +235,11 @@ static qos_task_state_t STRIPED_RAM sleep_critical(Scheduler* scheduler, void* p
 }
 
 void STRIPED_RAM yield() {
-  tick_count_t timeout = 0;
+  qos_tick_count_t timeout = 0;
   critical_section(sleep_critical, &timeout);
 }
 
-void STRIPED_RAM sleep(tick_count_t timeout) {
+void STRIPED_RAM sleep(qos_tick_count_t timeout) {
   check_tick_count(&timeout);
   critical_section(sleep_critical, &timeout);
 }
@@ -308,7 +308,7 @@ void STRIPED_RAM set_critical_section_result(Scheduler* scheduler, Task* task, i
   }
 }
 
-void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, tick_count_t tick_count) {
+void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t tick_count) {
   if (tick_count == NO_TIMEOUT) {
     return;
   }

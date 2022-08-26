@@ -75,7 +75,7 @@ qos_task_state_t STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list arg
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
-  auto timeout = va_arg(args, tick_count_t);
+  auto timeout = va_arg(args, qos_tick_count_t);
   auto current_task = scheduler->current_task;
 
   auto& tasks_by_irq = g_schedulers[get_core_num()].tasks_by_irq;
@@ -112,7 +112,7 @@ qos_task_state_t STRIPED_RAM wait_irq_critical(Scheduler* scheduler, va_list arg
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, tick_count_t timeout) {
+bool STRIPED_RAM wait_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
   assert(irq >= 0 && irq < MAX_IRQS);
   check_tick_count(&timeout);
   assert(timeout != 0);

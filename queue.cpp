@@ -27,7 +27,7 @@ void init_queue(Queue* queue, void* buffer, int32_t capacity) {
   queue->buffer = (char*) buffer;
 }
 
-bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, tick_count_t timeout) {
+bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, qos_tick_count_t timeout) {
   check_tick_count(&timeout);
 
   if (!acquire_semaphore(&queue->write_semaphore, size, timeout)) {
@@ -55,7 +55,7 @@ bool STRIPED_RAM write_queue(Queue* queue, const void* data, int32_t size, tick_
   return true;
 }
 
-bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, tick_count_t timeout) {
+bool STRIPED_RAM read_queue(Queue* queue, void* data, int32_t size, qos_tick_count_t timeout) {
   check_tick_count(&timeout);
 
   if (!acquire_semaphore(&queue->read_semaphore, size, timeout)) {

@@ -20,7 +20,7 @@ typedef volatile int32_t qos_atomic32_t;
 typedef volatile void* qos_atomic_ptr_t;
 
 // Absolute tick counts are negative and grow towards zero. Durations are non-negative.
-typedef int64_t tick_count_t;
+typedef int64_t qos_tick_count_t;
 
 typedef enum qos_task_state_t {
   TASK_RUNNING,

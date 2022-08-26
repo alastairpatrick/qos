@@ -26,7 +26,7 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
 static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {
   auto semaphore = va_arg(args, Semaphore*);
   auto count = va_arg(args, int32_t);
-  auto timeout = va_arg(args, tick_count_t);
+  auto timeout = va_arg(args, qos_tick_count_t);
 
   auto current_task = scheduler->current_task;
 
@@ -49,7 +49,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* schedu
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, tick_count_t timeout) {
+bool STRIPED_RAM acquire_semaphore(Semaphore* semaphore, int32_t count, qos_tick_count_t timeout) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
   check_tick_count(&timeout);

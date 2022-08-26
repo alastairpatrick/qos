@@ -32,9 +32,9 @@ static inline struct Task* get_current_task() {
 }
 
 void yield();
-void sleep(tick_count_t timeout);
+void sleep(qos_tick_count_t timeout);
 
-static inline void check_tick_count(tick_count_t* tick_count) {
+static inline void check_tick_count(qos_tick_count_t* tick_count) {
   // Convert duration into absolute tick count.
   if (*tick_count > 0) {
     *tick_count += qos_atomic_tick_count();
@@ -46,7 +46,7 @@ void ready_busy_blocked_tasks();
 
 // May only be called from critical section
 bool ready_task(struct Scheduler* scheduler, struct Task* task);
-void delay_task(struct Scheduler* scheduler, struct Task* task, tick_count_t tick_count);
+void delay_task(struct Scheduler* scheduler, struct Task* task, qos_tick_count_t tick_count);
 
 END_EXTERN_C
 

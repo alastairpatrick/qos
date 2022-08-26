@@ -40,7 +40,7 @@ typedef struct Task {
   UnblockTaskProc sync_unblock_task_proc;
 
   DNode timeout_node;
-  tick_count_t awaken_tick_count;
+  qos_tick_count_t awaken_tick_count;
 } Task;
 
 typedef struct TaskSchedulingDList {

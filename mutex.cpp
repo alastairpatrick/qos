@@ -41,7 +41,7 @@ static int32_t STRIPED_RAM pack_owner_state(Task* owner, MutexState state) {
 
 static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler, va_list args) {
   auto mutex = va_arg(args, Mutex*);
-  auto timeout = va_arg(args, tick_count_t);
+  auto timeout = va_arg(args, qos_tick_count_t);
   
   auto current_task = scheduler->current_task;
 
@@ -67,7 +67,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(Scheduler* scheduler,
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM acquire_mutex(Mutex* mutex, tick_count_t timeout) {
+bool STRIPED_RAM acquire_mutex(Mutex* mutex, qos_tick_count_t timeout) {
   assert(mutex->core == get_core_num());
   assert(!owns_mutex(mutex));
   check_tick_count(&timeout);
@@ -147,13 +147,13 @@ void init_condition_var(ConditionVar* var, Mutex* mutex) {
   init_dlist(&var->waiting.tasks);
 }
 
-void acquire_condition_var(struct ConditionVar* var, tick_count_t timeout) {
+void acquire_condition_var(struct ConditionVar* var, qos_tick_count_t timeout) {
   acquire_mutex(var->mutex, timeout);
 }
 
 qos_task_state_t wait_condition_var_critical(Scheduler* scheduler, va_list args) {
   auto var = va_arg(args, ConditionVar*);
-  auto timeout = va_arg(args, tick_count_t);
+  auto timeout = va_arg(args, qos_tick_count_t);
 
   auto current_task = scheduler->current_task;
 
@@ -167,7 +167,7 @@ qos_task_state_t wait_condition_var_critical(Scheduler* scheduler, va_list args)
   return TASK_SYNC_BLOCKED;
 }
 
-bool wait_condition_var(ConditionVar* var, tick_count_t timeout) {
+bool wait_condition_var(ConditionVar* var, qos_tick_count_t timeout) {
   assert(owns_mutex(var->mutex));
   assert(timeout != 0);
   check_tick_count(&timeout);
