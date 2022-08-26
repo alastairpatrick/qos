@@ -4,6 +4,7 @@
 #include "scheduler.h"
 #include "semaphore.h"
 #include "mutex.h"
+#include "time.h"
 
 #include <algorithm>
 #include <cstring>
@@ -27,8 +28,8 @@ void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   queue->buffer = (char*) buffer;
 }
 
-bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_tick_count_t timeout) {
-  qos_normalize_tick_count(&timeout);
+bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
+  qos_normalize_time(&timeout);
 
   if (!qos_acquire_semaphore(&queue->write_semaphore, size, timeout)) {
     return false;
@@ -55,8 +56,8 @@ bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t s
   return true;
 }
 
-bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_tick_count_t timeout) {
-  qos_normalize_tick_count(&timeout);
+bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
+  qos_normalize_time(&timeout);
 
   if (!qos_acquire_semaphore(&queue->read_semaphore, size, timeout)) {
     return false;

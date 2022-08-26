@@ -4,6 +4,7 @@
 #include "atomic.h"
 #include "critical.h"
 #include "dlist_it.h"
+#include "time.h"
 
 #include <algorithm>
 #include <cassert>
@@ -58,7 +59,7 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
     return;
   }
 
-  scheduler.tick_count = INT64_MIN;
+  scheduler.time = INT64_MIN;
   scheduler.core = get_core_num();
 
   qos_init_dlist(&scheduler.ready.tasks);
@@ -126,9 +127,15 @@ static void core_start_scheduler() {
   *(io_rw_32 *)(PPB_BASE + M0PLUS_SHPR3_OFFSET) = 0xC0C00000;
 
   // Enable SysTick, processor clock, enable exception
-  systick_hw->rvr = QOS_QUANTUM;
+  systick_hw->rvr = QOS_TICK_CYCLES;
   systick_hw->cvr = 0;
-  systick_hw->csr = M0PLUS_SYST_CSR_CLKSOURCE_BITS | M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
+
+  int32_t csr = M0PLUS_SYST_CSR_TICKINT_BITS | M0PLUS_SYST_CSR_ENABLE_BITS;
+  if (!QOS_TICK_1MHZ_SOURCE) {
+    csr |= M0PLUS_SYST_CSR_CLKSOURCE_BITS;
+  }
+
+  systick_hw->csr = csr;
 
   qos_yield();
 
@@ -211,13 +218,13 @@ void STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
 bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   auto& delayed = scheduler->delayed;
   
-  int64_t tick_count = scheduler->tick_count + 1;
-  scheduler->tick_count = tick_count;
+  int64_t time = scheduler->time + QOS_TICK_MS;
+  scheduler->time = time;
 
   bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler);
 
   auto position = begin(delayed);
-  while (position != end(delayed) && position->awaken_tick_count <= tick_count) {
+  while (position != end(delayed) && position->awaken_time <= time) {
     auto task = &*position;
     position = remove(position);
 
@@ -228,7 +235,7 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
 }
 
 static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, void* p) {
-  auto timeout = *(qos_tick_count_t*) p;
+  auto timeout = *(qos_time_t*) p;
 
   auto current_task = scheduler->current_task;
 
@@ -242,12 +249,12 @@ static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, v
 }
 
 void STRIPED_RAM qos_yield() {
-  qos_tick_count_t timeout = 0;
+  qos_time_t timeout = 0;
   qos_critical_section(sleep_critical, &timeout);
 }
 
-void STRIPED_RAM qos_sleep(qos_tick_count_t timeout) {
-  qos_normalize_tick_count(&timeout);
+void STRIPED_RAM qos_sleep(qos_time_t timeout) {
+  qos_normalize_time(&timeout);
   qos_critical_section(sleep_critical, &timeout);
 }
 
@@ -315,18 +322,18 @@ void STRIPED_RAM qos_critical_section_result(qos_scheduler_t* scheduler, qos_tas
   }
 }
 
-void STRIPED_RAM qos_delay_task(qos_scheduler_t* scheduler, qos_task_t* task, qos_tick_count_t tick_count) {
-  if (tick_count == QOS_NO_TIMEOUT) {
+void STRIPED_RAM qos_delay_task(qos_scheduler_t* scheduler, qos_task_t* task, qos_time_t time) {
+  if (time == QOS_NO_TIMEOUT) {
     return;
   }
   
   auto& delayed = scheduler->delayed;
 
-  assert(tick_count < 0 && tick_count > scheduler->tick_count);
+  assert(time < 0);
 
-  task->awaken_tick_count = tick_count;
+  task->awaken_time = time;
   auto position = begin(delayed);
-  while (position != end(delayed) && position->awaken_tick_count < tick_count) {
+  while (position != end(delayed) && position->awaken_time < time) {
     ++position;
   }
   splice(position, task);

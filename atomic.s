@@ -47,15 +47,15 @@ qos_atomic_compare_and_set_ptr:
         BX      LR
 
 
-// int64_t qos_atomic_tick_count()
+// int64_t qos_time()
 .BALIGN 32
-.GLOBAL qos_atomic_tick_count
-.TYPE qos_atomic_tick_count, %function
+.GLOBAL qos_time
+.TYPE qos_time, %function
         B       0f
 .SPACE  22 - (1f - 0f)
-qos_atomic_tick_count:
+qos_time:
 0:      MRS     R3, MSP         // MSP points to qos_scheduler_t in thread mode
-        LDR     R0, [R3, #8]    // tick_count at byte offset 8 of qos_scheduler_t
+        LDR     R0, [R3, #8]    // time at byte offset 8 of qos_scheduler_t
 1:      LDR     R1, [R3, #12]   // byte offset 24
         BX      LR
 

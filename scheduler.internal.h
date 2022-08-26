@@ -42,7 +42,7 @@ typedef struct qos_task_t {
   qos_task_proc_t sync_unblock_task_proc;
 
   qos_dnode_t timeout_node;
-  qos_tick_count_t awaken_tick_count;
+  qos_time_t awaken_time;
 } qos_task_t;
 
 typedef struct qos_task_scheduling_dlist_t {
@@ -58,8 +58,8 @@ typedef struct qos_scheduler_t {
   // exception stack is empty.
   qos_task_t* current_task;
 
-  // Must be second field of qos_scheduler_t so that atomic_tick_count() addresses it correctly.
-  volatile int64_t tick_count;
+  // Must be second field of qos_scheduler_t so that qos_time() addresses it correctly.
+  volatile int64_t time;
 
   int8_t core;
   qos_task_t idle_task;

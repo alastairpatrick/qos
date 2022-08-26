@@ -1,6 +1,7 @@
 #include "atomic.h"
 #include "interrupt.h"
 #include "mutex.h"
+#include "time.h"
 #include "queue.h"
 
 #include <assert.h>
@@ -38,11 +39,11 @@ bool repeating_timer_isr(repeating_timer_t* timer) {
   return true;
 }
 
-int64_t tick_count;
+int64_t time;
 
 void do_delay_task() {
   for(;;) {
-    tick_count = qos_atomic_tick_count();
+    time = qos_time();
     qos_sleep(1000);
   }
 }

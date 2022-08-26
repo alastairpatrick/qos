@@ -5,6 +5,7 @@
 #include "dlist_it.h"
 #include "scheduler.h"
 #include "scheduler.internal.h"
+#include "time.h"
 #include "hardware/irq.h"
 
 #include "hardware/regs/m0plus.h"
@@ -53,7 +54,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_critical(qos_scheduler_t* scheduler, 
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
-  auto timeout = va_arg(args, qos_tick_count_t);
+  auto timeout = va_arg(args, qos_time_t);
   auto current_task = scheduler->current_task;
 
   auto& awaiting_irq = scheduler->awaiting_irq;
@@ -90,9 +91,9 @@ qos_task_state_t STRIPED_RAM qos_await_irq_critical(qos_scheduler_t* scheduler, 
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
   assert(irq >= 0 && irq < QOS_MAX_IRQS);
-  qos_normalize_tick_count(&timeout);
+  qos_normalize_time(&timeout);
   assert(timeout != 0);
 
   return qos_critical_section_va(qos_await_irq_critical, irq, enable, mask, timeout);

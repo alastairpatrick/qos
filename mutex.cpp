@@ -6,6 +6,7 @@
 #include "dlist_it.h"
 #include "scheduler.h"
 #include "scheduler.internal.h"
+#include "time.h"
 
 //////// qos_mutex_t ////////
 
@@ -41,7 +42,7 @@ static int32_t STRIPED_RAM pack_owner_state(qos_task_t* owner, mutex_state_t sta
 
 static qos_task_state_t STRIPED_RAM acquire_mutex_critical(qos_scheduler_t* scheduler, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
-  auto timeout = va_arg(args, qos_tick_count_t);
+  auto timeout = va_arg(args, qos_time_t);
   
   auto current_task = scheduler->current_task;
 
@@ -67,10 +68,10 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(qos_scheduler_t* sche
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   assert(mutex->core == get_core_num());
   assert(!qos_owns_mutex(mutex));
-  qos_normalize_tick_count(&timeout);
+  qos_normalize_time(&timeout);
 
   auto current_task = qos_current_task();
 
@@ -147,13 +148,13 @@ void qos_init_condition_var(qos_condition_var_t* var, qos_mutex_t* mutex) {
   qos_init_dlist(&var->waiting.tasks);
 }
 
-void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_tick_count_t timeout) {
+void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout) {
   qos_acquire_mutex(var->mutex, timeout);
 }
 
 qos_task_state_t qos_wait_condition_var_critical(qos_scheduler_t* scheduler, va_list args) {
   auto var = va_arg(args, qos_condition_var_t*);
-  auto timeout = va_arg(args, qos_tick_count_t);
+  auto timeout = va_arg(args, qos_time_t);
 
   auto current_task = scheduler->current_task;
 
@@ -167,10 +168,10 @@ qos_task_state_t qos_wait_condition_var_critical(qos_scheduler_t* scheduler, va_
   return TASK_SYNC_BLOCKED;
 }
 
-bool qos_wait_condition_var(qos_condition_var_t* var, qos_tick_count_t timeout) {
+bool qos_wait_condition_var(qos_condition_var_t* var, qos_time_t timeout) {
   assert(qos_owns_mutex(var->mutex));
   assert(timeout != 0);
-  qos_normalize_tick_count(&timeout);
+  qos_normalize_time(&timeout);
 
   return qos_critical_section_va(qos_wait_condition_var_critical, var, timeout);
 }

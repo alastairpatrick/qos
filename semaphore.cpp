@@ -6,6 +6,7 @@
 #include "dlist_it.h"
 #include "scheduler.h"
 #include "scheduler.internal.h"
+#include "time.h"
 
 #include <cassert>
 #include <cstdarg>
@@ -26,7 +27,7 @@ void qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
 static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
   auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
-  auto timeout = va_arg(args, qos_tick_count_t);
+  auto timeout = va_arg(args, qos_time_t);
 
   auto current_task = scheduler->current_task;
 
@@ -49,10 +50,10 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   return TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_tick_count_t timeout) {
+bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
-  qos_normalize_tick_count(&timeout);
+  qos_normalize_time(&timeout);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;

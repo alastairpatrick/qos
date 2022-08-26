@@ -8,11 +8,6 @@
 
 #include "hardware/structs/systick.h"
 
-#ifndef QOS_QUANTUM
-#define QOS_QUANTUM 1250000
-//#define QOS_QUANTUM 1000
-#endif
-
 QOS_BEGIN_EXTERN_C
 
 struct qos_task_t* qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size);
@@ -31,14 +26,6 @@ static inline struct qos_task_t* qos_current_task() {
 }
 
 void qos_yield();
-void qos_sleep(qos_tick_count_t timeout);
-
-static inline void qos_normalize_tick_count(qos_tick_count_t* tick_count) {
-  // Convert duration into absolute tick count.
-  if (*tick_count > 0) {
-    *tick_count += qos_atomic_tick_count();
-  }
-}
 
 // May be called from thead mode, critical section or interrupt service routine.
 void qos_ready_busy_blocked_tasks();
@@ -46,7 +33,7 @@ void qos_ready_busy_blocked_tasks();
 // May only be called from critical section
 struct qos_scheduler_t;
 bool qos_ready_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task);
-void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, qos_tick_count_t tick_count);
+void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, qos_time_t time);
 
 QOS_END_EXTERN_C
 
