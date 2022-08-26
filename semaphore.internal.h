@@ -7,7 +7,7 @@
 typedef struct Semaphore {
   int8_t core;
   qos_atomic32_t count;
-  TaskSchedulingDList waiting;
+  TaskSchedulingqos_dlist_t waiting;
 } Semaphore;
 
 #endif  // QOS_SEMAPHORE_INTERNAL_H

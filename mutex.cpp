@@ -24,7 +24,7 @@ Mutex* new_mutex() {
 void init_mutex(Mutex* mutex) {
   mutex->core = get_core_num();
   mutex->owner_state = AVAILABLE;
-  init_dlist(&mutex->waiting.tasks);
+  qos_init_dlist(&mutex->waiting.tasks);
 }
 
 static Task* STRIPED_RAM unpack_owner(int32_t owner_state) {
@@ -144,7 +144,7 @@ ConditionVar* new_condition_var(Mutex* mutex) {
 
 void init_condition_var(ConditionVar* var, Mutex* mutex) {
   var->mutex = mutex;
-  init_dlist(&var->waiting.tasks);
+  qos_init_dlist(&var->waiting.tasks);
 }
 
 void acquire_condition_var(struct ConditionVar* var, qos_tick_count_t timeout) {
@@ -196,7 +196,7 @@ qos_task_state_t release_and_signal_condition_var_critical(Scheduler* scheduler,
     // Both the current task and the signalled task are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
     
-    remove_dnode(&signalled_task->timeout_node);
+    qos_remove_dnode(&signalled_task->timeout_node);
   }
 
   return release_mutex_critical(scheduler, var->mutex);
@@ -223,7 +223,7 @@ qos_task_state_t release_and_broadcast_condition_var_critical(Scheduler* schedul
     // Both the current task and one or more signalled tasks are contending for the lock.
     var->mutex->owner_state = pack_owner_state(current_task, ACQUIRED_CONTENDED);
     
-    remove_dnode(&signalled_task->timeout_node);
+    qos_remove_dnode(&signalled_task->timeout_node);
   }
 
   return release_mutex_critical(scheduler, var->mutex);

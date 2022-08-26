@@ -13,7 +13,7 @@
 #define MAX_IRQS 32
 
 struct WaitIRQScheduler {
-  TaskSchedulingDList tasks_by_irq[MAX_IRQS];
+  TaskSchedulingqos_dlist_t tasks_by_irq[MAX_IRQS];
 };
 
 static WaitIRQScheduler g_schedulers[NUM_CORES];
@@ -31,7 +31,7 @@ static void init_scheduler() {
   }
 
   for (auto& list : scheduler.tasks_by_irq) {
-    init_dlist(&list.tasks);
+    qos_init_dlist(&list.tasks);
   }
 }
 

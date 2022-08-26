@@ -7,12 +7,12 @@
 typedef struct Mutex {
   int8_t core;
   qos_atomic32_t owner_state;
-  TaskSchedulingDList waiting;
+  TaskSchedulingqos_dlist_t waiting;
 } Mutex;
 
 typedef struct ConditionVar {
   Mutex* mutex;
-  TaskSchedulingDList waiting;
+  TaskSchedulingqos_dlist_t waiting;
 } ConditionVar;
 
 #endif  // QOS_MUTEX_INTERNAL_H

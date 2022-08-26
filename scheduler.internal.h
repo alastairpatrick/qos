@@ -30,7 +30,7 @@ typedef struct Task {
   int32_t* stack;
   int32_t stack_size;
 
-  DNode scheduling_node;
+  qos_dnode_t scheduling_node;
 
   // May be used by synchronization primitive during TASK_SYNC_BLOCKING. Must be
   // zero at all other times. sync_unblock_task_proc must be called before making
@@ -39,17 +39,17 @@ typedef struct Task {
   int32_t sync_state;
   UnblockTaskProc sync_unblock_task_proc;
 
-  DNode timeout_node;
+  qos_dnode_t timeout_node;
   qos_tick_count_t awaken_tick_count;
 } Task;
 
-typedef struct TaskSchedulingDList {
-  DList tasks;
-} TaskSchedulingDList;
+typedef struct TaskSchedulingqos_dlist_t {
+  qos_dlist_t tasks;
+} TaskSchedulingqos_dlist_t;
 
-typedef struct TaskTimeoutDList {
-  DList tasks;
-} TaskTimeoutDList;
+typedef struct TaskTimeoutqos_dlist_t {
+  qos_dlist_t tasks;
+} TaskTimeoutqos_dlist_t;
 
 typedef struct Scheduler {
   // Must be the first field of Scheduler so that MSP points to it when the
@@ -61,31 +61,31 @@ typedef struct Scheduler {
 
   int8_t core;
   Task idle_task;
-  TaskSchedulingDList ready;         // Always in descending priority order
-  TaskSchedulingDList busy_blocked;  // Always in descending priority order
-  TaskSchedulingDList pending;       // Always in descending priority order
-  TaskTimeoutDList delayed;
+  TaskSchedulingqos_dlist_t ready;         // Always in descending priority order
+  TaskSchedulingqos_dlist_t busy_blocked;  // Always in descending priority order
+  TaskSchedulingqos_dlist_t pending;       // Always in descending priority order
+  TaskTimeoutqos_dlist_t delayed;
   volatile bool ready_busy_blocked_tasks;
 } Scheduler;
 
 // Insert task into linked list, maintaining descending priority order.
-void internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task);
+void internal_insert_scheduled_task(TaskSchedulingqos_dlist_t* list, Task* task);
 
 #ifdef __cplusplus
 
-inline qos_dlist_iterator<Task, &Task::scheduling_node> begin(TaskSchedulingDList& list) {
+inline qos_dlist_iterator<Task, &Task::scheduling_node> begin(TaskSchedulingqos_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::scheduling_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::scheduling_node> end(TaskSchedulingDList& list) {
+inline qos_dlist_iterator<Task, &Task::scheduling_node> end(TaskSchedulingqos_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::scheduling_node>::end(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::timeout_node> begin(TaskTimeoutDList& list) {
+inline qos_dlist_iterator<Task, &Task::timeout_node> begin(TaskTimeoutqos_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::timeout_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<Task, &Task::timeout_node> end(TaskTimeoutDList& list) {
+inline qos_dlist_iterator<Task, &Task::timeout_node> end(TaskTimeoutqos_dlist_t& list) {
   return qos_dlist_iterator<Task, &Task::timeout_node>::end(list.tasks);
 }
 

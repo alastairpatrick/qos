@@ -5,7 +5,7 @@
 
 #include <iterator>
 
-template <typename T, DNode T::*NODE>
+template <typename T, qos_dnode_t T::*NODE>
 struct qos_dlist_iterator {
   using iterator_category = std::bidirectional_iterator_tag;
   using difference_type   = std::ptrdiff_t;
@@ -13,18 +13,18 @@ struct qos_dlist_iterator {
   using pointer           = T*;
   using reference         = T&;
 
-  static pointer node_to_object(DNode* node) {
+  static pointer node_to_object(qos_dnode_t* node) {
     uintptr_t node_offset = uintptr_t(&(pointer(nullptr)->*NODE));
     return pointer(uintptr_t(node) - node_offset);
   }
 
   explicit qos_dlist_iterator(T* object): node(&object->*NODE) {}
 
-  static inline qos_dlist_iterator begin(DList& list) {
+  static inline qos_dlist_iterator begin(qos_dlist_t& list) {
     return qos_dlist_iterator(list.sentinel.next);
   }
 
-  static inline qos_dlist_iterator end(DList& list) {
+  static inline qos_dlist_iterator end(qos_dlist_t& list) {
     return qos_dlist_iterator(&list.sentinel);
   }
 
@@ -73,25 +73,25 @@ struct qos_dlist_iterator {
   // Removes referenced node and returns pointer to next.
   friend qos_dlist_iterator remove(qos_dlist_iterator it) {
     qos_dlist_iterator t(it.node->next);
-    remove_dnode(it.node);
+    qos_remove_dnode(it.node);
     return t;
   }
 
   friend inline void splice(qos_dlist_iterator dest, qos_dlist_iterator begin, qos_dlist_iterator end) {
-    splice_dlist(dest.node, begin.node, end.node);
+    qos_splice_dlist(dest.node, begin.node, end.node);
   }
 
   friend inline void splice(qos_dlist_iterator dest, qos_dlist_iterator source) {
-    splice_dnode(dest.node, source.node);
+    qos_splice_dnode(dest.node, source.node);
   }
 
   friend inline void splice(qos_dlist_iterator dest, T* source) {
-    splice_dnode(dest.node, &(source->*NODE));
+    qos_splice_dnode(dest.node, &(source->*NODE));
   }
 
 private:
-  DNode* node;
-  explicit qos_dlist_iterator(DNode* node): node(node) {}
+  qos_dnode_t* node;
+  explicit qos_dlist_iterator(qos_dnode_t* node): node(node) {}
 };
 
 #endif  // QOS_DLIST_IT_H

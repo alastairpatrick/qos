@@ -20,7 +20,7 @@ void init_semaphore(Semaphore* semaphore, int32_t initial_count) {
   assert(initial_count >= 0);
   semaphore->core = get_core_num();
   semaphore->count = initial_count;
-  init_dlist(&semaphore->waiting.tasks);
+  qos_init_dlist(&semaphore->waiting.tasks);
 }
 
 static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(Scheduler* scheduler, va_list args) {

@@ -61,13 +61,13 @@ static void init_scheduler(Scheduler& scheduler) {
   scheduler.tick_count = INT64_MIN;
   scheduler.core = get_core_num();
 
-  init_dlist(&scheduler.ready.tasks);
-  init_dlist(&scheduler.busy_blocked.tasks);
-  init_dlist(&scheduler.pending.tasks);
-  init_dlist(&scheduler.delayed.tasks);
+  qos_init_dlist(&scheduler.ready.tasks);
+  qos_init_dlist(&scheduler.busy_blocked.tasks);
+  qos_init_dlist(&scheduler.pending.tasks);
+  qos_init_dlist(&scheduler.delayed.tasks);
 
-  init_dnode(&scheduler.idle_task.scheduling_node);
-  init_dnode(&scheduler.idle_task.timeout_node);
+  qos_init_dnode(&scheduler.idle_task.scheduling_node);
+  qos_init_dnode(&scheduler.idle_task.timeout_node);
   scheduler.idle_task.core = get_core_num();
   scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
@@ -80,8 +80,8 @@ Task *new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   auto& ready = scheduler.ready;
 
   Task* task = new Task;
-  init_dnode(&task->scheduling_node);
-  init_dnode(&task->timeout_node);
+  qos_init_dnode(&task->scheduling_node);
+  qos_init_dnode(&task->timeout_node);
   internal_insert_scheduled_task(&ready, task);
 
   task->core = get_core_num();
@@ -270,7 +270,7 @@ Task* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, Sche
   }
 
   if (empty(begin(pending))) {
-    swap_dlist(&pending.tasks, &ready.tasks);
+    qos_swap_dlist(&pending.tasks, &ready.tasks);
   }
 
   if (empty(begin(pending))) {
@@ -292,7 +292,7 @@ bool STRIPED_RAM ready_task(Scheduler* scheduler, Task* task) {
   task->sync_state = 0;
   task->sync_unblock_task_proc = 0;
 
-  remove_dnode(&task->timeout_node);
+  qos_remove_dnode(&task->timeout_node);
 
   internal_insert_scheduled_task(&scheduler->ready, task);
 
@@ -325,7 +325,7 @@ void STRIPED_RAM delay_task(Scheduler* scheduler, Task* task, qos_tick_count_t t
   splice(position, task);
 }
 
-void STRIPED_RAM internal_insert_scheduled_task(TaskSchedulingDList* list, Task* task) {
+void STRIPED_RAM internal_insert_scheduled_task(TaskSchedulingqos_dlist_t* list, Task* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {

@@ -2,15 +2,15 @@
 
 #include <cassert>
 
-void STRIPED_RAM splice_dlist(DNode* dest, DNode* begin, DNode* end) {
+void STRIPED_RAM qos_splice_dlist(qos_dnode_t* dest, qos_dnode_t* begin, qos_dnode_t* end) {
   if (begin == end) {
     return;
   }
   
-  DNode* a = begin->prev;
-  DNode* b = begin;
-  DNode* c = end->prev;
-  DNode* d = end;
+  qos_dnode_t* a = begin->prev;
+  qos_dnode_t* b = begin;
+  qos_dnode_t* c = end->prev;
+  qos_dnode_t* d = end;
 
   // Remove from source.
   a->next = d;
@@ -23,12 +23,12 @@ void STRIPED_RAM splice_dlist(DNode* dest, DNode* begin, DNode* end) {
   dest->prev = c;
 }
 
-void STRIPED_RAM swap_dlist(DList* a, DList* b) {
-  DList temp;
+void STRIPED_RAM qos_swap_dlist(qos_dlist_t* a, qos_dlist_t* b) {
+  qos_dlist_t temp;
 
-  init_dlist(&temp);
-  splice_dlist(&temp.sentinel, a->sentinel.next, &a->sentinel);
-  splice_dlist(&a->sentinel, b->sentinel.next, &b->sentinel);
-  splice_dlist(&b->sentinel, temp.sentinel.next, &temp.sentinel);
-  assert(is_dlist_empty(&temp));
+  qos_init_dlist(&temp);
+  qos_splice_dlist(&temp.sentinel, a->sentinel.next, &a->sentinel);
+  qos_splice_dlist(&a->sentinel, b->sentinel.next, &b->sentinel);
+  qos_splice_dlist(&b->sentinel, temp.sentinel.next, &temp.sentinel);
+  assert(qos_is_dlist_empty(&temp));
 }

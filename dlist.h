@@ -6,35 +6,35 @@
 
 BEGIN_EXTERN_C
 
-typedef struct DNode {
-  struct DNode* next;
-  struct DNode* prev;
-} DNode;
+typedef struct qos_dnode_t {
+  struct qos_dnode_t* next;
+  struct qos_dnode_t* prev;
+} qos_dnode_t;
 
-typedef struct DList {
-  DNode sentinel;
-} DList;
+typedef struct qos_dlist_t {
+  qos_dnode_t sentinel;
+} qos_dlist_t;
 
-void splice_dlist(struct DNode* dest, struct DNode* begin, struct DNode* end);
-void swap_dlist(struct DList* a, struct DList* b);
+void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
+void qos_swap_dlist(struct qos_dlist_t* a, struct qos_dlist_t* b);
 
-inline void init_dnode(struct DNode* node) {
+inline void qos_init_dnode(struct qos_dnode_t* node) {
   node->next = node;
   node->prev = node;
 }
 
-inline void init_dlist(struct DList* list) {
-  init_dnode(&list->sentinel);
+inline void qos_init_dlist(struct qos_dlist_t* list) {
+  qos_init_dnode(&list->sentinel);
 }
 
-inline bool is_dlist_empty(DList* list) {
+inline bool qos_is_dlist_empty(qos_dlist_t* list) {
   return list->sentinel.next == &list->sentinel;
 }
 
-inline void splice_dnode(DNode* dest, DNode* source) {
-  DNode* a = source->prev;
-  DNode* b = source;
-  DNode* c = source->next;
+inline void qos_splice_dnode(qos_dnode_t* dest, qos_dnode_t* source) {
+  qos_dnode_t* a = source->prev;
+  qos_dnode_t* b = source;
+  qos_dnode_t* c = source->next;
 
   // Remove from source.
   a->next = c;
@@ -47,7 +47,7 @@ inline void splice_dnode(DNode* dest, DNode* source) {
   dest->prev = b;
 }
 
-inline void remove_dnode(struct DNode* node) {
+inline void qos_remove_dnode(struct qos_dnode_t* node) {
   node->next->prev = node->prev;
   node->prev->next = node->next;
   node->next = node;
