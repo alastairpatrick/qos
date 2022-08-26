@@ -11,10 +11,10 @@
 
 .EXTERN atomic_start, atomic_end
 
-// void rtos_internal_init_stacks(Scheduler* exception_stack_top)
-.GLOBAL rtos_internal_init_stacks
-.TYPE rtos_internal_init_stacks, %function
-rtos_internal_init_stacks:
+// void qos_internal_init_stacks(Scheduler* exception_stack_top)
+.GLOBAL qos_internal_init_stacks
+.TYPE qos_internal_init_stacks, %function
+qos_internal_init_stacks:
         // Thread mode continues to use current main stack but as processor stack.
         MOV     R3, SP
         MSR     PSP, R3
@@ -27,10 +27,10 @@ rtos_internal_init_stacks:
         BX      LR
 
 
-// void rtos_supervisor_svc_handler()
-.GLOBAL rtos_supervisor_svc_handler
-.TYPE rtos_supervisor_svc_handler, %function
-rtos_supervisor_svc_handler:
+// void qos_supervisor_svc_handler()
+.GLOBAL qos_supervisor_svc_handler
+.TYPE qos_supervisor_svc_handler, %function
+qos_supervisor_svc_handler:
         PUSH    {LR}
 
         // Load proc to call.
@@ -55,15 +55,15 @@ rtos_supervisor_svc_handler:
         POP     {PC}
         
 
-// void rtos_supervisor_systick_handler
-.GLOBAL rtos_supervisor_systick_handler
-.TYPE rtos_supervisor_systick_handler, %function
-rtos_supervisor_systick_handler:
+// void qos_supervisor_systick_handler
+.GLOBAL qos_supervisor_systick_handler
+.TYPE qos_supervisor_systick_handler, %function
+qos_supervisor_systick_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool rtos_supervisor_systick(Scheduler*)
-        LDR     R3, =rtos_supervisor_systick
+        // bool qos_supervisor_systick(Scheduler*)
+        LDR     R3, =qos_supervisor_systick
         ADD     R0, SP, #4
         BLX     R3
         CMP     R0, #0
@@ -71,20 +71,20 @@ rtos_supervisor_systick_handler:
 
         POP     {PC}
 
-// void rtos_supervisor_pendsv_handler()
-.GLOBAL rtos_supervisor_pendsv_handler
-.TYPE rtos_supervisor_pendsv_handler, %function
-rtos_supervisor_pendsv_handler:
+// void qos_supervisor_pendsv_handler()
+.GLOBAL qos_supervisor_pendsv_handler
+.TYPE qos_supervisor_pendsv_handler, %function
+qos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool rtos_supervisor_pendsv(Scheduler*)
-        LDR     R3, =rtos_supervisor_pendsv
+        // bool qos_supervisor_pendsv(Scheduler*)
+        LDR     R3, =qos_supervisor_pendsv
         ADD     R0, SP, #4
         BLX     R3
 
 context_switch_ready:
-        // R0 becomes the first parameter of rtos_supervisor_context_switch.
+        // R0 becomes the first parameter of qos_supervisor_context_switch.
         MOVS    R0, #task_ready
 
 context_switch:
@@ -105,9 +105,9 @@ context_switch:
         MOV     R7, R11
         STM     R1!, {R4-R7}
 
-        // Task* rtos_supervisor_context_switch(TaskState new_state, Scheduler*, Task* current);
+        // Task* qos_supervisor_context_switch(TaskState new_state, Scheduler*, Task* current);
         ADD     R1, SP, #4
-        BL      rtos_supervisor_context_switch
+        BL      qos_supervisor_context_switch
 
         // Store new TCB.
         STR     R0, [SP, #4]

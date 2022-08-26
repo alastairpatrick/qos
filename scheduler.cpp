@@ -40,13 +40,13 @@ Supervisor g_supervisors[NUM_CORES];
 bool g_internal_are_schedulers_started;
 
 extern "C" {
-  void rtos_internal_init_stacks(Scheduler* exception_stack_top);
-  void rtos_supervisor_svc_handler();
-  void rtos_supervisor_systick_handler();
-  void rtos_supervisor_pendsv_handler();
-  bool rtos_supervisor_systick(Scheduler* scheduler);
-  void rtos_supervisor_pendsv(Scheduler* scheduler);
-  Task* rtos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current);
+  void qos_internal_init_stacks(Scheduler* exception_stack_top);
+  void qos_supervisor_svc_handler();
+  void qos_supervisor_systick_handler();
+  void qos_supervisor_pendsv_handler();
+  bool qos_supervisor_systick(Scheduler* scheduler);
+  void qos_supervisor_pendsv(Scheduler* scheduler);
+  Task* qos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current);
 }
 
 static Scheduler& STRIPED_RAM get_scheduler() {
@@ -109,13 +109,13 @@ static void core_start_scheduler() {
 
   init_scheduler(scheduler);
 
-  rtos_internal_init_stacks(&scheduler);
+  qos_internal_init_stacks(&scheduler);
 
   systick_hw->csr = 0;
 
-  exception_set_exclusive_handler(PENDSV_EXCEPTION, rtos_supervisor_pendsv_handler);
-  exception_set_exclusive_handler(SVCALL_EXCEPTION, rtos_supervisor_svc_handler);
-  exception_set_exclusive_handler(SYSTICK_EXCEPTION, rtos_supervisor_systick_handler);
+  exception_set_exclusive_handler(PENDSV_EXCEPTION, qos_supervisor_pendsv_handler);
+  exception_set_exclusive_handler(SVCALL_EXCEPTION, qos_supervisor_svc_handler);
+  exception_set_exclusive_handler(SYSTICK_EXCEPTION, qos_supervisor_systick_handler);
 
   // Set SysTick, PendSV and SVC exceptions to lowest logical exception priority.
   *(io_rw_32 *)(PPB_BASE + M0PLUS_SHPR2_OFFSET) = 0xC0000000;
@@ -191,7 +191,7 @@ bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(Scheduler* scheduler) {
   return should_yield;
 }
 
-void STRIPED_RAM rtos_supervisor_pendsv(Scheduler* scheduler) {
+void STRIPED_RAM qos_supervisor_pendsv(Scheduler* scheduler) {
   if (scheduler->ready_busy_blocked_tasks) {
     scheduler->ready_busy_blocked_tasks = false;
 
@@ -199,7 +199,7 @@ void STRIPED_RAM rtos_supervisor_pendsv(Scheduler* scheduler) {
   }
 }
 
-bool STRIPED_RAM rtos_supervisor_systick(Scheduler* scheduler) {
+bool STRIPED_RAM qos_supervisor_systick(Scheduler* scheduler) {
   auto& delayed = scheduler->delayed;
   
   int64_t tick_count = scheduler->tick_count + 1;
@@ -242,7 +242,7 @@ void STRIPED_RAM sleep(tick_count_t timeout) {
   critical_section(sleep_critical, &timeout);
 }
 
-Task* STRIPED_RAM rtos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current_task) {
+Task* STRIPED_RAM qos_supervisor_context_switch(TaskState new_state, Scheduler* scheduler, Task* current_task) {
   auto& ready = scheduler->ready;
   auto& busy_blocked = scheduler->busy_blocked;
   auto& pending = scheduler->pending;

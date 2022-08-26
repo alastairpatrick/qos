@@ -19,8 +19,8 @@ struct WaitIRQScheduler {
 static WaitIRQScheduler g_schedulers[NUM_CORES];
 
 extern "C" {
-  void rtos_supervisor_wait_irq_handler();
-  void rtos_supervisor_wait_irq(Scheduler* scheduler);
+  void qos_supervisor_wait_irq_handler();
+  void qos_supervisor_wait_irq(Scheduler* scheduler);
 }
 
 static void init_scheduler() {
@@ -35,7 +35,7 @@ static void init_scheduler() {
   }
 }
 
-void STRIPED_RAM rtos_supervisor_wait_irq(Scheduler* scheduler) {
+void STRIPED_RAM qos_supervisor_wait_irq(Scheduler* scheduler) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
@@ -60,7 +60,7 @@ void init_wait_irq(int32_t irq) {
 
   init_scheduler();
 
-  irq_set_exclusive_handler(irq, rtos_supervisor_wait_irq_handler);
+  irq_set_exclusive_handler(irq, qos_supervisor_wait_irq_handler);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
