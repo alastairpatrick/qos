@@ -27,7 +27,7 @@ struct ExceptionFrame {
   int32_t r3;
   int32_t r12;
   void* lr;
-  entry_t return_addr;
+  qos_entry_t return_addr;
   int32_t xpsr;
 };
 
@@ -73,7 +73,7 @@ static void init_scheduler(Scheduler& scheduler) {
   scheduler.current_task = &scheduler.idle_task;
 }
 
-Task *new_task(uint8_t priority, entry_t entry, int32_t stack_size) {
+Task *new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
@@ -136,7 +136,7 @@ static void core_start_scheduler() {
   }
 }
 
-static volatile entry_t g_init_core1;
+static volatile qos_entry_t g_init_core1;
 
 static void start_core1_scheduler() {
   g_init_core1();
@@ -144,7 +144,7 @@ static void start_core1_scheduler() {
   core_start_scheduler();
 }
 
-void start_schedulers(int32_t num_cores, const entry_t* init_procs) {
+void start_schedulers(int32_t num_cores, const qos_entry_t* init_procs) {
   assert(num_cores >= 0 && num_cores <= NUM_CORES);
 
   if (get_core_num() == 0) {

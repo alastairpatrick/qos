@@ -26,7 +26,7 @@ typedef struct Task {
 
   int8_t core;
   int16_t priority;
-  entry_t entry;
+  qos_entry_t entry;
   int32_t* stack;
   int32_t stack_size;
 

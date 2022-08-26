@@ -17,8 +17,8 @@ BEGIN_EXTERN_C
 
 struct Scheduler;
 
-struct Task* new_task(uint8_t priority, entry_t entry, int32_t stack_size);
-void start_schedulers(int32_t num_cores, const entry_t* init_procs);
+struct Task* new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size);
+void start_schedulers(int32_t num_cores, const qos_entry_t* init_procs);
 
 static inline bool are_schedulers_started() {
   extern bool g_internal_are_schedulers_started;
