@@ -144,27 +144,29 @@ static void start_core1_scheduler() {
   core_start_scheduler();
 }
 
-void start_schedulers(entry_t init_core0, entry_t init_core1) {
+void start_schedulers(int32_t num_cores, const entry_t* init_procs) {
+  assert(num_cores >= 0 && num_cores <= NUM_CORES);
+
   if (get_core_num() == 0) {
-    if (init_core0) {
-      init_core0();
+    if (init_procs[0]) {
+      init_procs[0]();
     }
 
-    if (init_core1) {
-      g_init_core1 = init_core1;
+    if (init_procs[1]) {
+      g_init_core1 = init_procs[1];
       multicore_launch_core1(start_core1_scheduler);
       while (!g_internal_are_schedulers_started) {}
     } else {
       g_internal_are_schedulers_started = true;
     }
 
-    if (init_core0) {
+    if (init_procs[0]) {
       core_start_scheduler();
     }
   } else {
-    assert(!init_core0);
-    if (init_core1) {
-      init_core1();
+    assert(!init_procs[0]);
+    if (init_procs[1]) {
+      init_procs[1]();
       core_start_scheduler();
     }
   }

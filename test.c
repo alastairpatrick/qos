@@ -178,7 +178,7 @@ int main() {
 
   mutex_init(&g_live_core_mutex);
 
-  start_schedulers(init_core0, init_core1);
+  start_schedulers(2, (entry_t[]) { init_core0, init_core1 });
 
   // Not reached.
   assert(false);
