@@ -51,6 +51,6 @@ typedef enum qos_task_state_t {
   TASK_SYNC_BLOCKED,
 } qos_task_state_t;
 
-typedef void (*qos_entry_t)();
+typedef void (*qos_proc0_t)();
 
 #endif  // QOS_BASE_H

@@ -153,7 +153,7 @@ int main() {
 
   mutex_init(&g_live_core_mutex);
 
-  qos_start(2, (qos_entry_t[]) { init_core0, init_core1 });
+  qos_start(2, (qos_proc0_t[]) { init_core0, init_core1 });
 
   // Not reached.
   assert(false);

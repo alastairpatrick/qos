@@ -79,14 +79,14 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   scheduler.current_task = &scheduler.idle_task;
 }
 
-static void run_task(qos_entry_t entry) {
+static void run_task(qos_proc0_t entry) {
   for (;;) {
     entry();
     qos_sleep(1);
   }
 }
 
-qos_task_t *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
+qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
@@ -164,7 +164,7 @@ static void core_start_scheduler() {
   }
 }
 
-static volatile qos_entry_t g_init_core1;
+static volatile qos_proc0_t g_init_core1;
 
 static void start_core1() {
   g_init_core1();
@@ -175,7 +175,7 @@ static void start_core1() {
   core_start_scheduler();
 }
 
-void qos_start(int32_t num, const qos_entry_t* init_procs) {
+void qos_start(int32_t num, const qos_proc0_t* init_procs) {
   assert(num == NUM_CORES);
   assert(get_core_num() == 0);
 
