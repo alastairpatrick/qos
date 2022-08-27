@@ -44,7 +44,7 @@ typedef qos_task_state_t (*critical_section_va_proc_t)(struct qos_scheduler_t* s
 
 int32_t qos_critical_section(critical_section_proc_t proc, void*);
 
-inline int32_t qos_critical_section_va(critical_section_va_proc_t proc, ...) {
+static inline int32_t qos_critical_section_va(critical_section_va_proc_t proc, ...) {
   int32_t critical_section_va_internal(critical_section_va_proc_t proc, va_list args);
 
   va_list args;

@@ -76,19 +76,19 @@ void qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_t
 
 #ifdef __cplusplus
 
-inline qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node> begin(qos_task_scheduling_dlist_t& list) {
+static inline qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node> begin(qos_task_scheduling_dlist_t& list) {
   return qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node> end(qos_task_scheduling_dlist_t& list) {
+static inline qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node> end(qos_task_scheduling_dlist_t& list) {
   return qos_dlist_iterator<qos_task_t, &qos_task_t::scheduling_node>::end(list.tasks);
 }
 
-inline qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node> begin(qos_task_timout_dlist_t& list) {
+static inline qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node> begin(qos_task_timout_dlist_t& list) {
   return qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node>::begin(list.tasks);
 }
 
-inline qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node> end(qos_task_timout_dlist_t& list) {
+static inline qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node> end(qos_task_timout_dlist_t& list) {
   return qos_dlist_iterator<qos_task_t, &qos_task_t::timeout_node>::end(list.tasks);
 }
 
