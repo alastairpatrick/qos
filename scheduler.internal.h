@@ -58,7 +58,7 @@ typedef struct qos_scheduler_t {
   // exception stack is empty.
   qos_task_t* current_task;
 
-  // Must be second field of qos_scheduler_t so that qos_time() addresses it correctly.
+  // Must be at byte offset 8 of qos_scheduler_t so that qos_time() addresses it correctly.
   volatile int64_t time;
 
   int8_t core;

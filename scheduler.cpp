@@ -28,7 +28,7 @@ struct exception_frame_t {
   int32_t r3;
   int32_t r12;
   void* lr;
-  qos_entry_t return_addr;
+  void* return_addr;
   int32_t xpsr;
 };
 
@@ -78,13 +78,20 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   scheduler.current_task = &scheduler.idle_task;
 }
 
+static void run_task(qos_entry_t entry) {
+  for (;;) {
+    entry();
+    qos_sleep(1);
+  }
+}
+
 qos_task_t *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
   auto& ready = scheduler.ready;
 
-  qos_task_t* task = new qos_task_t;
+  auto task = new qos_task_t;
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
   qos_internal_insert_scheduled_task(&ready, task);
@@ -102,7 +109,8 @@ qos_task_t *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size
   exception_frame_t* frame = (exception_frame_t*) task->sp;
 
   frame->lr = 0;
-  frame->return_addr = entry;
+  frame->return_addr = (void*) run_task;
+  frame->r0 = (int32_t) entry;
   frame->xpsr = 0x1000000;
 
   return task;

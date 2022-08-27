@@ -50,94 +50,67 @@ void do_delay_task() {
 }
 
 void do_producer_task1() {
-  for(;;) {
-    qos_write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
-    qos_sleep(10);
-  }
+  qos_write_queue(g_queue, "hello", 6, QOS_NO_TIMEOUT);
 }
 
 void do_producer_task2() {
-  for(;;) {
-    qos_write_queue(g_queue, "world", 6, 100);
-    qos_sleep(10);
-  }
+  qos_write_queue(g_queue, "world", 6, 100);
 }
 
 void do_consumer_task1() {
-  for(;;) {
-    char buffer[10];
-    memset(buffer, 0, sizeof(buffer));
-    qos_read_queue(g_queue, buffer, 6, QOS_NO_TIMEOUT);
+  char buffer[10];
+  memset(buffer, 0, sizeof(buffer));
+  qos_read_queue(g_queue, buffer, 6, QOS_NO_TIMEOUT);
+  assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
+}
+
+void do_consumer_task2() {
+  char buffer[10];
+  memset(buffer, 0, sizeof(buffer));
+  if (qos_read_queue(g_queue, buffer, 6, 100)) {
     assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
   }
 }
 
-void do_consumer_task2() {
-  for(;;) {
-    char buffer[10];
-    memset(buffer, 0, sizeof(buffer));
-    if (qos_read_queue(g_queue, buffer, 6, 100)) {
-      assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
-    }
-  }
-}
-
 void do_update_cond_var_task() {
-  for (;;) {
-    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
-    ++g_observed_count;
-    qos_release_and_broadcast_condition_var(g_cond_var);
-    qos_sleep(10);
-  }
+  qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+  ++g_observed_count;
+  qos_release_and_broadcast_condition_var(g_cond_var);
 }
 
 void do_observe_cond_var_task1() {
-  for (;;) {
-    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
-    while ((g_observed_count & 1) != 1) {
-      qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
-    }
-    //printf("count is odd: %d\n", g_observed_count);
-    qos_release_condition_var(g_cond_var);
-
-    qos_sleep(5);
+  qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+  while ((g_observed_count & 1) != 1) {
+    qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
   }
+  //printf("count is odd: %d\n", g_observed_count);
+  qos_release_condition_var(g_cond_var);
 }
 
 void do_observe_cond_var_task2() {
-  for (;;) {
-    qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
-    while ((g_observed_count & 1) != 0) {
-      qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
-    }
-    //printf("count is even: %d\n", g_observed_count);
-    qos_release_condition_var(g_cond_var);
-
-    qos_sleep(5);
+  qos_acquire_condition_var(g_cond_var, QOS_NO_TIMEOUT);
+  while ((g_observed_count & 1) != 0) {
+    qos_wait_condition_var(g_cond_var, QOS_NO_TIMEOUT);
   }
+  //printf("count is even: %d\n", g_observed_count);
+  qos_release_condition_var(g_cond_var);
 }
 
 void do_wait_pwm_wrap() {
-  for (;;) {
-    qos_await_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
-    pwm_clear_irq(PWM_SLICE);
-  }
+  qos_await_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
+  pwm_clear_irq(PWM_SLICE);
 }
 
 void do_live_core_mutex_task1() {
-  for(;;) {
-    mutex_enter_blocking(&g_live_core_mutex);
-    sleep_ms(5000);
-    mutex_exit(&g_live_core_mutex);
-  }
+  mutex_enter_blocking(&g_live_core_mutex);
+  sleep_ms(5000);
+  mutex_exit(&g_live_core_mutex);
 }
 
 void do_live_core_mutex_task2() {
-  for(;;) {
-    mutex_enter_blocking(&g_live_core_mutex);
-    sleep_ms(5000);
-    mutex_exit(&g_live_core_mutex);
-  }
+  mutex_enter_blocking(&g_live_core_mutex);
+  sleep_ms(5000);
+  mutex_exit(&g_live_core_mutex);
 }
 
 void init_pwm_interrupt() {
