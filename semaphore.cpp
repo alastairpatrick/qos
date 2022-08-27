@@ -29,6 +29,8 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_time_t);
 
+  assert(timeout != 0);
+  
   auto current_task = scheduler->current_task;
 
   auto old_count = semaphore->count;
@@ -36,10 +38,6 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   if (new_count >= 0) {
     semaphore->count = new_count;
     qos_current_critical_section_result(scheduler, true);
-    return TASK_RUNNING;
-  }
-
-  if (timeout == 0) {
     return TASK_RUNNING;
   }
 
