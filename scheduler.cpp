@@ -45,8 +45,9 @@ extern "C" {
   void qos_supervisor_svc_handler();
   void qos_supervisor_systick_handler();
   void qos_supervisor_pendsv_handler();
+  void qos_supervisor_fifo_handler();
   bool qos_supervisor_systick(qos_scheduler_t* scheduler);
-  void qos_supervisor_pendsv(qos_scheduler_t* scheduler);
+  void qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
 }
 
@@ -116,11 +117,21 @@ qos_task_t *qos_new_task(uint8_t priority, qos_entry_t entry, int32_t stack_size
   return task;
 }
 
+static void init_fifo() {
+  multicore_fifo_clear_irq();
+
+  auto irq = SIO_IRQ_PROC0 + get_core_num();
+  irq_set_exclusive_handler(irq, qos_supervisor_fifo_handler);
+  irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
+  irq_set_enabled(irq, true);
+}
+
 static void core_start_scheduler() {
   auto& scheduler = get_scheduler();
   auto& idle_task = scheduler.idle_task;
 
   init_scheduler(scheduler);
+  init_fifo();
 
   qos_internal_init_stacks(&scheduler);
 
@@ -155,7 +166,7 @@ static void core_start_scheduler() {
 
 static volatile qos_entry_t g_init_core1;
 
-static void start_core1_scheduler() {
+static void start_core1() {
   g_init_core1();
 
   g_qos_internal_started = true;
@@ -164,40 +175,33 @@ static void start_core1_scheduler() {
   core_start_scheduler();
 }
 
-void qos_start(int32_t num_cores, const qos_entry_t* init_procs) {
-  assert(num_cores >= 0 && num_cores <= NUM_CORES);
+void qos_start(int32_t num, const qos_entry_t* init_procs) {
+  assert(num == NUM_CORES);
+  assert(get_core_num() == 0);
 
-  if (get_core_num() == 0) {
-    if (init_procs[0]) {
-      init_procs[0]();
-    }
+  init_procs[0]();
 
-    if (init_procs[1]) {
-      g_init_core1 = init_procs[1];
-      multicore_launch_core1(start_core1_scheduler);
-      do {
-        __mem_fence_acquire();
-      } while (!g_qos_internal_started);
-    } else {
-      g_qos_internal_started = true;
-    }
+  g_init_core1 = init_procs[1];
+  multicore_launch_core1(start_core1);
+  do {
+    __mem_fence_acquire();
+  } while (!g_qos_internal_started);
 
-    if (init_procs[0]) {
-      core_start_scheduler();
-    }
-  } else {
-    assert(!init_procs[0]);
-    if (init_procs[1]) {
-      init_procs[1]();
-      core_start_scheduler();
-    }
-  }
+  core_start_scheduler();
 }
 
-void STRIPED_RAM qos_ready_busy_blocked_tasks() {
+void STRIPED_RAM qos_ready_busy_blocked_tasks(bool inter_core) {
   auto& scheduler = get_scheduler();
   scheduler.ready_busy_blocked_tasks = true;
-  scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
+
+  // Pend IRQ on this core.
+  auto irq = SIO_IRQ_PROC0 + get_core_num();
+  irq_set_pending(irq);
+
+  if (inter_core) {
+    // Pend IRQ on other core.
+    sio_hw->fifo_wr = 0;
+  }
 }
 
 static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler) {
@@ -215,20 +219,15 @@ static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* sch
   return should_yield;
 }
 
-void STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
-  if (scheduler->ready_busy_blocked_tasks) {
-    scheduler->ready_busy_blocked_tasks = false;
-
-    ready_busy_blocked_tasks_supervisor(scheduler);
-  }
-}
-
 bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   auto& delayed = scheduler->delayed;
   
   int64_t time = scheduler->time + QOS_TICK_MS;
   scheduler->time = time;
 
+  // Do this every SysTick in case any of the busy blocked tasks have
+  // timed out. TODO: record the absolute_time_t with the
+  // task and only ready those tasks that have timed out.
   bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler);
 
   auto position = begin(delayed);
@@ -240,6 +239,28 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   }
 
   return should_yield;
+}
+
+void STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
+  while (multicore_fifo_rvalid()) {
+    int32_t data = sio_hw->fifo_rd;
+
+    if (ready_busy_blocked_tasks_supervisor(scheduler)) {
+      scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
+    }
+  }
+
+  if (scheduler->ready_busy_blocked_tasks) {
+    scheduler->ready_busy_blocked_tasks = false;
+
+    if (ready_busy_blocked_tasks_supervisor(scheduler)) {
+      scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
+    }
+  }
+
+  auto irq = SIO_IRQ_PROC0 + get_core_num();
+  multicore_fifo_clear_irq();
+  irq_clear(irq);
 }
 
 static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, void* p) {

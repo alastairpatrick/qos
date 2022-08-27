@@ -23,7 +23,7 @@ static inline struct qos_task_t* qos_current_task() {
 void qos_yield();
 
 // May be called from thead mode, critical section or interrupt service routine.
-void qos_ready_busy_blocked_tasks();
+void qos_ready_busy_blocked_tasks(bool inter_core);
 
 // May only be called from critical section
 struct qos_scheduler_t;

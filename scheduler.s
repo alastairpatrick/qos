@@ -71,6 +71,7 @@ qos_supervisor_systick_handler:
         MRS     R3, PSP
         B       roll_back_atomic
 
+
 // void qos_supervisor_pendsv_handler()
 .GLOBAL qos_supervisor_pendsv_handler
 .TYPE qos_supervisor_pendsv_handler, %function
@@ -78,10 +79,6 @@ qos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool qos_supervisor_pendsv(qos_scheduler_t*)
-        LDR     R3, =qos_supervisor_pendsv
-        ADD     R0, SP, #4
-        BLX     R3
 
 context_switch_ready:
         // R0 becomes the first parameter of qos_supervisor_context_switch.
@@ -150,3 +147,13 @@ roll_back_atomic:
 
         // EXC_RETURN value.
 0:      POP     {PC}
+
+
+// void qos_supervisor_fifo_handler()
+.GLOBAL qos_supervisor_fifo_handler
+.TYPE qos_supervisor_fifo_handler, %function
+qos_supervisor_fifo_handler:
+        // bool qos_supervisor_fifo(qos_scheduler_t*)
+        LDR     R3, =qos_supervisor_fifo
+        MOV     R0, SP
+        BX      R3

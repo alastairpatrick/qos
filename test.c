@@ -103,13 +103,13 @@ void do_wait_pwm_wrap() {
 
 void do_live_core_mutex_task1() {
   mutex_enter_blocking(&g_live_core_mutex);
-  sleep_ms(5000);
+  sleep_ms(500);
   mutex_exit(&g_live_core_mutex);
 }
 
 void do_live_core_mutex_task2() {
   mutex_enter_blocking(&g_live_core_mutex);
-  sleep_ms(5000);
+  sleep_ms(500);
   mutex_exit(&g_live_core_mutex);
 }
 
