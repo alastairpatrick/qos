@@ -334,14 +334,13 @@ void STRIPED_RAM qos_delay_task(qos_scheduler_t* scheduler, qos_task_t* task, qo
   if (time == QOS_NO_TIMEOUT) {
     return;
   }
-  
-  auto& delayed = scheduler->delayed;
-
-  assert(time < 0);
+  assert(time < QOS_NO_BLOCKING);
 
   task->awaken_time = time;
+
+  auto& delayed = scheduler->delayed;
   auto position = begin(delayed);
-  while (position != end(delayed) && position->awaken_time < time) {
+  while (position != end(delayed) && position->awaken_time <= time) {
     ++position;
   }
   splice(position, task);
