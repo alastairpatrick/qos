@@ -47,6 +47,9 @@ qos_atomic_compare_and_set_ptr:
         BX      LR
 
 
+// qos_time() is implemented as an atomic operation in case the SysTick exception - which
+// advances the current time - occurs between loading the low and high 32-bits into R0 & R1.
+
 // int64_t qos_time()
 .BALIGN 32
 .GLOBAL qos_time
