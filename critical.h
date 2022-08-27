@@ -35,7 +35,7 @@
 // much less expensive than critical sections and never cause priority
 // inversion.
 
-#include "scheduler.h"
+#include "base.h"
 
 QOS_BEGIN_EXTERN_C
 

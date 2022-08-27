@@ -2,11 +2,6 @@
 #define QOS_SCHEDULER_H
 
 #include "base.h"
-#include "atomic.h"
-
-#include <stdint.h>
-
-#include "hardware/structs/systick.h"
 
 QOS_BEGIN_EXTERN_C
 

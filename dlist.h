@@ -2,7 +2,6 @@
 #define QOS_DLIST_H
 
 #include "base.h"
-#include <stdbool.h>
 
 QOS_BEGIN_EXTERN_C
 

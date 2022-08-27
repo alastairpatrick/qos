@@ -3,8 +3,6 @@
 
 #include "base.h"
 
-#include <stdbool.h>
-
 QOS_BEGIN_EXTERN_C
 
 struct qos_mutex_t* qos_new_mutex();

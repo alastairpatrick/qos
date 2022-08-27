@@ -2,7 +2,10 @@
 #define QOS_BASE_H
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
+
+#include "hardware/address_mapped.h"
 
 #ifndef QOS_TICK_1MHZ_SOURCE
 #define QOS_TICK_1MHZ_SOURCE 1      // nominal 1MHz clock source

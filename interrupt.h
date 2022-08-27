@@ -2,7 +2,6 @@
 #define QOS_INTERRUPT_H
 
 #include "base.h"
-#include "scheduler.h"
 
 QOS_BEGIN_EXTERN_C
 

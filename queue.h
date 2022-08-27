@@ -3,8 +3,6 @@
 
 #include "base.h"
 
-#include <stdint.h>
-
 QOS_BEGIN_EXTERN_C
 
 struct qos_queue_t* qos_new_queue(int32_t capacity);
