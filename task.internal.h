@@ -26,7 +26,6 @@ typedef struct qos_task_t {
   int32_t r10;
   int32_t r11;
 
-  int8_t core;
   int16_t priority;
   qos_proc0_t entry;
   int32_t* stack;

@@ -22,6 +22,8 @@ static inline struct qos_task_t* qos_current_task() {
 
 void qos_yield();
 
+int32_t qos_migrate_core(int32_t dest_core);
+
 // May only be called from critical section
 struct qos_scheduler_t;
 bool qos_ready_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task);

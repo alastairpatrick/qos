@@ -54,6 +54,22 @@ qos_supervisor_svc_handler:
         POP     {PC}
 
 
+// void qos_supervisor_fifo_handler()
+.GLOBAL qos_supervisor_fifo_handler
+.TYPE qos_supervisor_fifo_handler, %function
+qos_supervisor_fifo_handler:
+        PUSH    {LR}
+        
+        // bool qos_supervisor_fifo(qos_scheduler_t*)
+        ADD     R0, SP, #4
+        BL      qos_supervisor_fifo
+        
+        CMP     R0, #0
+        BNE     context_switch_ready
+
+        POP     {PC}
+
+
 // void qos_supervisor_systick_handler
 .GLOBAL qos_supervisor_systick_handler
 .TYPE qos_supervisor_systick_handler, %function
@@ -62,9 +78,9 @@ qos_supervisor_systick_handler:
         PUSH    {LR}
 
         // bool qos_supervisor_systick(qos_scheduler_t*)
-        LDR     R3, =qos_supervisor_systick
         ADD     R0, SP, #4
-        BLX     R3
+        BL      qos_supervisor_systick
+
         CMP     R0, #0
         BNE     context_switch_ready
 
@@ -148,13 +164,3 @@ roll_back_atomic:
 
         // EXC_RETURN value.
 0:      POP     {PC}
-
-
-// void qos_supervisor_fifo_handler()
-.GLOBAL qos_supervisor_fifo_handler
-.TYPE qos_supervisor_fifo_handler, %function
-qos_supervisor_fifo_handler:
-        // bool qos_supervisor_fifo(qos_scheduler_t*)
-        LDR     R3, =qos_supervisor_fifo
-        MOV     R0, SP
-        BX      R3

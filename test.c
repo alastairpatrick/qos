@@ -32,6 +32,7 @@ struct qos_task_t* g_update_cond_var_task;
 struct qos_task_t* g_observe_cond_var_task1;
 struct qos_task_t* g_observe_cond_var_task2;
 struct qos_task_t* g_wait_pwm_task;
+struct qos_task_t* g_migrating_task;
 struct qos_task_t* g_live_core_mutex_task1;
 struct qos_task_t* g_live_core_mutex_task2;
 
@@ -102,6 +103,11 @@ void do_wait_pwm_wrap() {
   pwm_clear_irq(PWM_SLICE);
 }
 
+void do_migrating_task() {
+  qos_sleep(100);
+  qos_migrate_core(1 - get_core_num());
+}
+
 void do_live_core_mutex_task1() {
   mutex_enter_blocking(&g_live_core_mutex);
   sleep_ms(500);
@@ -129,8 +135,8 @@ void init_core0() {
   g_delay_task = qos_new_task(100, do_delay_task, 1024);
   g_producer_task1 = qos_new_task(1, do_producer_task1, 1024);
   g_consumer_task1 = qos_new_task(1, do_consumer_task1, 1024);
-  g_producer_task2 = qos_new_task(1, do_producer_task2, 1024);
-  g_consumer_task2 = qos_new_task(1, do_consumer_task2, 1024);
+  g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
+  g_migrating_task = qos_new_task(1, do_migrating_task, 1024);
 
   g_live_core_mutex_task1 = qos_new_task(100, do_live_core_mutex_task1, 1024);
 }
@@ -141,7 +147,8 @@ void init_core1() {
   g_mutex = qos_new_mutex();
   g_cond_var = qos_new_condition_var(g_mutex);
 
-  g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
+  g_producer_task2 = qos_new_task(1, do_producer_task2, 1024);
+  g_consumer_task2 = qos_new_task(1, do_consumer_task2, 1024);
   g_observe_cond_var_task2 = qos_new_task(1, do_observe_cond_var_task2, 1024);
   g_update_cond_var_task = qos_new_task(1, do_update_cond_var_task, 1024);
   g_wait_pwm_task = qos_new_task(1, do_wait_pwm_wrap, 1024);

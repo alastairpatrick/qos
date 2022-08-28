@@ -2,6 +2,7 @@
 #include "semaphore.internal.h"
 
 #include "atomic.h"
+#include "core_migrator.h"
 #include "dlist_it.h"
 #include "svc.h"
 #include "task.h"
@@ -49,9 +50,10 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_supervisor(qos_scheduler_t
 }
 
 bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout) {
-  assert(semaphore->core == get_core_num());
   assert(count >= 0);
   qos_normalize_time(&timeout);
+
+  qos_core_migrator migrator(semaphore->core);
 
   auto old_count = semaphore->count;
   auto new_count = old_count - count;
@@ -97,7 +99,9 @@ static qos_task_state_t STRIPED_RAM release_semaphore_supervisor(qos_scheduler_t
 }
 
 void STRIPED_RAM qos_release_semaphore(qos_semaphore_t* semaphore, int32_t count) {
-  assert(semaphore->core == get_core_num());
   assert(count >= 0);
+
+  qos_core_migrator migrator(semaphore->core);
+
   qos_call_supervisor_va(release_semaphore_supervisor, semaphore, count);
 }

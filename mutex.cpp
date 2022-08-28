@@ -2,6 +2,7 @@
 #include "mutex.internal.h"
 
 #include "atomic.h"
+#include "core_migrator.h"
 #include "dlist_it.h"
 #include "svc.h"
 #include "task.h"
@@ -67,9 +68,11 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* sc
 }
 
 bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
-  assert(mutex->core == get_core_num());
-  assert(!qos_owns_mutex(mutex));
   qos_normalize_time(&timeout);
+
+  qos_core_migrator migrator(mutex->core);
+
+  assert(!qos_owns_mutex(mutex));
 
   auto current_task = qos_current_task();
 
@@ -115,6 +118,8 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* sc
 }
 
 void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
+  qos_core_migrator migrator(mutex->core);
+
   assert(qos_owns_mutex(mutex));
 
   auto current_task = qos_current_task();
@@ -167,10 +172,12 @@ qos_task_state_t qos_wait_condition_var_supervisor(qos_scheduler_t* scheduler, v
 }
 
 bool qos_wait_condition_var(qos_condition_var_t* var, qos_time_t timeout) {
-  assert(qos_owns_mutex(var->mutex));
   assert(timeout != 0);
   qos_normalize_time(&timeout);
 
+  qos_core_migrator migrator(var->mutex->core);
+
+  assert(qos_owns_mutex(var->mutex));
   return qos_call_supervisor_va(qos_wait_condition_var_supervisor, var, timeout);
 }
 
@@ -202,6 +209,8 @@ static qos_task_state_t release_and_signal_condition_var_supervisor(qos_schedule
 }
 
 void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
+  qos_core_migrator migrator(var->mutex->core);
+
   assert(qos_owns_mutex(var->mutex));
   qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
 }
@@ -229,6 +238,8 @@ static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_sched
 }
 
 void qos_release_and_broadcast_condition_var(qos_condition_var_t* var) {
+  qos_core_migrator migrator(var->mutex->core);
+
   assert(qos_owns_mutex(var->mutex));
   qos_call_supervisor(release_and_broadcast_condition_var_supervisor, var);
 }

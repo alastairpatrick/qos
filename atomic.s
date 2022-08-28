@@ -2,7 +2,6 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
-.EQU    sio_cpuid_offset, 0xD0000000
 
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //

@@ -47,9 +47,9 @@ extern "C" {
   void qos_supervisor_pendsv_handler();
   void qos_supervisor_fifo_handler();
   bool qos_supervisor_systick(qos_scheduler_t* scheduler);
-  void qos_supervisor_fifo(qos_scheduler_t* scheduler);
+  bool qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
-  void qos_internal_atomic_compare_and_wfe(qos_atomic32_t* atomic, int32_t expected);
+  void qos_internal_atomic_write_fifo(int32_t data);
 }
 
 static void run_idle_task();
@@ -77,7 +77,6 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
 
   qos_init_dnode(&scheduler.idle_task.scheduling_node);
   qos_init_dnode(&scheduler.idle_task.timeout_node);
-  scheduler.idle_task.core = get_core_num();
   scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
 }
@@ -100,7 +99,6 @@ qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size
   qos_init_dnode(&task->timeout_node);
   qos_internal_insert_scheduled_task(&ready, task);
 
-  task->core = get_core_num();
   task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
@@ -236,12 +234,15 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   return should_yield;
 }
 
-void STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
+bool STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
+  bool should_yield = false;
   while (multicore_fifo_rvalid()) {
-    int32_t data = sio_hw->fifo_rd;
+    auto task = (qos_task_t*) sio_hw->fifo_rd;
+    
+    should_yield |= qos_ready_task(scheduler, task);
   }
 
-  multicore_fifo_clear_irq();
+  return should_yield;
 }
 
 static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_scheduler_t* scheduler, void* p) {
@@ -266,6 +267,32 @@ void STRIPED_RAM qos_yield() {
 void STRIPED_RAM qos_sleep(qos_time_t timeout) {
   qos_normalize_time(&timeout);
   qos_call_supervisor(sleep_supervisor, &timeout);
+}
+
+static qos_task_state_t migrate_core_supervisor(qos_scheduler_t* scheduler, void*) {
+  if (!multicore_fifo_wready()) {
+    return TASK_READY;
+  }
+
+  qos_current_supervisor_call_result(scheduler, true);
+  __dmb();
+
+  sio_hw->fifo_wr = (int32_t) scheduler->current_task;
+
+  return TASK_SYNC_BLOCKED;
+}
+
+int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
+  assert(dest_core >= 0 && dest_core < NUM_CORES);
+  int32_t source_core = get_core_num();
+  if (dest_core == source_core) {
+    return source_core;
+  }
+
+  while (!qos_call_supervisor(migrate_core_supervisor, nullptr)) {
+  }
+
+  return source_core;
 }
 
 qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current_task) {
