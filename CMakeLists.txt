@@ -17,10 +17,10 @@ add_executable(rtos
   live_core.cpp
   mutex.cpp
   queue.cpp
-  scheduler.cpp
-  scheduler.s
   svc.s
   semaphore.cpp
+  task.cpp
+  task.s
   test.c
 )
 

@@ -2,9 +2,9 @@
 
 #include "dlist.h"
 #include "dlist_it.h"
-#include "scheduler.h"
-#include "scheduler.internal.h"
 #include "svc.h"
+#include "task.h"
+#include "task.internal.h"
 #include "time.h"
 #include "hardware/irq.h"
 

@@ -1,7 +1,7 @@
 #ifndef QOS_TASK_INTERNAL_H
 #define QOS_TASK_INTERNAL_H
 
-#include "scheduler.h"
+#include "task.h"
 
 #include "dlist.h"
 

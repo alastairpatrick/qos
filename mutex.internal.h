@@ -2,7 +2,7 @@
 #define QOS_MUTEX_INTERNAL_H
 
 #include "base.h"
-#include "scheduler.internal.h"
+#include "task.internal.h"
 
 typedef struct qos_mutex_t {
   int8_t core;

@@ -1,7 +1,7 @@
 #include "atomic.h"
 #include "interrupt.h"
 #include "mutex.h"
-#include "scheduler.h"
+#include "task.h"
 #include "time.h"
 #include "queue.h"
 

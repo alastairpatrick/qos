@@ -9,3 +9,5 @@
 #include "queue.internal.h"
 #include "semaphore.h"
 #include "semaphore.internal.h"
+#include "task.h"
+#include "task.internal.h"

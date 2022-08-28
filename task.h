@@ -1,5 +1,5 @@
-#ifndef QOS_SCHEDULER_H
-#define QOS_SCHEDULER_H
+#ifndef QOS_TASK_H
+#define QOS_TASK_H
 
 #include "base.h"
 
@@ -29,4 +29,4 @@ void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, 
 
 QOS_END_EXTERN_C
 
-#endif  // QOS_SCHEDULER_H
+#endif  // QOS_TASK_H

@@ -1,9 +1,9 @@
 #include "queue.h"
 #include "queue.internal.h"
 
-#include "scheduler.h"
 #include "semaphore.h"
 #include "mutex.h"
+#include "task.h"
 #include "time.h"
 
 #include <algorithm>

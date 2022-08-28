@@ -1,5 +1,5 @@
-#include "scheduler.h"
-#include "scheduler.internal.h"
+#include "task.h"
+#include "task.internal.h"
 
 #include "atomic.h"
 #include "dlist_it.h"

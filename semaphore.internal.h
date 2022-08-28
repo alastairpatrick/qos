@@ -2,7 +2,7 @@
 #define QOS_SEMAPHORE_INTERNAL_H
 
 #include "base.h"
-#include "scheduler.internal.h"
+#include "task.internal.h"
 
 typedef struct qos_semaphore_t {
   int8_t core;
