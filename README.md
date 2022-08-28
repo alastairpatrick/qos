@@ -9,7 +9,7 @@ It isn't ready for use in other projects. I'll update this document if it ever i
 ### Multi-core preemptive multi-tasking
 
 Tasks have affinity to a particular core on which they run. They can be explicitly migrated to another
-core while running. This is underlying mechanism on which multi-core IPC is built.
+core while running. This is the underlying mechanism on which multi-core IPC is built.
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
@@ -22,8 +22,17 @@ int32_t qos_migrate_core(int32_t dest_core);
 Units are milliseconds.
 
 ```c
+typedef int64_t qos_time_t;
 void qos_sleep(qos_time_t timeout);
-int64_t qos_time();
+qos_time_t qos_time();
+void qos_normalize_time(qos_time_t* time)
+```
+qos_time_t can represent an absolute time or a time relative to the present.
+Absolute times are negative and grow towards zero. Relative times are non-negative. Both these
+calls sleep for 100ms:
+```c
+qos_sleep(100);
+qos_sleep(100 + qos_time());
 ```
 
 ### Multi-core IPC
