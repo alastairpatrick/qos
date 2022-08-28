@@ -139,6 +139,8 @@ static void core_start_scheduler() {
   qos_internal_init_stacks(&scheduler);
 
   systick_hw->csr = 0;
+  __dsb();
+  __isb();
 
   exception_set_exclusive_handler(PENDSV_EXCEPTION, qos_supervisor_pendsv_handler);
   exception_set_exclusive_handler(SVCALL_EXCEPTION, qos_supervisor_svc_handler);
@@ -158,6 +160,8 @@ static void core_start_scheduler() {
   }
 
   systick_hw->csr = csr;
+  __dsb();
+  __isb();
 
   qos_yield();
 
@@ -205,6 +209,7 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_sche
 static void run_idle_task() {
   for (;;) {
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
+    __dsb();
     __wfe();
   }
 }

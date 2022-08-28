@@ -31,7 +31,7 @@
 #define QOS_END_EXTERN_C
 #endif
 
-#define STRIPED_RAM __attribute__((section(".time_critical")))
+#define STRIPED_RAM __attribute__((section(".time_critical.qos")))
 
 typedef volatile int32_t qos_atomic32_t;
 typedef volatile void* qos_atomic_ptr_t;

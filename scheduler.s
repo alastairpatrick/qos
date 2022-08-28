@@ -1,4 +1,4 @@
-.SECTION .time_critical
+.SECTION .time_critical.qos
 .SYNTAX UNIFIED
 .THUMB_FUNC
 .BALIGN 4
@@ -18,6 +18,7 @@ qos_internal_init_stacks:
         MSR     PSP, R3
         MOVS    R3, #task_CONTROL
         MSR     CONTROL, R3
+        ISB
 
         // Exception mode uses new main stack.
         MSR     MSP, R0

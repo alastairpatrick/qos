@@ -10,6 +10,7 @@
 
 #include "hardware/regs/m0plus.h"
 #include "hardware/structs/scb.h"
+#include "hardware/sync.h"
 
 extern "C" {
   void qos_supervisor_await_irq_handler();
@@ -25,6 +26,8 @@ void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
   
   // Atomically disable IRQ but leave it pending.
   *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICER_OFFSET)) = 1 << irq;
+  __dsb();
+  __isb();
 
   bool should_preempt = false;
   while (!empty(begin(tasks))) {
@@ -47,6 +50,7 @@ static void STRIPED_RAM unblock_await_irq(qos_task_t* task) {
   // Disable interrupt.
   if (task->sync_ptr) {
     hw_clear_bits((io_rw_32*) task->sync_ptr, task->sync_state);
+    __dsb();
   }
 }
 
@@ -63,6 +67,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
   // Enable interrupt.
   if (enable) {
     hw_set_bits(enable, mask);
+    __dsb();
   }
 
   // Yield if the interrupt is pending. Yield rather than run so other tasks
@@ -72,6 +77,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
   if (pending & irq_mask) {
     if (enable) {
       hw_clear_bits(enable, mask);
+      __dsb();
     }
     return TASK_READY;
   }

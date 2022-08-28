@@ -1,4 +1,4 @@
-.SECTION .time_critical
+.SECTION .time_critical.qos
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
@@ -9,6 +9,6 @@ qos_supervisor_await_irq_handler:
 
         // void qos_supervisor_await_irq(qos_scheduler_t* scheduler)
         ADD     R0, SP, #4
-        BLX     qos_supervisor_await_irq
+        BL      qos_supervisor_await_irq
 
         POP     {PC}
