@@ -7,9 +7,9 @@
 extern "C" {
 #endif
 
-void qos_live_core_busy_block();
-bool qos_live_core_busy_block_until(absolute_time_t until);
-void qos_live_core_ready_busy_blocked_tasks();
+void qos_lock_core_busy_block();
+bool qos_lock_core_busy_block_until(absolute_time_t until);
+void qos_lock_core_ready_busy_blocked_tasks();
 
 #ifdef __cplusplus
 }
@@ -36,7 +36,7 @@ void qos_live_core_ready_busy_blocked_tasks();
  * \param save the uint32_t value that should be passed to spin_unlock when the spin lock is unlocked. (i.e. the `PRIMASK`
  *             state when the spin lock was acquire
  */
-#define lock_internal_spin_unlock_with_wait(lock, save) spin_unlock((lock)->spin_lock, save), qos_live_core_busy_block()
+#define lock_internal_spin_unlock_with_wait(lock, save) spin_unlock((lock)->spin_lock, save), qos_lock_core_busy_block()
 #endif
 
 #ifndef lock_internal_spin_unlock_with_notify
@@ -87,7 +87,7 @@ void qos_live_core_ready_busy_blocked_tasks();
  */
 #define lock_internal_spin_unlock_with_best_effort_wait_or_timeout(lock, save, until) ({ \
     spin_unlock((lock)->spin_lock, save);                                                \
-    qos_live_core_busy_block_until(until);                                               \
+    qos_lock_core_busy_block_until(until);                                               \
 })
 #endif
 

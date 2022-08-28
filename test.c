@@ -21,7 +21,7 @@ struct qos_queue_t* g_queue;
 struct qos_mutex_t* g_mutex;
 struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
-mutex_t g_live_core_mutex;
+mutex_t g_lock_core_mutex;
 
 struct qos_task_t* g_delay_task;
 struct qos_task_t* g_producer_task1;
@@ -33,8 +33,8 @@ struct qos_task_t* g_observe_cond_var_task1;
 struct qos_task_t* g_observe_cond_var_task2;
 struct qos_task_t* g_wait_pwm_task;
 struct qos_task_t* g_migrating_task;
-struct qos_task_t* g_live_core_mutex_task1;
-struct qos_task_t* g_live_core_mutex_task2;
+struct qos_task_t* g_lock_core_mutex_task1;
+struct qos_task_t* g_lock_core_mutex_task2;
 
 int g_observed_count;
 
@@ -108,17 +108,17 @@ void do_migrating_task() {
   qos_migrate_core(1 - get_core_num());
 }
 
-void do_live_core_mutex_task1() {
-  mutex_enter_blocking(&g_live_core_mutex);
+void do_lock_core_mutex_task1() {
+  mutex_enter_blocking(&g_lock_core_mutex);
   sleep_ms(500);
   sio_hw->gpio_togl = 1 << PICO_DEFAULT_LED_PIN;
-  mutex_exit(&g_live_core_mutex);
+  mutex_exit(&g_lock_core_mutex);
 }
 
-void do_live_core_mutex_task2() {
-  mutex_enter_blocking(&g_live_core_mutex);
+void do_lock_core_mutex_task2() {
+  mutex_enter_blocking(&g_lock_core_mutex);
   sleep_ms(500);
-  mutex_exit(&g_live_core_mutex);
+  mutex_exit(&g_lock_core_mutex);
 }
 
 void init_pwm_interrupt() {
@@ -138,7 +138,7 @@ void init_core0() {
   g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
   g_migrating_task = qos_new_task(1, do_migrating_task, 1024);
 
-  g_live_core_mutex_task1 = qos_new_task(100, do_live_core_mutex_task1, 1024);
+  g_lock_core_mutex_task1 = qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
 
 void init_core1() {
@@ -153,7 +153,7 @@ void init_core1() {
   g_update_cond_var_task = qos_new_task(1, do_update_cond_var_task, 1024);
   g_wait_pwm_task = qos_new_task(1, do_wait_pwm_wrap, 1024);
 
-  g_live_core_mutex_task2 = qos_new_task(100, do_live_core_mutex_task2, 1024);
+  g_lock_core_mutex_task2 = qos_new_task(100, do_lock_core_mutex_task2, 1024);
 }
 
 int main() {
@@ -163,7 +163,7 @@ int main() {
   alarm_pool_init_default();
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
-  mutex_init(&g_live_core_mutex);
+  mutex_init(&g_lock_core_mutex);
 
   qos_start(2, (qos_proc0_t[]) { init_core0, init_core1 });
 

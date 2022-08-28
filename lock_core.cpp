@@ -6,15 +6,15 @@
 
 QOS_BEGIN_EXTERN_C
 
-void qos_live_core_busy_block();
-bool qos_live_core_busy_block_until(absolute_time_t until);
+void qos_lock_core_busy_block();
+bool qos_lock_core_busy_block_until(absolute_time_t until);
 
 static qos_task_state_t busy_block_supervisor(qos_scheduler_t*, void*) {
   return TASK_BUSY_BLOCKED;
 }
 
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify or spuriously.
-void qos_live_core_busy_block() {
+void qos_lock_core_busy_block() {
   if (qos_is_started()) {
     qos_call_supervisor(busy_block_supervisor, nullptr);
   } else {
@@ -23,7 +23,7 @@ void qos_live_core_busy_block() {
 }
 
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify, after timrout or spuriously.
-bool qos_live_core_busy_block_until(absolute_time_t until) {
+bool qos_lock_core_busy_block_until(absolute_time_t until) {
   if (qos_is_started()) {
     qos_call_supervisor(busy_block_supervisor, nullptr);
     return time_reached(until);
