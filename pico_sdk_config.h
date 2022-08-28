@@ -59,7 +59,7 @@ void qos_live_core_ready_busy_blocked_tasks();
  * \param save the uint32_t value that should be passed to spin_unlock when the spin lock is unlocked. (i.e. the PRIMASK
  *             state when the spin lock was acquire)
  */
-#define lock_internal_spin_unlock_with_notify(lock, save) spin_unlock((lock)->spin_lock, save), qos_live_core_ready_busy_blocked_tasks()
+#define lock_internal_spin_unlock_with_notify(lock, save) spin_unlock((lock)->spin_lock, save), __sev()
 #endif
 
 #ifndef lock_internal_spin_unlock_with_best_effort_wait_or_timeout
@@ -87,7 +87,7 @@ void qos_live_core_ready_busy_blocked_tasks();
  */
 #define lock_internal_spin_unlock_with_best_effort_wait_or_timeout(lock, save, until) ({ \
     spin_unlock((lock)->spin_lock, save);                                                \
-    qos_live_core_busy_block_until(until);                                                   \
+    qos_live_core_busy_block_until(until);                                               \
 })
 #endif
 

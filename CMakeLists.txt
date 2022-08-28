@@ -32,6 +32,7 @@ target_link_libraries(rtos
   hardware_claim
   hardware_dma
   hardware_exception
+  hardware_gpio
   hardware_irq
   hardware_pwm
   hardware_timer

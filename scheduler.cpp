@@ -38,7 +38,7 @@ struct supervisor_t {
 };
 
 static supervisor_t g_supervisors[NUM_CORES];
-bool g_qos_internal_started;
+volatile bool g_qos_internal_started;
 
 extern "C" {
   void qos_internal_init_stacks(qos_scheduler_t* exception_stack_top);
@@ -49,7 +49,10 @@ extern "C" {
   bool qos_supervisor_systick(qos_scheduler_t* scheduler);
   void qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
+  void qos_internal_atomic_compare_and_wfe(qos_atomic32_t* atomic, int32_t expected);
 }
+
+static void run_idle_task();
 
 static qos_scheduler_t& STRIPED_RAM get_scheduler() {
   return g_supervisors[get_core_num()].scheduler;
@@ -158,10 +161,7 @@ static void core_start_scheduler() {
 
   qos_yield();
 
-  // Become the idle task.
-  for (;;) {
-    __wfi();
-  }
+  run_idle_task();
 }
 
 static volatile qos_proc0_t g_init_core1;
@@ -170,7 +170,6 @@ static void start_core1() {
   g_init_core1();
 
   g_qos_internal_started = true;
-  __mem_fence_release();
 
   core_start_scheduler();
 }
@@ -183,28 +182,12 @@ void qos_start(int32_t num, const qos_proc0_t* init_procs) {
 
   g_init_core1 = init_procs[1];
   multicore_launch_core1(start_core1);
-  do {
-    __mem_fence_acquire();
-  } while (!g_qos_internal_started);
+  while (!g_qos_internal_started) {}
 
   core_start_scheduler();
 }
 
-void STRIPED_RAM qos_ready_busy_blocked_tasks(bool inter_core) {
-  auto& scheduler = get_scheduler();
-  scheduler.ready_busy_blocked_tasks = true;
-
-  // Pend IRQ on this core.
-  auto irq = SIO_IRQ_PROC0 + get_core_num();
-  irq_set_pending(irq);
-
-  if (inter_core) {
-    // Pend IRQ on other core.
-    sio_hw->fifo_wr = 0;
-  }
-}
-
-static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler) {
+static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_critical(qos_scheduler_t* scheduler, void*) {
   auto& busy_blocked = scheduler->busy_blocked;
 
   bool should_yield = false;
@@ -216,7 +199,14 @@ static bool STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* sch
     should_yield |= qos_ready_task(scheduler, task);
   }
 
-  return should_yield;
+  return should_yield ? TASK_READY : TASK_RUNNING;
+}
+
+static void run_idle_task() {
+  for (;;) {
+    qos_critical_section(ready_busy_blocked_tasks_critical, nullptr);
+    __wfe();
+  }
 }
 
 bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
@@ -225,10 +215,10 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   int64_t time = scheduler->time + QOS_TICK_MS;
   scheduler->time = time;
 
-  // Do this every SysTick in case any of the busy blocked tasks have
-  // timed out. TODO: record the absolute_time_t with the
-  // task and only ready those tasks that have timed out.
-  bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler);
+  // The priority of a busy blocked task is dynamically reduced until it is readied. To mitigate the
+  // possibility that it might never otherwise run again on account of higher priority tasks, periodically
+  // elevate it to its original priority by readying it. This also solves the problem of how to ready it on timeout.
+  bool should_yield = ready_busy_blocked_tasks_critical(scheduler, nullptr);
 
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_time <= time) {
@@ -244,23 +234,9 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
 void STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
   while (multicore_fifo_rvalid()) {
     int32_t data = sio_hw->fifo_rd;
-
-    if (ready_busy_blocked_tasks_supervisor(scheduler)) {
-      scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
-    }
   }
 
-  if (scheduler->ready_busy_blocked_tasks) {
-    scheduler->ready_busy_blocked_tasks = false;
-
-    if (ready_busy_blocked_tasks_supervisor(scheduler)) {
-      scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
-    }
-  }
-
-  auto irq = SIO_IRQ_PROC0 + get_core_num();
   multicore_fifo_clear_irq();
-  irq_clear(irq);
 }
 
 static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, void* p) {

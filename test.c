@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
 #include "pico/sync.h"
@@ -104,6 +105,7 @@ void do_wait_pwm_wrap() {
 void do_live_core_mutex_task1() {
   mutex_enter_blocking(&g_live_core_mutex);
   sleep_ms(500);
+  sio_hw->gpio_togl = 1 << PICO_DEFAULT_LED_PIN;
   mutex_exit(&g_live_core_mutex);
 }
 
@@ -148,6 +150,9 @@ void init_core1() {
 }
 
 int main() {
+  gpio_init(PICO_DEFAULT_LED_PIN);
+  gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+
   alarm_pool_init_default();
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
