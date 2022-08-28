@@ -92,6 +92,7 @@ void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, v
 
 ### Doubly linked lists
 
+```c
 void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
 void qos_swap_dlist(struct qos_dlist_t* a, struct qos_dlist_t* b);
 void qos_init_dnode(struct qos_dnode_t* node);
@@ -99,6 +100,7 @@ void qos_init_dlist(struct qos_dlist_t* list);
 bool qos_is_dlist_empty(struct qos_dlist_t* list);
 void qos_splice_dnode(struct qos_dnode_t* dest, struct qos_dnode_t* source);
 void qos_remove_dnode(struct qos_dnode_t* node);
+```
 
 ### Raspberry Pi Pico SDK integration
 
