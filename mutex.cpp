@@ -2,10 +2,10 @@
 #include "mutex.internal.h"
 
 #include "atomic.h"
-#include "critical.h"
 #include "dlist_it.h"
 #include "scheduler.h"
 #include "scheduler.internal.h"
+#include "svc.h"
 #include "time.h"
 
 //////// qos_mutex_t ////////
@@ -40,7 +40,7 @@ static int32_t STRIPED_RAM pack_owner_state(qos_task_t* owner, mutex_state_t sta
   return int32_t(owner) | state;
 }
 
-static qos_task_state_t STRIPED_RAM acquire_mutex_critical(qos_scheduler_t* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* scheduler, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
   
@@ -54,7 +54,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_critical(qos_scheduler_t* sche
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-    qos_current_critical_section_result(scheduler, true);
+    qos_current_supervisor_call_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -81,10 +81,10 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
     return false;
   }
 
-  return qos_critical_section_va(acquire_mutex_critical, mutex, timeout);
+  return qos_call_supervisor_va(acquire_mutex_supervisor, mutex, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_mutex_critical(qos_scheduler_t* scheduler, void* m) {
+static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* scheduler, void* m) {
   auto mutex = (qos_mutex_t*) m;
 
   auto current_task = scheduler->current_task;
@@ -101,7 +101,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_critical(qos_scheduler_t* sche
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
-  qos_critical_section_result(scheduler, resumed, true);
+  qos_supervisor_call_result(scheduler, resumed, true);
   bool should_yield = qos_ready_task(scheduler, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
@@ -125,7 +125,7 @@ void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
     return;
   }
 
-  qos_critical_section(release_mutex_critical, mutex);
+  qos_call_supervisor(release_mutex_supervisor, mutex);
 }
 
 bool STRIPED_RAM qos_owns_mutex(qos_mutex_t* mutex) {
@@ -150,7 +150,7 @@ void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeo
   qos_acquire_mutex(var->mutex, timeout);
 }
 
-qos_task_state_t qos_wait_condition_var_critical(qos_scheduler_t* scheduler, va_list args) {
+qos_task_state_t qos_wait_condition_var_supervisor(qos_scheduler_t* scheduler, va_list args) {
   auto var = va_arg(args, qos_condition_var_t*);
   auto timeout = va_arg(args, qos_time_t);
 
@@ -158,7 +158,7 @@ qos_task_state_t qos_wait_condition_var_critical(qos_scheduler_t* scheduler, va_
 
   // _Atomically_ release mutex and add to condition variable waiting list.
 
-  release_mutex_critical(scheduler, var->mutex);
+  release_mutex_supervisor(scheduler, var->mutex);
 
   qos_internal_insert_scheduled_task(&var->waiting, current_task);
   qos_delay_task(scheduler, current_task, timeout);
@@ -171,14 +171,14 @@ bool qos_wait_condition_var(qos_condition_var_t* var, qos_time_t timeout) {
   assert(timeout != 0);
   qos_normalize_time(&timeout);
 
-  return qos_critical_section_va(qos_wait_condition_var_critical, var, timeout);
+  return qos_call_supervisor_va(qos_wait_condition_var_supervisor, var, timeout);
 }
 
 void qos_release_condition_var(qos_condition_var_t* var) {
   qos_release_mutex(var->mutex);
 }
 
-static qos_task_state_t release_and_signal_condition_var_critical(qos_scheduler_t* scheduler, void* v) {
+static qos_task_state_t release_and_signal_condition_var_supervisor(qos_scheduler_t* scheduler, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = scheduler->current_task;
@@ -198,15 +198,15 @@ static qos_task_state_t release_and_signal_condition_var_critical(qos_scheduler_
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(scheduler, var->mutex);
+  return release_mutex_supervisor(scheduler, var->mutex);
 }
 
 void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
   assert(qos_owns_mutex(var->mutex));
-  qos_critical_section(release_and_signal_condition_var_critical, var);
+  qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
 }
 
-static qos_task_state_t release_and_broadcast_condition_var_critical(qos_scheduler_t* scheduler, void* v) {
+static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_scheduler_t* scheduler, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = scheduler->current_task;
@@ -225,10 +225,10 @@ static qos_task_state_t release_and_broadcast_condition_var_critical(qos_schedul
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_critical(scheduler, var->mutex);
+  return release_mutex_supervisor(scheduler, var->mutex);
 }
 
 void qos_release_and_broadcast_condition_var(qos_condition_var_t* var) {
   assert(qos_owns_mutex(var->mutex));
-  qos_critical_section(release_and_broadcast_condition_var_critical, var);
+  qos_call_supervisor(release_and_broadcast_condition_var_supervisor, var);
 }

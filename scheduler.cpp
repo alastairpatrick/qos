@@ -2,8 +2,8 @@
 #include "scheduler.internal.h"
 
 #include "atomic.h"
-#include "critical.h"
 #include "dlist_it.h"
+#include "svc.h"
 #include "time.h"
 
 #include <algorithm>
@@ -187,7 +187,7 @@ void qos_start(int32_t num, const qos_proc0_t* init_procs) {
   core_start_scheduler();
 }
 
-static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_critical(qos_scheduler_t* scheduler, void*) {
+static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler, void*) {
   auto& busy_blocked = scheduler->busy_blocked;
 
   bool should_yield = false;
@@ -204,7 +204,7 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_critical(qos_schedu
 
 static void run_idle_task() {
   for (;;) {
-    qos_critical_section(ready_busy_blocked_tasks_critical, nullptr);
+    qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
     __wfe();
   }
 }
@@ -218,7 +218,7 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   // The priority of a busy blocked task is dynamically reduced until it is readied. To mitigate the
   // possibility that it might never otherwise run again on account of higher priority tasks, periodically
   // elevate it to its original priority by readying it. This also solves the problem of how to ready it on timeout.
-  bool should_yield = ready_busy_blocked_tasks_critical(scheduler, nullptr);
+  bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler, nullptr);
 
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_time <= time) {
@@ -239,7 +239,7 @@ void STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
   multicore_fifo_clear_irq();
 }
 
-static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, void* p) {
+static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_scheduler_t* scheduler, void* p) {
   auto timeout = *(qos_time_t*) p;
 
   auto current_task = scheduler->current_task;
@@ -255,12 +255,12 @@ static qos_task_state_t STRIPED_RAM sleep_critical(qos_scheduler_t* scheduler, v
 
 void STRIPED_RAM qos_yield() {
   qos_time_t timeout = 0;
-  qos_critical_section(sleep_critical, &timeout);
+  qos_call_supervisor(sleep_supervisor, &timeout);
 }
 
 void STRIPED_RAM qos_sleep(qos_time_t timeout) {
   qos_normalize_time(&timeout);
-  qos_critical_section(sleep_critical, &timeout);
+  qos_call_supervisor(sleep_supervisor, &timeout);
 }
 
 qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current_task) {
@@ -318,9 +318,9 @@ bool STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_t* task) {
   return task->priority > scheduler->current_task->priority;
 }
 
-void STRIPED_RAM qos_critical_section_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {
+void STRIPED_RAM qos_supervisor_call_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {
   if (task == scheduler->current_task) {
-    qos_current_critical_section_result(scheduler, result);
+    qos_current_supervisor_call_result(scheduler, result);
   } else {
     exception_frame_t* frame = (exception_frame_t*) task->sp;
     frame->r0 = result;

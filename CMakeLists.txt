@@ -11,7 +11,6 @@ pico_sdk_init()
 add_executable(rtos
   atomic.s
   c.c
-  critical.s
   dlist.cpp
   interrupt.cpp
   interrupt.s
@@ -20,6 +19,7 @@ add_executable(rtos
   queue.cpp
   scheduler.cpp
   scheduler.s
+  svc.s
   semaphore.cpp
   test.c
 )

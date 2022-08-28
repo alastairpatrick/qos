@@ -2,10 +2,10 @@
 #include "semaphore.internal.h"
 
 #include "atomic.h"
-#include "critical.h"
 #include "dlist_it.h"
 #include "scheduler.h"
 #include "scheduler.internal.h"
+#include "svc.h"
 #include "time.h"
 
 #include <cassert>
@@ -24,7 +24,7 @@ void qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
   qos_init_dlist(&semaphore->waiting.tasks);
 }
 
-static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_semaphore_supervisor(qos_scheduler_t* scheduler, va_list args) {
   auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_time_t);
@@ -37,7 +37,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_critical(qos_scheduler_t* 
   auto new_count = old_count - count;
   if (new_count >= 0) {
     semaphore->count = new_count;
-    qos_current_critical_section_result(scheduler, true);
+    qos_current_supervisor_call_result(scheduler, true);
     return TASK_RUNNING;
   }
 
@@ -63,10 +63,10 @@ bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count
     return false;
   }
 
-  return qos_critical_section_va(acquire_semaphore_critical, semaphore, count, timeout);
+  return qos_call_supervisor_va(acquire_semaphore_supervisor, semaphore, count, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM release_semaphore_supervisor(qos_scheduler_t* scheduler, va_list args) {
   auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
 
@@ -82,7 +82,7 @@ static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* 
 
       position = remove(position);
 
-      qos_critical_section_result(scheduler, task, true);
+      qos_supervisor_call_result(scheduler, task, true);
       should_yield |= qos_ready_task(scheduler, task);
     } else {
       ++position;
@@ -99,5 +99,5 @@ static qos_task_state_t STRIPED_RAM release_semaphore_critical(qos_scheduler_t* 
 void STRIPED_RAM qos_release_semaphore(qos_semaphore_t* semaphore, int32_t count) {
   assert(semaphore->core == get_core_num());
   assert(count >= 0);
-  qos_critical_section_va(release_semaphore_critical, semaphore, count);
+  qos_call_supervisor_va(release_semaphore_supervisor, semaphore, count);
 }
