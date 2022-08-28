@@ -6,7 +6,7 @@
 QOS_BEGIN_EXTERN_C
 
 void qos_sleep(qos_time_t timeout);
-int64_t qos_time();
+qos_time_t qos_time();
 
 static inline void qos_normalize_time(qos_time_t* time) {
   if (*time > 0) {
