@@ -8,8 +8,8 @@ It isn't ready for use in other projects. I'll update this document if it ever i
 
 ### Multi-core preemptive multi-tasking
 
-Tasks have affinity to a particular core on which they will run. They can be explicitly migrated to another
-core. This is underlying mechanism on which multi-core IPC is built.
+Tasks have affinity to a particular core on which they run. They can be explicitly migrated to another
+core while running. This is underlying mechanism on which multi-core IPC is built.
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
@@ -31,9 +31,6 @@ int64_t qos_time();
 Synchronization objects have affinity to a particular core. Operations on synchronization objects are faster
 for tasks running on the same core. When a task runs on a different core, it first has to migrate, then it
 performs the operation on the synchronization object, and finally it migrates back.
-
-Spin locks are not used as part of the implementation - they aren't very useful if interrupts can't be disabled -
-so the two spin locks reserved for an RTOS are available to applications.
 
 ```c
 struct qos_mutex_t* qos_new_mutex();
@@ -61,11 +58,24 @@ bool qos_write_queue(struct qos_queue_t* queue, const void* data, int32_t size, 
 bool qos_read_queue(struct qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 ```
 
-### Await IRQ without writing an ISR
+### Await IRQ
 
 ```c
 void qos_init_await_irq(int32_t irq);
 bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout);
+```
+
+#### Example
+
+```c
+void write_uart(const char* buffer, int32_t size) {
+  for (auto i = 0; i < size; ++i) {
+    while (!uart_is_writable(uart0)) {
+      qos_await_irq(UART0_IRQ, &uart0->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
+    }
+    uart_putc(uart0, buffer[i]);
+  }
+}
 ```
 
 ### Atomics
@@ -74,6 +84,7 @@ These are atomic with respect to multiple tasks running on a single core but not
 running on different cores or with ISRs.
 
 ```c
+typedef volatile int32_t qos_atomic32_t;
 int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
 int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int32_t new_value);
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
@@ -85,11 +96,23 @@ void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struc
 void qos_swap_dlist(struct qos_dlist_t* a, struct qos_dlist_t* b);
 void qos_init_dnode(struct qos_dnode_t* node);
 void qos_init_dlist(struct qos_dlist_t* list);
-bool qos_is_dlist_empty(qos_dlist_t* list);
-void qos_splice_dnode(qos_dnode_t* dest, qos_dnode_t* source);
+bool qos_is_dlist_empty(struct qos_dlist_t* list);
+void qos_splice_dnode(struct qos_dnode_t* dest, struct qos_dnode_t* source);
 void qos_remove_dnode(struct qos_dnode_t* node);
 
-### Pico_sync integration
+### Raspberry Pi Pico SDK integration
+
+QOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use most features of the SDK.
 
 The Raspberry Pi Pico SDK synchronization objects, e.g. mutex_t, are integrated so that they can be
-used in QOS tasks and, while they block, other tasks can run.
+used in QOS tasks and, while they block, other tasks can run. One caveat is any task blocking on an SDK
+has its priority reduced to that of the idle task. It's better to use QOS synchronization objects when
+possible.
+
+### Reserved hardware
+
+QOS reserves:
+* SysTick, PendSV and SVC on both cores
+* Inter-core FIFOs of both cores
+* The EVENT bits of both cores
+* Neither of the spin locks reserved for it by the SDK
