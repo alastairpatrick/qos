@@ -6,17 +6,20 @@ is C while the implementation is C++ and assembly language.
 
 It isn't ready for use in other projects. I'll update this document if it ever is.
 
-### Multi-core preemptive multi-tasking
+### Multi-tasking
 
 Tasks have affinity to a particular core on which they run. They can be explicitly migrated to another
 core while running. This is the underlying mechanism on which multi-core IPC is built.
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
+void qos_yield();
 struct qos_task_t* qos_current_task();
 int32_t qos_migrate_core(int32_t dest_core);
 ```
 
+Multi-tasking is pre-emptive, i.e. a task does not have to explicitly yield or block to allow a context
+switch to another task; the highest priority ready task is always the one that runs.
 ### Time
 
 Units are milliseconds.
@@ -127,6 +130,7 @@ synchronization objects when possible.
 
 QOS reserves:
 * SysTick, PendSV and SVC on both cores
-* Inter-core FIFOs of both cores
+* Inter-core FIFOs and associated IRQs of both cores
 * The EVENT bits of both cores
+* Both stack pointers: MSP & PSP
 * Neither of the spin locks reserved for it by the SDK
