@@ -1,8 +1,10 @@
 #include "queue.h"
 #include "queue.internal.h"
 
+#include "core_migrator.h"
 #include "semaphore.h"
 #include "mutex.h"
+#include "mutex.internal.h"
 #include "task.h"
 #include "time.h"
 
@@ -31,6 +33,9 @@ void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
 bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
+  // This isn't actually needed but it reduces the number of task migrations.
+  qos_core_migrator migrator(queue->mutex.core);
+
   if (!qos_acquire_semaphore(&queue->write_semaphore, size, timeout)) {
     return false;
   }
@@ -58,6 +63,9 @@ bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t s
 
 bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
+
+  // This isn't actually needed but it reduces the number of task migrations.
+  qos_core_migrator migrator(queue->mutex.core);
 
   if (!qos_acquire_semaphore(&queue->read_semaphore, size, timeout)) {
     return false;
