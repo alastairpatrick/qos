@@ -89,7 +89,7 @@ void write_uart(const char* buffer, int32_t size) {
 
 ### Atomics
 
-These are atomic with respect to multiple tasks running on a single core but not between tasks
+These are atomic with respect to multiple tasks running on the same core but not between tasks
 running on different cores or with ISRs.
 
 ```c
@@ -98,6 +98,9 @@ int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
 int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int32_t new_value);
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
 ```
+
+When tasks running on different cores must interact through atomics, the usual approach is for
+all the tasks to migrate to the same core before accessing them. This is how IPC works.
 
 ### Doubly linked lists
 
