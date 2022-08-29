@@ -28,7 +28,7 @@ typedef struct qos_task_t {
 
   int16_t priority;
   qos_proc0_t entry;
-  int32_t* stack;
+  char* stack;
   int32_t stack_size;
 
   qos_dnode_t scheduling_node;
@@ -67,6 +67,7 @@ typedef struct qos_scheduler_t {
   qos_task_scheduling_dlist_t pending;       // Always in descending priority order
   qos_task_scheduling_dlist_t awaiting_irq[QOS_MAX_IRQS];
   qos_task_timout_dlist_t delayed;
+  bool migrate_task;
 } qos_scheduler_t;
 
 // Insert task into linked list, maintaining descending priority order.

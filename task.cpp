@@ -79,6 +79,7 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   qos_init_dnode(&scheduler.idle_task.timeout_node);
   scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
+  scheduler.migrate_task = false;
 }
 
 static void run_task(qos_proc0_t entry) {
@@ -107,6 +108,7 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry,
 
   task->entry = entry;
   task->priority = priority;
+  task->stack = (char*) stack;
   task->stack_size = stack_size;
   task->sync_ptr = 0;
   task->sync_state = 0;
@@ -278,9 +280,7 @@ static qos_task_state_t migrate_core_supervisor(qos_scheduler_t* scheduler, void
   }
 
   qos_current_supervisor_call_result(scheduler, true);
-  __dmb();
-
-  sio_hw->fifo_wr = (int32_t) scheduler->current_task;
+  scheduler->migrate_task = true;
 
   return TASK_SYNC_BLOCKED;
 }
@@ -295,6 +295,8 @@ int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
   while (!qos_call_supervisor(migrate_core_supervisor, nullptr)) {
   }
 
+  assert(get_core_num() == dest_core);
+
   return source_core;
 }
 
@@ -306,6 +308,11 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   auto current_priority = current_task->priority;
 
   if (current_task != &idle_task) {
+    if (scheduler->migrate_task) {
+      sio_hw->fifo_wr = (int32_t) scheduler->current_task;
+      scheduler->migrate_task = false;
+    }
+
     if (new_state == TASK_BUSY_BLOCKED) {
       // Maintain blocked in descending priority order.
       assert(empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority);
