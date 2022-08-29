@@ -1,6 +1,7 @@
 #include "atomic.h"
 #include "interrupt.h"
 #include "mutex.h"
+#include "parallel.h"
 #include "task.h"
 #include "time.h"
 #include "queue.h"
@@ -35,6 +36,7 @@ struct qos_task_t* g_wait_pwm_task;
 struct qos_task_t* g_migrating_task;
 struct qos_task_t* g_lock_core_mutex_task1;
 struct qos_task_t* g_lock_core_mutex_task2;
+struct qos_task_t* g_parallel_sum_task;
 
 int g_observed_count;
 
@@ -121,6 +123,32 @@ void do_lock_core_mutex_task2() {
   mutex_exit(&g_lock_core_mutex);
 }
 
+
+void do_parallel_sum_task() {
+  qos_init_parallel(256);
+
+  static char array[10000];
+  for (int i = 0; i < count_of(array); ++i) {
+    array[i] = 1;
+  }
+
+  for (;;) {
+    int totals[NUM_CORES];
+    void sum_array(int32_t core) {
+      totals[core] = 0;
+      for (int i = core; i < count_of(array); i += NUM_CORES) {
+        totals[core] += array[i];
+      }
+    }
+
+    qos_parallel(sum_array);
+    assert(totals[0] == count_of(array) / 2);
+    assert(totals[1] == count_of(array) / 2);
+
+    qos_sleep(100);
+  }
+}
+
 void init_pwm_interrupt() {
   pwm_config cfg = pwm_get_default_config();
   pwm_config_set_clkdiv_int(&cfg, 255);
@@ -137,6 +165,7 @@ void init_core0() {
   g_consumer_task1 = qos_new_task(1, do_consumer_task1, 1024);
   g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
   g_migrating_task = qos_new_task(1, do_migrating_task, 1024);
+  g_parallel_sum_task = qos_new_task(1, do_parallel_sum_task, 1024);
 
   g_lock_core_mutex_task1 = qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
@@ -165,7 +194,7 @@ int main() {
 
   mutex_init(&g_lock_core_mutex);
 
-  qos_start(2, (qos_proc0_t[]) { init_core0, init_core1 });
+  qos_start_tasks(2, (qos_proc0_t[]) { init_core0, init_core1 });
 
   // Not reached.
   assert(false);

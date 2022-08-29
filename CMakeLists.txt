@@ -16,6 +16,7 @@ add_executable(rtos
   interrupt.s
   lock_core.cpp
   mutex.cpp
+  parallel.cpp
   queue.cpp
   svc.s
   semaphore.cpp

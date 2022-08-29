@@ -1,18 +1,20 @@
 ## QOS
 
-This is an experimental / hobby project RTOS for Raspberry Pi Pico. Its main distinguishing feature is it
+This is an experimental / hobby RTOS for Raspberry Pi Pico. Its main distinguishing feature is it
 never disables interrupts or does anything else that would cause priority inversion of IRQs.
 
 It isn't ready for use in other projects. I'll update this document if it ever is.
 
-The API is C. It generally provides two functions to initialize each kind of object: one which takes a
-pointer to the object as parameter and allocates no memory and another that dynamically allocates memory
-for the object and returns a pointer.
+The API is C.
 
-### Multi-tasking
+It generally provides two functions to initialize each kind of object: one which mallocs
+and one which leaves memory allocation to the caller. QOS nevers forces a program to malloc and provides
+a way to do everything without mallocing itself.
 
-Tasks have affinity to a particular core on which they run. They can be explicitly migrated to another
-core while running. This is the underlying mechanism on which multi-core IPC is built.
+### Multi-Tasking
+
+Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other
+cores while running. This is the underlying structure upon which multi-core IPC is built.
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
@@ -22,8 +24,9 @@ struct qos_task_t* qos_current_task();
 int32_t qos_migrate_core(int32_t dest_core);
 ```
 
-Multi-tasking is pre-emptive, i.e. a task does not have to explicitly yield or block to allow a context
-switch to another task; the highest priority ready task is always the one that runs.
+Multi-tasking is preemptive, i.e. a task need not explicitly yield or block to allow a context
+switch to another task; the highest priority ready task on any given core runs.
+
 ### Time
 
 Units are milliseconds.
@@ -31,22 +34,27 @@ Units are milliseconds.
 ```c
 typedef int64_t qos_time_t;
 void qos_sleep(qos_time_t timeout);
-qos_time_t qos_time();
-void qos_normalize_time(qos_time_t* time)
+qos_time_t qos_time();  // always returns -ve
+void qos_normalize_time(qos_time_t* time);  // *time is -ve after
 ```
-qos_time_t can represent an absolute time or a time relative to the present.
-Absolute times are negative and grow towards zero. Relative times are non-negative. Both these
-calls sleep for 100ms:
+
+qos_time_t can represent both absolute time or time relative to present. It has thousands of years
+of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (start_time - 2^63), i.e. negative
+and aging towards zero. Relative times are non-negative.
+
+qos_time_t is derived from SysTick rather than the RP2040 timer peripheral or RTC. Therefore, care should be used when comparing differently
+sourced counts of time. Similarly, each core has its own SysTick.
+
+Both these calls sleep for 100ms:
 ```c
 qos_sleep(100);
 qos_sleep(100 + qos_time());
 ```
 
-### Multi-core IPC
+### Multi-Core IPC
 
-Synchronization objects have affinity to a particular core. Operations on synchronization objects are faster
-for tasks running on the same core. When a task runs on a different core, it first has to migrate, then it
-performs the operation on the synchronization object, and finally it migrates back.
+Multi-core IPC routines may be called on any core regardless of which core a synchronization object
+was initialized on.
 
 ```c
 struct qos_mutex_t* qos_new_mutex();
@@ -74,6 +82,44 @@ bool qos_write_queue(struct qos_queue_t* queue, const void* data, int32_t size, 
 bool qos_read_queue(struct qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 ```
 
+Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
+changed after initialization. For tasks with affinity to the same core, operations on synchronization objects
+are faster and cause less inter-task priority inversion. When a task with affinity to a different core encounters
+a synchronization object, it first migrates to the same core as the synchronization object, then
+performs the operation on the synchronization object, and finally migrates back.
+
+### Parallel Tasks
+
+Tasks can execute on all cores in parallel.
+
+```c
+void qos_init_parallel(int32_t parallel_stack_size);
+void qos_parallel(qos_proc_int32_t entry);
+```
+
+During a parallel task invocation, a proxy task is readied on the other cores, having the same priority as the initiating task. All
+tasks then run the same code. When the parallel task completes, the proxy tasks are suspended.
+
+#### Example
+
+```c
+int sum_array(const int* array, int size) {
+  int totals[NUM_CORES];
+
+  // GCC lexical closure extension.
+  void sum_parallel(int32_t core) {
+    int total = 0;
+    for (int i = core; i < size; i += NUM_CORES) {
+      total += array[i];
+    }
+    totals[core] = total;
+  }
+
+  qos_parallel(sum_parallel);
+  return totals[0] + totals[1];
+}
+```
+
 ### Await IRQ
 
 ```c
@@ -99,18 +145,23 @@ void write_uart(const char* buffer, int32_t size) {
 These are atomic with respect to multiple tasks running on the same core but not between tasks
 running on different cores or with ISRs.
 
+Atomics run wholly in thread mode and incur no supervisor call overhead. The only interaction
+with privileged threads: they can roll back the thread mode program counter to the beginning of
+an atomic subroutine to ensure that atomic operations are exactly so so with respect to tasks.
+
 ```c
 typedef volatile int32_t qos_atomic32_t;
+typedef volatile void* qos_atomic_ptr_t;
 int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
 int32_t qos_atomic_xor(qos_atomic32_t* atomic, int32_t bitmask);
 int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int32_t new_value);
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
 ```
 
-When tasks running on different cores must interact through atomics, the usual approach is for
+When tasks running on different cores must interact through atomics, the suggested approach is for
 all the tasks to migrate to the same core before accessing them. This is how IPC works.
 
-### Doubly linked lists
+### Doubly Linked Lists
 
 ```c
 void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
@@ -122,7 +173,7 @@ void qos_splice_dnode(struct qos_dnode_t* dest, struct qos_dnode_t* source);
 void qos_remove_dnode(struct qos_dnode_t* node);
 ```
 
-### Raspberry Pi Pico SDK integration
+### Raspberry Pi Pico SDK Integration
 
 QOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use most features of the SDK.
 
@@ -131,7 +182,7 @@ used in QOS tasks and, while they block, other tasks can run. One caveat is any 
 synchronization object has its priority reduced to that of the idle task. It's better to use QOS
 synchronization objects when possible.
 
-### Reserved hardware
+### Reserved Hardware
 
 QOS reserves:
 * SysTick, PendSV and SVC on both cores

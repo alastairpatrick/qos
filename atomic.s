@@ -2,6 +2,10 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
+.EQU    sio_base, 0xD0000000
+.EQU    sio_fifo_st, 0x50
+.EQU    sio_fifo_st_rdy, 0b10
+.EQU    sio_fifo_wr, 0x54
 
 // Atomic routines are 32 byte aligned and at most 32 bytes long.
 //
@@ -73,6 +77,22 @@ qos_time:
 0:      MRS     R3, MSP         // MSP points to qos_scheduler_t in thread mode
         LDR     R0, [R3, #8]    // time at byte offset 8 of qos_scheduler_t
 1:      LDR     R1, [R3, #12]   // byte offset 24
+        BX      LR
+
+
+// void qos_internal_atomic_write_fifo(int32_t data)
+.BALIGN 32
+.GLOBAL qos_internal_atomic_write_fifo
+.TYPE qos_internal_atomic_write_fifo, %function
+        B       0f
+.SPACE  22 - (1f - 0f)
+qos_internal_atomic_write_fifo:
+0:      LDR     R3, =sio_base
+        MOVS    R1, #sio_fifo_st_rdy
+2:      LDR     R2, [R3, #sio_fifo_st]
+        TST     R2, R1
+        BEQ     2b
+1:      STR     R0, [R3, #sio_fifo_wr]      // byte offset 24
         BX      LR
 
 

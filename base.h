@@ -52,5 +52,6 @@ typedef enum qos_task_state_t {
 } qos_task_state_t;
 
 typedef void (*qos_proc0_t)();
+typedef void (*qos_proc_int32_t)(int32_t);
 
 #endif  // QOS_BASE_H

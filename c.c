@@ -5,6 +5,7 @@
 #include "interrupt.h"
 #include "mutex.h"
 #include "mutex.internal.h"
+#include "parallel.h"
 #include "queue.h"
 #include "queue.internal.h"
 #include "semaphore.h"

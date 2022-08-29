@@ -21,17 +21,6 @@
 
 const static int SUPERVISOR_SIZE = 1024;
 
-struct exception_frame_t {
-  int32_t r0;
-  int32_t r1;
-  int32_t r2;
-  int32_t r3;
-  int32_t r12;
-  void* lr;
-  void* return_addr;
-  int32_t xpsr;
-};
-
 struct supervisor_t {
   char exception_stack[SUPERVISOR_SIZE - sizeof(qos_scheduler_t)];
   qos_scheduler_t scheduler;
@@ -49,7 +38,6 @@ extern "C" {
   bool qos_supervisor_systick(qos_scheduler_t* scheduler);
   bool qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
-  void qos_internal_atomic_write_fifo(int32_t data);
 }
 
 static void run_idle_task();
@@ -104,7 +92,10 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry,
 
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
-  qos_internal_insert_scheduled_task(&ready, task);
+
+  if (!g_qos_internal_started) {
+    qos_internal_insert_scheduled_task(&ready, task);
+  }
 
   task->entry = entry;
   task->priority = priority;
@@ -113,9 +104,11 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry,
   task->sync_ptr = 0;
   task->sync_state = 0;
   task->sync_unblock_task_proc = 0;
-
-  task->sp = ((uint8_t*) task->stack) + stack_size - sizeof(exception_frame_t);
-  exception_frame_t* frame = (exception_frame_t*) task->sp;
+  task->parallel_task = nullptr;
+  task->parallel_entry = nullptr;
+    
+  task->sp = task->stack + stack_size - sizeof(qos_exception_frame_t);
+  auto frame = (qos_exception_frame_t*) task->sp;
 
   frame->lr = 0;
   frame->return_addr = (void*) run_task;
@@ -181,7 +174,7 @@ static void start_core1() {
   core_start_scheduler();
 }
 
-void qos_start(int32_t num, const qos_proc0_t* init_procs) {
+void qos_start_tasks(int32_t num, const qos_proc0_t* init_procs) {
   assert(num == NUM_CORES);
   assert(get_core_num() == 0);
 
@@ -364,7 +357,7 @@ void STRIPED_RAM qos_supervisor_call_result(qos_scheduler_t* scheduler, qos_task
   if (task == scheduler->current_task) {
     qos_current_supervisor_call_result(scheduler, result);
   } else {
-    exception_frame_t* frame = (exception_frame_t*) task->sp;
+    qos_exception_frame_t* frame = (qos_exception_frame_t*) task->sp;
     frame->r0 = result;
   }
 }

@@ -42,6 +42,9 @@ typedef struct qos_task_t {
 
   qos_dnode_t timeout_node;
   qos_time_t awaken_time;
+
+  struct qos_task_t* parallel_task;
+  qos_proc_int32_t parallel_entry;
 } qos_task_t;
 
 typedef struct qos_task_scheduling_dlist_t {
@@ -69,6 +72,17 @@ typedef struct qos_scheduler_t {
   qos_task_timout_dlist_t delayed;
   bool migrate_task;
 } qos_scheduler_t;
+
+struct qos_exception_frame_t {
+  int32_t r0;
+  int32_t r1;
+  int32_t r2;
+  int32_t r3;
+  int32_t r12;
+  void* lr;
+  void* return_addr;
+  int32_t xpsr;
+};
 
 // Insert task into linked list, maintaining descending priority order.
 void qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_task_t* task);
