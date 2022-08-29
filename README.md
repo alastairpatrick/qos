@@ -120,7 +120,7 @@ int sum_array(const int* array, int size) {
 }
 ```
 
-### Await IRQ
+### IRQs
 
 ```c
 void qos_init_await_irq(int32_t irq);
@@ -143,11 +143,8 @@ void write_uart(const char* buffer, int32_t size) {
 ### Atomics
 
 These are atomic with respect to multiple tasks running on the same core but not between tasks
-running on different cores or with ISRs.
-
-Atomics run wholly in thread mode and incur no supervisor call overhead. The only interaction
-with privileged threads: they can roll back the thread mode program counter to the beginning of
-an atomic subroutine to ensure that atomic operations are exactly so so with respect to tasks.
+running on different cores or with ISRs. Atomics run wholly in thread mode and incur no supervisor
+call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;
@@ -178,7 +175,7 @@ void qos_remove_dnode(struct qos_dnode_t* node);
 QOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use most features of the SDK.
 
 The Raspberry Pi Pico SDK synchronization objects, e.g. mutex_t, are integrated so that they can be
-used in QOS tasks and, while they block, other tasks can run. One caveat is any task blocking on an SDK
+used in QOS tasks and, while they block, other tasks can still run. One caveat is any task blocking on an SDK
 synchronization object has its priority reduced to that of the idle task. It's better to use QOS
 synchronization objects when possible.
 
