@@ -120,8 +120,8 @@ QOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use m
 
 The Raspberry Pi Pico SDK synchronization objects, e.g. mutex_t, are integrated so that they can be
 used in QOS tasks and, while they block, other tasks can run. One caveat is any task blocking on an SDK
-has its priority reduced to that of the idle task. It's better to use QOS synchronization objects when
-possible.
+synchronization object has its priority reduced to that of the idle task. It's better to use QOS
+synchronization objects when possible.
 
 ### Reserved hardware
 
