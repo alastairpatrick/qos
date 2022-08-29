@@ -28,6 +28,20 @@ qos_atomic_add:
         BX      LR
 
 
+// int32_t qos_atomic_xor(qos_atomic_t* atomic, int32_t bitmask)
+.BALIGN 32
+.GLOBAL qos_atomic_xor
+.TYPE qos_atomic_xor, %function
+        B       0f
+.SPACE  22 - (1f - 0f)
+qos_atomic_xor:
+0:      LDR     R3, [R0]
+        EORS    R3, R3, R1
+1:      STR     R3, [R0]      // byte offset 24
+        MOVS    R0, R3
+        BX      LR
+
+
 // int32_t qos_atomic_compare_and_set(qos_atomic_t* atomic, int32_t expected, int32_t new_value)
 .BALIGN 32
 .GLOBAL qos_atomic_compare_and_set
