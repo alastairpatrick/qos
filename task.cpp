@@ -89,12 +89,18 @@ static void run_task(qos_proc0_t entry) {
 }
 
 qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size) {
+  auto task = new qos_task_t;
+  auto stack = new int32_t[(stack_size + 3) / 4];
+  qos_init_task(task, priority, entry, stack, stack_size);
+  return task;
+}
+
+void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry, void* stack, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
   auto& ready = scheduler.ready;
 
-  auto task = new qos_task_t;
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
   qos_internal_insert_scheduled_task(&ready, task);
@@ -102,7 +108,6 @@ qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size
   task->entry = entry;
   task->priority = priority;
   task->stack_size = stack_size;
-  task->stack = new int32_t[(stack_size + 3) / 4];
   task->sync_ptr = 0;
   task->sync_state = 0;
   task->sync_unblock_task_proc = 0;
@@ -114,8 +119,6 @@ qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size
   frame->return_addr = (void*) run_task;
   frame->r0 = (int32_t) entry;
   frame->xpsr = 0x1000000;
-
-  return task;
 }
 
 static void init_fifo() {

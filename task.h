@@ -6,6 +6,7 @@
 QOS_BEGIN_EXTERN_C
 
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
+void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry, void* stack, int32_t stack_size);
 
 void qos_start(int32_t num_cores, const qos_proc0_t* init_procs);
 

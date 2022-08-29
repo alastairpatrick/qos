@@ -1,10 +1,13 @@
 ## QOS
 
 This is an experimental / hobby project RTOS for Raspberry Pi Pico. Its main distinguishing feature is it
-never disables interrupts or does anything else that would cause priority inversion of IRQs. The public API
-is C while the implementation is C++ and assembly language.
+never disables interrupts or does anything else that would cause priority inversion of IRQs.
 
 It isn't ready for use in other projects. I'll update this document if it ever is.
+
+The API is C. It generally provides two functions to initialize each kind of object: one which takes a
+pointer to the object as parameter and allocates no memory and another that dynamically allocates memory
+for the object and returns a pointer.
 
 ### Multi-tasking
 
@@ -13,6 +16,7 @@ core while running. This is the underlying mechanism on which multi-core IPC is 
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
+void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry, void* stack, int32_t stack_size);
 void qos_yield();
 struct qos_task_t* qos_current_task();
 int32_t qos_migrate_core(int32_t dest_core);
