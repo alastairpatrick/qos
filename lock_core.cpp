@@ -22,7 +22,7 @@ void qos_lock_core_busy_block() {
   }
 }
 
-// Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify, after timrout or spuriously.
+// Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify, after timeout or spuriously.
 bool qos_lock_core_busy_block_until(absolute_time_t until) {
   if (qos_is_started()) {
     qos_call_supervisor(busy_block_supervisor, nullptr);
