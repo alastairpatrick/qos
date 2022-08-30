@@ -31,7 +31,9 @@ void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
 
   bool should_preempt = false;
   while (!empty(begin(tasks))) {
-    should_preempt |= qos_ready_task(scheduler, &*begin(tasks));
+    auto task = &*begin(tasks);
+    qos_supervisor_call_result(scheduler, task, true);
+    should_preempt |= qos_ready_task(scheduler, task);
   }
 
   if (should_preempt) {

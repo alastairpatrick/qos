@@ -176,7 +176,9 @@ void do_uart_echo_task() {
 
   for (;;) {
     while (!uart_is_readable(UART)) {
-      qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, QOS_NO_TIMEOUT);
+      if (!qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, 1000)) {
+        uart_putc(UART, '?');
+      }
     }
 
     char c = uart_getc(UART);
