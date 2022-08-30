@@ -124,8 +124,11 @@ void do_wait_pwm_wrap() {
 }
 
 void do_migrating_task() {
-  qos_sleep(100);
-  qos_migrate_core(1 - get_core_num());
+  qos_migrate_core(0);
+  assert(get_core_num() == 0);
+
+  qos_migrate_core(1);
+  assert(get_core_num() == 1);
 }
 
 void do_lock_core_mutex_task1() {
