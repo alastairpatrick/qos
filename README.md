@@ -9,7 +9,8 @@ The API is C.
 
 It generally provides two functions to initialize each kind of object: one which mallocs
 and one which leaves memory allocation to the caller. QOS nevers forces a program to malloc and provides
-a way to do everything without mallocing itself.
+a way to do everything without mallocing itself. All QOS objects should be initialized before starting
+the RTOS.
 
 ### Multi-Tasking
 
