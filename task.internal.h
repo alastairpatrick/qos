@@ -27,7 +27,7 @@ typedef struct qos_task_t {
   int32_t r11;
 
   int16_t priority;
-  qos_proc0_t entry;
+  qos_proc_t entry;
   char* stack;
   int32_t stack_size;
 

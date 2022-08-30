@@ -10,7 +10,7 @@ void qos_lock_core_busy_block();
 bool qos_lock_core_busy_block_until(absolute_time_t until);
 
 static qos_task_state_t busy_block_supervisor(qos_scheduler_t*, void*) {
-  return TASK_BUSY_BLOCKED;
+  return QOS_TASK_BUSY_BLOCKED;
 }
 
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify or spuriously.

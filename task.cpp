@@ -71,21 +71,21 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   scheduler.ready_busy_blocked_tasks = false;
 }
 
-static void run_task(qos_proc0_t entry) {
+static void run_task(qos_proc_t entry) {
   for (;;) {
     entry();
     qos_sleep(1);
   }
 }
 
-qos_task_t *qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size) {
+qos_task_t *qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size) {
   auto task = new qos_task_t;
   auto stack = new int32_t[(stack_size + 3) / 4];
   qos_init_task(task, priority, entry, stack, stack_size);
   return task;
 }
 
-void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry, void* stack, int32_t stack_size) {
+void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size) {
   auto& scheduler = get_scheduler();
   init_scheduler(scheduler);
 
@@ -165,7 +165,7 @@ static void core_start_scheduler() {
   run_idle_task();
 }
 
-static volatile qos_proc0_t g_init_core1;
+static volatile qos_proc_t g_init_core1;
 
 static void start_core1() {
   g_init_core1();
@@ -175,7 +175,7 @@ static void start_core1() {
   core_start_scheduler();
 }
 
-void qos_start_tasks(int32_t num, const qos_proc0_t* init_procs) {
+void qos_start_tasks(int32_t num, const qos_proc_t* init_procs) {
   assert(num == NUM_CORES);
   assert(get_core_num() == 0);
 
@@ -200,7 +200,7 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_sche
     should_yield |= qos_ready_task(scheduler, task);
   }
 
-  return should_yield ? TASK_READY : TASK_RUNNING;
+  return should_yield ? QOS_TASK_READY : QOS_TASK_RUNNING;
 }
 
 void STRIPED_RAM qos_ready_busy_blocked_tasks() {
@@ -262,12 +262,12 @@ static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_scheduler_t* scheduler,
   auto current_task = scheduler->current_task;
 
   if (timeout == 0) {
-    return TASK_READY;
+    return QOS_TASK_READY;
   }
 
   qos_delay_task(scheduler, current_task, timeout);
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 void STRIPED_RAM qos_yield() {
@@ -282,13 +282,13 @@ void STRIPED_RAM qos_sleep(qos_time_t timeout) {
 
 static qos_task_state_t migrate_core_supervisor(qos_scheduler_t* scheduler, void*) {
   if (!multicore_fifo_wready()) {
-    return TASK_READY;
+    return QOS_TASK_READY;
   }
 
   qos_current_supervisor_call_result(scheduler, true);
   scheduler->migrate_task = true;
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
@@ -319,11 +319,11 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
       scheduler->migrate_task = false;
     }
 
-    if (new_state == TASK_BUSY_BLOCKED) {
+    if (new_state == QOS_TASK_BUSY_BLOCKED) {
       // Maintain blocked in descending priority order.
       assert(empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority);
       splice(end(busy_blocked), current_task);
-    } else if (new_state == TASK_READY) {
+    } else if (new_state == QOS_TASK_READY) {
       // Maintain ready in descending priority order.
       if (empty(begin(ready)) || current_priority <= (--end(ready))->priority) {
         // Fast path for common case.
@@ -332,7 +332,7 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
         qos_internal_insert_scheduled_task(&ready, current_task);
       }
     } else {
-      assert(new_state == TASK_SYNC_BLOCKED);
+      assert(new_state == QOS_TASK_SYNC_BLOCKED);
     }
   }
 

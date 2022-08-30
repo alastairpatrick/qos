@@ -45,13 +45,13 @@ typedef volatile void* qos_atomic_ptr_t;
 typedef int64_t qos_time_t;
 
 typedef enum qos_task_state_t {
-  TASK_RUNNING,
-  TASK_READY,
-  TASK_BUSY_BLOCKED,
-  TASK_SYNC_BLOCKED,
+  QOS_TASK_RUNNING,
+  QOS_TASK_READY,
+  QOS_TASK_BUSY_BLOCKED,
+  QOS_TASK_SYNC_BLOCKED,
 } qos_task_state_t;
 
-typedef void (*qos_proc0_t)();
+typedef void (*qos_proc_t)();
 typedef void (*qos_proc_int32_t)(int32_t);
 
 #endif  // QOS_BASE_H

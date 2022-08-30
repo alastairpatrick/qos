@@ -56,7 +56,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* sc
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
     qos_current_supervisor_call_result(scheduler, true);
-    return TASK_RUNNING;
+    return QOS_TASK_RUNNING;
   }
 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
@@ -64,7 +64,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* sc
   qos_internal_insert_scheduled_task(&mutex->waiting, current_task);
   qos_delay_task(scheduler, current_task, timeout);
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
@@ -98,7 +98,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* sc
 
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
-    return TASK_RUNNING;
+    return QOS_TASK_RUNNING;
   }
 
   assert(state == ACQUIRED_CONTENDED);
@@ -111,9 +111,9 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* sc
   mutex->owner_state = pack_owner_state(resumed, state);
 
   if (should_yield) {
-    return TASK_READY;
+    return QOS_TASK_READY;
   } else {
-    return TASK_RUNNING;
+    return QOS_TASK_RUNNING;
   }
 }
 
@@ -168,7 +168,7 @@ qos_task_state_t qos_wait_condition_var_supervisor(qos_scheduler_t* scheduler, v
   qos_internal_insert_scheduled_task(&var->waiting, current_task);
   qos_delay_task(scheduler, current_task, timeout);
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 bool qos_wait_condition_var(qos_condition_var_t* var, qos_time_t timeout) {

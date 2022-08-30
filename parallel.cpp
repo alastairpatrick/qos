@@ -11,7 +11,7 @@ extern "C" {
 static qos_task_state_t STRIPED_RAM suspend_supervisor(qos_scheduler_t* scheduler, void* p) {
   auto done = (qos_proc_int32_t*) p;
   *done = nullptr;
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 static void STRIPED_RAM run_parallel() {

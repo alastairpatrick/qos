@@ -17,8 +17,8 @@ Tasks have affinity to a particular core on which they run. Tasks can migrate th
 cores while running. This is the underlying structure upon which multi-core IPC is built.
 
 ```c
-struct qos_task_t* qos_new_task(uint8_t priority, qos_proc0_t entry, int32_t stack_size);
-void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc0_t entry, void* stack, int32_t stack_size);
+struct qos_task_t* qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size);
+void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size);
 void qos_yield();
 struct qos_task_t* qos_current_task();
 int32_t qos_migrate_core(int32_t dest_core);

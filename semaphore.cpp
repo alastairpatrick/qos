@@ -39,14 +39,14 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_supervisor(qos_scheduler_t
   if (new_count >= 0) {
     semaphore->count = new_count;
     qos_current_supervisor_call_result(scheduler, true);
-    return TASK_RUNNING;
+    return QOS_TASK_RUNNING;
   }
 
   current_task->sync_state = count;
   qos_internal_insert_scheduled_task(&semaphore->waiting, current_task);
   qos_delay_task(scheduler, current_task, timeout);
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout) {
@@ -92,9 +92,9 @@ static qos_task_state_t STRIPED_RAM release_semaphore_supervisor(qos_scheduler_t
   }
 
   if (should_yield) {
-    return TASK_READY;
+    return QOS_TASK_READY;
   } else {
-    return TASK_RUNNING;
+    return QOS_TASK_RUNNING;
   }
 }
 

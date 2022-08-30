@@ -7,7 +7,7 @@
 .EQU    r0_offset, 0
 .EQU    r1_offset, 4
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
-.EQU    task_ready, 1               // Must match enum TastState.
+.EQU    QOS_TASK_READY, 1               // Must match enum TastState.
 
 // void qos_internal_init_stacks(qos_scheduler_t* exception_stack_top)
 .GLOBAL qos_internal_init_stacks
@@ -99,7 +99,7 @@ qos_supervisor_pendsv_handler:
 
 context_switch_ready:
         // R0 becomes the first parameter of qos_supervisor_context_switch.
-        MOVS    R0, #task_ready
+        MOVS    R0, #QOS_TASK_READY
 
 context_switch:
         // Get yielding task's SP.

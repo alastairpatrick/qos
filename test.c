@@ -194,7 +194,7 @@ int main() {
 
   mutex_init(&g_lock_core_mutex);
 
-  qos_start_tasks(2, (qos_proc0_t[]) { init_core0, init_core1 });
+  qos_start_tasks(2, (qos_proc_t[]) { init_core0, init_core1 });
 
   // Not reached.
   assert(false);

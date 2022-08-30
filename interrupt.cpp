@@ -79,7 +79,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
       hw_clear_bits(enable, mask);
       __dsb();
     }
-    return TASK_READY;
+    return QOS_TASK_READY;
   }
 
   // Enable IRQ. It's okay if this pends the interrupt; it has the same
@@ -94,7 +94,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
   qos_internal_insert_scheduled_task(&awaiting_irq[irq], current_task);
   qos_delay_task(scheduler, current_task, timeout);
 
-  return TASK_SYNC_BLOCKED;
+  return QOS_TASK_SYNC_BLOCKED;
 }
 
 bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
