@@ -163,6 +163,15 @@ all the tasks to migrate to the same core before accessing them. This is how IPC
 ### Doubly Linked Lists
 
 ```c
+typedef struct qos_dnode_t {
+  struct qos_dnode_t* next;
+  struct qos_dnode_t* prev;
+} qos_dnode_t;
+
+typedef struct qos_dlist_t {
+  qos_dnode_t sentinel;
+} qos_dlist_t;
+
 void qos_init_dlist(struct qos_dlist_t* list);
 bool qos_is_dlist_empty(struct qos_dlist_t* list);
 void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
