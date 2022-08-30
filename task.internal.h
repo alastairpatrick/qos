@@ -15,6 +15,12 @@
 
 typedef void (*qos_task_proc_t)(struct qos_task_t*);
 
+typedef struct qos_interp_context_t {
+  int32_t accum0, accum1;
+  int32_t base0, base1;
+  int32_t ctrl0, ctrl1;
+} qos_interp_context_t;
+
 typedef struct qos_task_t {
   void* sp;
   int32_t r4;
@@ -26,11 +32,15 @@ typedef struct qos_task_t {
   int32_t r10;
   int32_t r11;
 
+  // Optional context.
+  uint32_t save_context;
+  qos_interp_context_t interp_contexts[2];
+  
   int16_t priority;
   qos_proc_t entry;
   char* stack;
   int32_t stack_size;
-
+  
   qos_dnode_t scheduling_node;
 
   // May be used by synchronization primitive during TASK_SYNC_BLOCKING. Must be

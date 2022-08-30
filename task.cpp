@@ -13,6 +13,7 @@
 #include "hardware/exception.h"
 #include "hardware/irq.h"
 #include "hardware/regs/m0plus.h"
+#include "hardware/structs/interp.h"
 #include "hardware/structs/scb.h"
 #include "hardware/structs/systick.h"
 #include "hardware/sync.h"
@@ -90,6 +91,8 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
 
   auto& ready = scheduler.ready;
 
+  memset(task, 0, sizeof(*task));
+
   qos_init_dnode(&task->scheduling_node);
   qos_init_dnode(&task->timeout_node);
 
@@ -101,11 +104,6 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
   task->priority = priority;
   task->stack = (char*) stack;
   task->stack_size = stack_size;
-  task->sync_ptr = 0;
-  task->sync_state = 0;
-  task->sync_unblock_task_proc = 0;
-  task->parallel_task = nullptr;
-  task->parallel_entry = nullptr;
     
   task->sp = task->stack + stack_size - sizeof(qos_exception_frame_t);
   auto frame = (qos_exception_frame_t*) task->sp;
@@ -185,6 +183,11 @@ void qos_start_tasks(int32_t num, const qos_proc_t* init_procs) {
   while (!g_qos_internal_started) {}
 
   core_start_scheduler();
+}
+
+void qos_save_context(uint32_t save_context) {
+  auto task = qos_current_task();
+  task->save_context |= save_context;
 }
 
 static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler, void*) {
@@ -304,12 +307,35 @@ int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
   return source_core;
 }
 
+static void STRIPED_RAM save_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
+  ctx->ctrl0 = hw->ctrl[0];
+  ctx->ctrl1 = hw->ctrl[1];
+  ctx->accum0 = hw->accum[0];
+  ctx->accum1 = hw->accum[1];
+  ctx->base0 = hw->base[0];
+  ctx->base1 = hw->base[1];
+}
+
+static void STRIPED_RAM restore_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
+  hw->ctrl[0] = ctx->ctrl0;
+  hw->ctrl[1] = ctx->ctrl1;
+  hw->accum[0] = ctx->accum0;
+  hw->accum[1] = ctx->accum1;
+  hw->base[0] = ctx->base0;
+  hw->base[1] = ctx->base1;
+}
+
 qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current_task) {
   auto& ready = scheduler->ready;
   auto& busy_blocked = scheduler->busy_blocked;
   auto& pending = scheduler->pending;
   auto& idle_task = scheduler->idle_task;
   auto current_priority = current_task->priority;
+
+  if (current_task->save_context) {
+    save_interp_context(&current_task->interp_contexts[0], interp0_hw);
+    save_interp_context(&current_task->interp_contexts[1], interp1_hw);
+  }
 
   if (current_task != &idle_task) {
     if (scheduler->migrate_task) {
@@ -343,6 +369,11 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   } else {
     current_task = &*begin(pending);
     remove(begin(pending));
+  }
+
+  if (current_task->save_context) {
+    restore_interp_context(&current_task->interp_contexts[0], interp0_hw);
+    restore_interp_context(&current_task->interp_contexts[1], interp1_hw);
   }
 
   return current_task;

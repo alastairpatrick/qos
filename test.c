@@ -14,6 +14,7 @@
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
 #include "hardware/uart.h"
+#include "hardware/structs/interp.h"
 #include "pico/sync.h"
 #include "pico/time.h"
 
@@ -47,6 +48,8 @@ struct qos_task_t* g_lock_core_mutex_task1;
 struct qos_task_t* g_lock_core_mutex_task2;
 struct qos_task_t* g_parallel_sum_task;
 struct qos_task_t* g_uart_echo_task;
+struct qos_task_t* g_interp_task1;
+struct qos_task_t* g_interp_task2;
 
 int g_observed_count;
 
@@ -189,6 +192,46 @@ void do_uart_echo_task() {
   }
 }
 
+void do_interp_task1() {
+  qos_save_context(QOS_SAVE_INTERP_REGS);
+  interp0_hw->accum[0] = 1;
+  interp0_hw->accum[1] = 1;
+  interp0_hw->base[0] = 1;
+  interp0_hw->base[1] = 1;
+  interp0_hw->ctrl[0] = 1;
+  interp0_hw->ctrl[1] = 1;
+  
+  for (;;) {
+    assert(interp0_hw->accum[0] == 1);
+    assert(interp0_hw->accum[1] == 1);
+    assert(interp0_hw->base[0] == 1);
+    assert(interp0_hw->base[1] == 1);
+    assert(interp0_hw->ctrl[0] == 1);
+    assert(interp0_hw->ctrl[1] == 1);
+    qos_sleep(1);
+  }
+}
+
+void do_interp_task2() {
+  qos_save_context(QOS_SAVE_INTERP_REGS);
+  interp0_hw->accum[0] = 2;
+  interp0_hw->accum[1] = 2;
+  interp0_hw->base[0] = 2;
+  interp0_hw->base[1] = 2;
+  interp0_hw->ctrl[0] = 2;
+  interp0_hw->ctrl[1] = 2;
+
+  for (;;) {
+    assert(interp0_hw->accum[0] == 2);
+    assert(interp0_hw->accum[1] == 2);
+    assert(interp0_hw->base[0] == 2);
+    assert(interp0_hw->base[1] == 2);
+    assert(interp0_hw->ctrl[0] == 2);
+    assert(interp0_hw->ctrl[1] == 2);
+    qos_sleep(1);
+  }
+}
+
 void init_core0() {
   g_queue = qos_new_queue(100);
 
@@ -212,6 +255,8 @@ void init_core1() {
   g_observe_cond_var_task2 = qos_new_task(1, do_observe_cond_var_task2, 1024);
   g_update_cond_var_task = qos_new_task(1, do_update_cond_var_task, 1024);
   g_wait_pwm_task = qos_new_task(1, do_wait_pwm_wrap, 1024);
+  g_interp_task1 = qos_new_task(1, do_interp_task1, 1024);
+  g_interp_task2 = qos_new_task(1, do_interp_task2, 1024);
 
   g_lock_core_mutex_task2 = qos_new_task(100, do_lock_core_mutex_task2, 1024);
 }

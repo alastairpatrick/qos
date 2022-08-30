@@ -21,6 +21,11 @@ static inline struct qos_task_t* qos_current_task() {
   return *pp;                         // scheduler->current_task
 }
 
+enum {
+  QOS_SAVE_INTERP_REGS   = 0x1,
+};
+void qos_save_context(uint32_t save_context);
+
 void qos_yield();
 
 int32_t qos_migrate_core(int32_t dest_core);
