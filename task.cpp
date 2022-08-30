@@ -68,6 +68,7 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
   scheduler.idle_task.priority = -1;
   scheduler.current_task = &scheduler.idle_task;
   scheduler.migrate_task = false;
+  scheduler.ready_busy_blocked_tasks = false;
 }
 
 static void run_task(qos_proc0_t entry) {
@@ -202,11 +203,23 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_sche
   return should_yield ? TASK_READY : TASK_RUNNING;
 }
 
+void STRIPED_RAM qos_ready_busy_blocked_tasks() {
+  for (auto i = 0; i < NUM_CORES; ++i) {
+    g_supervisors[i].scheduler.ready_busy_blocked_tasks = true;
+  }
+  __sev();
+}
+
 static void run_idle_task() {
+  auto& scheduler = get_scheduler();
   for (;;) {
+    scheduler.ready_busy_blocked_tasks = false;
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
+
     __dsb();
-    __wfe();
+    while (!scheduler.ready_busy_blocked_tasks) {
+      __wfe();
+    }
   }
 }
 

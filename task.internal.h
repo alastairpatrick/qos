@@ -70,6 +70,8 @@ typedef struct qos_scheduler_t {
   qos_task_scheduling_dlist_t pending;       // Always in descending priority order
   qos_task_scheduling_dlist_t awaiting_irq[QOS_MAX_IRQS];
   qos_task_timout_dlist_t delayed;
+
+  volatile bool ready_busy_blocked_tasks;
   bool migrate_task;
 } qos_scheduler_t;
 

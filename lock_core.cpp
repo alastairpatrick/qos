@@ -32,4 +32,12 @@ bool qos_lock_core_busy_block_until(absolute_time_t until) {
   }
 }
 
+void qos_lock_core_ready_busy_blocked_tasks() {
+  if (qos_is_started()) {
+    qos_ready_busy_blocked_tasks();
+  } else {
+    __sev();
+  }
+}
+
 QOS_END_EXTERN_C
