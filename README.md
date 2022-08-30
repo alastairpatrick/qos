@@ -33,6 +33,7 @@ Units are milliseconds.
 
 ```c
 typedef int64_t qos_time_t;
+
 void qos_sleep(qos_time_t timeout);
 qos_time_t qos_time();  // always returns -ve
 void qos_normalize_time(qos_time_t* time);  // *time is -ve after
@@ -131,7 +132,7 @@ bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeo
 
 ```c
 void write_uart(const char* buffer, int32_t size) {
-  for (auto i = 0; i < size; ++i) {
+  for (int i = 0; i < size; ++i) {
     while (!uart_is_writable(uart0)) {
       qos_await_irq(UART0_IRQ, &uart0->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
     }
@@ -142,13 +143,14 @@ void write_uart(const char* buffer, int32_t size) {
 
 ### Atomics
 
-These are atomic with respect to multiple tasks running on the same core but not between tasks
+These are atomic only with respect to multiple tasks running on the same core but not between tasks
 running on different cores or with ISRs. Atomics run wholly in thread mode and incur no supervisor
 call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;
 typedef volatile void* qos_atomic_ptr_t;
+
 int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
 int32_t qos_atomic_xor(qos_atomic32_t* atomic, int32_t bitmask);
 int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int32_t new_value);
@@ -161,11 +163,12 @@ all the tasks to migrate to the same core before accessing them. This is how IPC
 ### Doubly Linked Lists
 
 ```c
-void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
-void qos_swap_dlist(struct qos_dlist_t* a, struct qos_dlist_t* b);
-void qos_init_dnode(struct qos_dnode_t* node);
 void qos_init_dlist(struct qos_dlist_t* list);
 bool qos_is_dlist_empty(struct qos_dlist_t* list);
+void qos_splice_dlist(struct qos_dnode_t* dest, struct qos_dnode_t* begin, struct qos_dnode_t* end);
+void qos_swap_dlist(struct qos_dlist_t* a, struct qos_dlist_t* b);
+
+void qos_init_dnode(struct qos_dnode_t* node);
 void qos_splice_dnode(struct qos_dnode_t* dest, struct qos_dnode_t* source);
 void qos_remove_dnode(struct qos_dnode_t* node);
 ```
@@ -184,6 +187,8 @@ synchronization objects when possible.
 QOS reserves:
 * SysTick, PendSV and SVC on both cores
 * Inter-core FIFOs and associated IRQs of both cores
-* The EVENT bits of both cores
 * Both stack pointers: MSP & PSP
 * Neither of the spin locks reserved for it by the SDK
+
+Tasks should usually avoid using the WFE instruction; it is usually more appropriate to yield or block
+so that other tasks can run.
