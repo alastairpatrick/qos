@@ -1,4 +1,4 @@
-## QOS
+## qOS
 
 This is an experimental / hobby RTOS for Raspberry Pi Pico. Its main distinguishing feature is it
 never disables interrupts or does anything else that would cause priority inversion of IRQs.
@@ -8,8 +8,8 @@ It isn't ready for use in other projects. I'll update this document if it ever i
 The API is C.
 
 It generally provides two functions to initialize each kind of object: one which mallocs
-and one which leaves memory allocation to the caller. QOS nevers forces a program to malloc and provides
-a way to do everything without mallocing itself. All QOS objects should be initialized before starting
+and one which leaves memory allocation to the caller. qOS nevers forces a program to malloc and provides
+a way to do everything without mallocing itself. All qOS objects should be initialized before starting
 the RTOS.
 
 ### Multi-Tasking
@@ -185,16 +185,16 @@ void qos_remove_dnode(struct qos_dnode_t* node);
 
 ### Raspberry Pi Pico SDK Integration
 
-QOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use most features of the SDK.
+qOS is built on top of the Raspberry Pi Pico SDK. It should be possible to use most features of the SDK.
 
 The Raspberry Pi Pico SDK synchronization objects, e.g. mutex_t, are integrated so that they can be
-used in QOS tasks and, while they block, other tasks can still run. One caveat is any task blocking on an SDK
-synchronization object has its priority reduced to that of the idle task. It's better to use QOS
+used in qOS tasks and, while they block, other tasks can still run. One caveat is any task blocking on an SDK
+synchronization object has its priority reduced to that of the idle task. It's better to use qOS
 synchronization objects when possible.
 
 ### Reserved Hardware
 
-QOS reserves:
+qOS reserves:
 * SysTick, PendSV and SVC on both cores
 * Inter-core FIFOs and associated IRQs of both cores
 * Both stack pointers: MSP & PSP
