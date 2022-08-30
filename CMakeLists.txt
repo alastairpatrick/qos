@@ -22,6 +22,7 @@ add_executable(rtos
   semaphore.cpp
   task.cpp
   task.s
+  time.cpp
   test.c
 )
 

@@ -56,7 +56,7 @@ int main() {
 
 ### Time
 
-Units are milliseconds.
+Units are microseconds.
 
 ```c
 typedef int64_t qos_time_t;
@@ -70,13 +70,12 @@ qos_time_t can represent both absolute time or time relative to present. It has 
 of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (time_after_start - 2^63), i.e. negative
 and aging towards zero. Relative times are non-negative.
 
-qos_time_t is derived from SysTick rather than the RP2040 timer peripheral or RTC. Therefore, care should be used when comparing differently
-sourced counts of time. Similarly, each core has its own SysTick.
+qos_time_t is derived from the RP2040 timer peripheral.
 
 Both these calls sleep for 100ms:
 ```c
-qos_sleep(100);
-qos_sleep(100 + qos_time());
+qos_sleep(100000);
+qos_sleep(100000 + qos_time());
 ```
 
 ### Multi-Core IPC

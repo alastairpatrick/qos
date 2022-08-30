@@ -59,7 +59,7 @@ int64_t time;
 void do_delay_task() {
   for(;;) {
     time = qos_time();
-    qos_sleep(1000);
+    qos_sleep(1000000);
   }
 }
 
@@ -68,7 +68,7 @@ void do_producer_task1() {
 }
 
 void do_producer_task2() {
-  qos_write_queue(g_queue, "world", 6, 100);
+  qos_write_queue(g_queue, "world", 6, 100000);
 }
 
 void do_consumer_task1() {
@@ -81,7 +81,7 @@ void do_consumer_task1() {
 void do_consumer_task2() {
   char buffer[10];
   memset(buffer, 0, sizeof(buffer));
-  if (qos_read_queue(g_queue, buffer, 6, 100)) {
+  if (qos_read_queue(g_queue, buffer, 6, 100000)) {
     assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
   }
 }
@@ -166,7 +166,7 @@ void do_parallel_sum_task() {
     assert(totals[0] == count_of(array) / 2);
     assert(totals[1] == count_of(array) / 2);
 
-    qos_sleep(100);
+    qos_sleep(100000);
   }
 }
 
@@ -179,7 +179,7 @@ void do_uart_echo_task() {
 
   for (;;) {
     while (!uart_is_readable(UART)) {
-      if (!qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, 1000)) {
+      if (!qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, 1000000)) {
         uart_putc(UART, '?');
       }
     }

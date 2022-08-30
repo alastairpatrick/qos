@@ -84,9 +84,7 @@ qos_supervisor_systick_handler:
         CMP     R0, #0
         BNE     context_switch_ready
 
-        // SysTick handler might have preempted an atomic qos_time().
-        MRS     R3, PSP
-        B       roll_back_atomic
+        POP     {PC}
 
 
 // void qos_supervisor_pendsv_handler()

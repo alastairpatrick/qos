@@ -51,7 +51,6 @@ static void init_scheduler(qos_scheduler_t& scheduler) {
     return;
   }
 
-  scheduler.time = INT64_MIN;
   scheduler.core = get_core_num();
 
   qos_init_dlist(&scheduler.ready.tasks);
@@ -226,8 +225,7 @@ static void run_idle_task() {
 bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   auto& delayed = scheduler->delayed;
   
-  int64_t time = scheduler->time + QOS_TICK_MS;
-  scheduler->time = time;
+  auto time = qos_time();
 
   // The priority of a busy blocked task is dynamically reduced until it is readied. To mitigate the
   // possibility that it might never otherwise run again on account of higher priority tasks, periodically
