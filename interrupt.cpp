@@ -97,7 +97,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
+bool STRIPED_RAM qos_await_irq(int32_t irq, qos_atomic32_t* enable, int32_t mask, qos_time_t timeout) {
   assert(irq >= 0 && irq < QOS_MAX_IRQS);
   qos_normalize_time(&timeout);
   assert(timeout != 0);

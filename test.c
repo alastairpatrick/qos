@@ -13,10 +13,19 @@
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
+#include "hardware/uart.h"
 #include "pico/sync.h"
 #include "pico/time.h"
 
 #define PWM_SLICE 0
+
+#define UART uart0
+#define UART_HW uart0_hw
+#define UART_IRQ UART0_IRQ
+#define BAUD_RATE 115200
+
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
 
 struct qos_queue_t* g_queue;
 struct qos_mutex_t* g_mutex;
@@ -37,6 +46,7 @@ struct qos_task_t* g_migrating_task;
 struct qos_task_t* g_lock_core_mutex_task1;
 struct qos_task_t* g_lock_core_mutex_task2;
 struct qos_task_t* g_parallel_sum_task;
+struct qos_task_t* g_uart_echo_task;
 
 int g_observed_count;
 
@@ -101,8 +111,16 @@ void do_observe_cond_var_task2() {
 }
 
 void do_wait_pwm_wrap() {
-  qos_await_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
-  pwm_clear_irq(PWM_SLICE);
+  pwm_config cfg = pwm_get_default_config();
+  pwm_config_set_clkdiv_int(&cfg, 255);
+  pwm_config_set_wrap(&cfg, 65535);
+  pwm_init(PWM_SLICE, &cfg, true);
+  qos_init_await_irq(PWM_IRQ_WRAP);
+
+  for (;;) {
+    qos_await_irq(PWM_IRQ_WRAP, &pwm_hw->inte, 1 << PWM_SLICE, QOS_NO_TIMEOUT);
+    pwm_clear_irq(PWM_SLICE);
+  }
 }
 
 void do_migrating_task() {
@@ -149,12 +167,21 @@ void do_parallel_sum_task() {
   }
 }
 
-void init_pwm_interrupt() {
-  pwm_config cfg = pwm_get_default_config();
-  pwm_config_set_clkdiv_int(&cfg, 255);
-  pwm_config_set_wrap(&cfg, 65535);
-  pwm_init(PWM_SLICE, &cfg, true);
-  qos_init_await_irq(PWM_IRQ_WRAP);
+void do_uart_echo_task() {
+  uart_init(UART, BAUD_RATE);
+  gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+  gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+
+  qos_init_await_irq(UART_IRQ);
+
+  for (;;) {
+    while (!uart_is_readable(UART)) {
+      qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, QOS_NO_TIMEOUT);
+    }
+
+    char c = uart_getc(UART);
+    uart_putc(UART, c);
+  }
 }
 
 void init_core0() {
@@ -166,13 +193,12 @@ void init_core0() {
   g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
   g_migrating_task = qos_new_task(1, do_migrating_task, 1024);
   g_parallel_sum_task = qos_new_task(1, do_parallel_sum_task, 1024);
+  g_uart_echo_task = qos_new_task(2, do_uart_echo_task, 1024);
 
   g_lock_core_mutex_task1 = qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
 
 void init_core1() {
-  init_pwm_interrupt();
-  
   g_mutex = qos_new_mutex();
   g_cond_var = qos_new_condition_var(g_mutex);
 
