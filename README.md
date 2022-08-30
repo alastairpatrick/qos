@@ -15,7 +15,7 @@ the RTOS.
 ### Multi-Tasking
 
 Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other
-cores while running. This is the underlying structure upon which multi-core IPC is built.
+cores while running. This is the underlying mechanism upon which multi-core IPC is built.
 
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size);
@@ -41,7 +41,7 @@ void qos_normalize_time(qos_time_t* time);  // *time is -ve after
 ```
 
 qos_time_t can represent both absolute time or time relative to present. It has thousands of years
-of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (start_time - 2^63), i.e. negative
+of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (time_after_start - 2^63), i.e. negative
 and aging towards zero. Relative times are non-negative.
 
 qos_time_t is derived from SysTick rather than the RP2040 timer peripheral or RTC. Therefore, care should be used when comparing differently
