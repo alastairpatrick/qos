@@ -53,6 +53,9 @@ void init_core1() {
 
 int main() {
   qos_start_tasks(NUM_CORES, (qos_proc_t[]) { init_core0, init_core1 });
+
+  // Not reached
+  assert(false);
 }
 ```
 
