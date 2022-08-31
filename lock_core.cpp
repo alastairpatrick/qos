@@ -15,20 +15,21 @@ static qos_task_state_t busy_block_supervisor(qos_scheduler_t*, void*) {
 
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify or spuriously.
 void qos_lock_core_busy_block() {
-  if (qos_is_started()) {
-    qos_call_supervisor(busy_block_supervisor, nullptr);
-  } else {
+  // Can't block if RTOS not started or if handling an exception.
+  if (!qos_is_started() || __get_current_exception()) {
     __wfe();
+  } else {
+    qos_call_supervisor(busy_block_supervisor, nullptr);
   }
 }
 
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify, after timeout or spuriously.
 bool qos_lock_core_busy_block_until(absolute_time_t until) {
-  if (qos_is_started()) {
-    qos_call_supervisor(busy_block_supervisor, nullptr);
-    return time_reached(until);
+  // Can't block if RTOS not started or if handling an exception.
+  if (!qos_is_started() || __get_current_exception()) {
+    return best_effort_wfe_or_timeout(until);
   } else {
-    return best_effort_wfe_or_timeout(until);       
+    qos_call_supervisor(busy_block_supervisor, nullptr);
   }
 }
 
