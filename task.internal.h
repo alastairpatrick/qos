@@ -32,10 +32,15 @@ typedef struct qos_task_t {
   int32_t r10;
   int32_t r11;
 
+  int32_t dividend;
+  int32_t divisor;
+  int32_t remainder;
+  int32_t quotient;
+
   // Optional context.
   uint32_t save_context;
   qos_interp_context_t interp_contexts[2];
-  
+
   int16_t priority;
   qos_proc_t entry;
   char* stack;
