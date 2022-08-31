@@ -70,10 +70,9 @@ qos_atomic_compare_and_set_ptr:
 .SPACE  22 - (1f - 0f)
 qos_internal_atomic_write_fifo:
 0:      LDR     R3, =SIO_BASE
-        MOVS    R1, #SIO_FIFO_ST_RDY_BITS
 2:      LDR     R2, [R3, #SIO_FIFO_ST_OFFSET]
-        TST     R2, R1
-        BEQ     2b
+        LSRS    R2, #SIO_FIFO_ST_RDY_LSB+1
+        BCC     2b
 1:      STR     R0, [R3, #SIO_FIFO_WR_OFFSET]      // byte offset 24
         BX      LR
 
@@ -101,9 +100,7 @@ qos_internal_atomic_write_fifo:
       BX      R3
 2:
       // 4 cycle NOP
-      NOP
-      NOP
-      NOP
+      DMB
       NOP
       
       LDR     R1, [R2, #SIO_DIV_REMAINDER_OFFSET]
