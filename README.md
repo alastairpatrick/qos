@@ -31,6 +31,7 @@ cores while running. This is the underlying mechanism upon which multi-core IPC 
 
 #### Example
 
+```c
 // Task repeatedly migrates from core 1 to core 0 and back every tick.
 void migrating_task() {
   qos_migrate_core(0);
@@ -53,6 +54,7 @@ void init_core1() {
 int main() {
   qos_start_tasks(NUM_CORES, (qos_proc_t[]) { init_core0, init_core1 });
 }
+```
 
 ### Time
 
