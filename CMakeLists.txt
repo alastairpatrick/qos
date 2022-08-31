@@ -4,11 +4,11 @@ list(APPEND PICO_CONFIG_HEADER_FILES ${CMAKE_CURRENT_LIST_DIR}/pico_sdk_config.h
 
 include(pico-sdk/pico_sdk_init.cmake)
 
-project(rtos C CXX ASM)
+project(qos C CXX ASM)
 
 pico_sdk_init()
 
-add_executable(rtos
+add_executable(qos
   atomic.S
   c.c
   dlist.cpp
@@ -26,11 +26,11 @@ add_executable(rtos
   test.c
 )
 
-pico_add_extra_outputs(rtos)
+pico_add_extra_outputs(qos)
 
-pico_enable_stdio_usb(rtos 1)
+pico_enable_stdio_usb(qos 1)
 
-target_link_libraries(rtos
+target_link_libraries(qos
   hardware_claim
   hardware_dma
   hardware_exception
