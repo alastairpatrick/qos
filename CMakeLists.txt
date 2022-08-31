@@ -53,4 +53,6 @@ pico_wrap_function(pico_divider_qos __aeabi_idivmod)
 pico_wrap_function(pico_divider_qos __aeabi_uidiv)
 pico_wrap_function(pico_divider_qos __aeabi_uidivmod)
 
+pico_set_float_implementation(qos compiler)
+pico_set_double_implementation(qos compiler)
 pico_set_divider_implementation(qos qos)
