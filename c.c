@@ -1,6 +1,7 @@
 // The purpose of this file is to ensure that no C++ slips into public header files.
 
 #include "atomic.h"
+#include "divide.h"
 #include "dlist.h"
 #include "interrupt.h"
 #include "mutex.h"

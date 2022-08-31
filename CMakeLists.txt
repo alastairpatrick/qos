@@ -44,3 +44,13 @@ target_link_libraries(qos
   pico_time
   pico_sync
 )
+
+add_library(pico_divider_qos INTERFACE
+)
+
+pico_wrap_function(pico_divider_qos __aeabi_idiv)
+pico_wrap_function(pico_divider_qos __aeabi_idivmod)
+pico_wrap_function(pico_divider_qos __aeabi_uidiv)
+pico_wrap_function(pico_divider_qos __aeabi_uidivmod)
+
+pico_set_divider_implementation(qos qos)

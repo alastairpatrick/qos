@@ -308,20 +308,6 @@ int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
   return source_core;
 }
 
-static void STRIPED_RAM save_divider_context(qos_task_t* task) {
-  task->dividend = sio_hw->div_udividend;
-  task->divisor = sio_hw->div_udivisor;
-  task->remainder = sio_hw->div_remainder;
-  task->quotient = sio_hw->div_quotient;
-}
-
-static void STRIPED_RAM restore_divider_context(qos_task_t* task) {
-  sio_hw->div_udividend = task->dividend;
-  sio_hw->div_udivisor = task->divisor;
-  sio_hw->div_remainder = task->remainder;
-  sio_hw->div_quotient = task->quotient;
-}
-
 static void STRIPED_RAM save_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
   ctx->ctrl0 = hw->ctrl[0];
   ctx->ctrl1 = hw->ctrl[1];
@@ -348,12 +334,11 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   auto current_priority = current_task->priority;
 
   if (current_task != &idle_task) {
-    // The idle task does not use the divider or any optional context.
+    // The idle task does not use any optional context.
     if (current_task->save_context) {
       save_interp_context(&current_task->interp_contexts[0], interp0_hw);
       save_interp_context(&current_task->interp_contexts[1], interp1_hw);
     }
-    save_divider_context(current_task);
 
     if (scheduler->migrate_task) {
       sio_hw->fifo_wr = (int32_t) scheduler->current_task;
@@ -387,12 +372,11 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
     current_task = &*begin(pending);
     remove(begin(pending));
 
-    // The idle task does not use the divider or any optional context.
+    // The idle task does not use any optional context.
     if (current_task->save_context) {
       restore_interp_context(&current_task->interp_contexts[0], interp0_hw);
       restore_interp_context(&current_task->interp_contexts[1], interp1_hw);
     }
-    restore_divider_context(current_task);
   }
 
   return current_task;

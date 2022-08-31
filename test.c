@@ -1,4 +1,5 @@
 #include "atomic.h"
+#include "divide.h"
 #include "interrupt.h"
 #include "mutex.h"
 #include "parallel.h"
@@ -34,22 +35,6 @@ struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
 mutex_t g_lock_core_mutex;
 
-struct qos_task_t* g_delay_task;
-struct qos_task_t* g_producer_task1;
-struct qos_task_t* g_producer_task2;
-struct qos_task_t* g_consumer_task1;
-struct qos_task_t* g_consumer_task2;
-struct qos_task_t* g_update_cond_var_task;
-struct qos_task_t* g_observe_cond_var_task1;
-struct qos_task_t* g_observe_cond_var_task2;
-struct qos_task_t* g_wait_pwm_task;
-struct qos_task_t* g_migrating_task;
-struct qos_task_t* g_lock_core_mutex_task1;
-struct qos_task_t* g_lock_core_mutex_task2;
-struct qos_task_t* g_parallel_sum_task;
-struct qos_task_t* g_uart_echo_task;
-struct qos_task_t* g_interp_task1;
-struct qos_task_t* g_interp_task2;
 
 int g_observed_count;
 
@@ -232,33 +217,49 @@ void do_interp_task2() {
   }
 }
 
+void do_divide_task1() {
+  volatile int two = 2;
+  for (int i = 0; i < 10000; i += 2) {
+    assert(qos_div(i, two) == i >> 1);
+  }
+}
+
+void do_divide_task2() {
+  volatile int two = 2;
+  for (int i = 0; i < 10000; i += 2) {
+    assert(qos_div(i, two) == i >> 1);
+  }
+}
+
 void init_core0() {
   g_queue = qos_new_queue(100);
 
-  g_delay_task = qos_new_task(100, do_delay_task, 1024);
-  g_producer_task1 = qos_new_task(1, do_producer_task1, 1024);
-  g_consumer_task1 = qos_new_task(1, do_consumer_task1, 1024);
-  g_observe_cond_var_task1 = qos_new_task(1, do_observe_cond_var_task1, 1024);
-  g_migrating_task = qos_new_task(1, do_migrating_task, 1024);
-  g_parallel_sum_task = qos_new_task(1, do_parallel_sum_task, 1024);
-  g_uart_echo_task = qos_new_task(2, do_uart_echo_task, 1024);
+  qos_new_task(100, do_delay_task, 1024);
+  qos_new_task(1, do_producer_task1, 1024);
+  qos_new_task(1, do_consumer_task1, 1024);
+  qos_new_task(1, do_observe_cond_var_task1, 1024);
+  qos_new_task(1, do_migrating_task, 1024);
+  qos_new_task(1, do_parallel_sum_task, 1024);
+  qos_new_task(2, do_uart_echo_task, 1024);
 
-  g_lock_core_mutex_task1 = qos_new_task(100, do_lock_core_mutex_task1, 1024);
+  qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
 
 void init_core1() {
   g_mutex = qos_new_mutex();
   g_cond_var = qos_new_condition_var(g_mutex);
 
-  g_producer_task2 = qos_new_task(1, do_producer_task2, 1024);
-  g_consumer_task2 = qos_new_task(1, do_consumer_task2, 1024);
-  g_observe_cond_var_task2 = qos_new_task(1, do_observe_cond_var_task2, 1024);
-  g_update_cond_var_task = qos_new_task(1, do_update_cond_var_task, 1024);
-  g_wait_pwm_task = qos_new_task(1, do_wait_pwm_wrap, 1024);
-  g_interp_task1 = qos_new_task(1, do_interp_task1, 1024);
-  g_interp_task2 = qos_new_task(1, do_interp_task2, 1024);
+  qos_new_task(1, do_producer_task2, 1024);
+  qos_new_task(1, do_consumer_task2, 1024);
+  qos_new_task(1, do_observe_cond_var_task2, 1024);
+  qos_new_task(1, do_update_cond_var_task, 1024);
+  qos_new_task(1, do_wait_pwm_wrap, 1024);
+  qos_new_task(1, do_interp_task1, 1024);
+  qos_new_task(1, do_interp_task2, 1024);
+  qos_new_task(1, do_divide_task1, 1024);
+  qos_new_task(1, do_divide_task2, 1024);
 
-  g_lock_core_mutex_task2 = qos_new_task(100, do_lock_core_mutex_task2, 1024);
+  qos_new_task(100, do_lock_core_mutex_task2, 1024);
 }
 
 int main() {
