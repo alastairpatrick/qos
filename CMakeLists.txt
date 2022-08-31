@@ -9,19 +9,19 @@ project(rtos C CXX ASM)
 pico_sdk_init()
 
 add_executable(rtos
-  atomic.s
+  atomic.S
   c.c
   dlist.cpp
   interrupt.cpp
-  interrupt.s
+  interrupt.S
   lock_core.cpp
   mutex.cpp
   parallel.cpp
   queue.cpp
-  svc.s
+  svc.S
   semaphore.cpp
   task.cpp
-  task.s
+  task.S
   time.cpp
   test.c
 )
