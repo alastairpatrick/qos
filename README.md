@@ -193,7 +193,7 @@ all the tasks to migrate to the same core before accessing them. This is how IPC
 
 ### Division
 
-To reduce context switching overhead, qOS regulates use of the SIO hardware integer dividers.
+To reduce context switching overhead, qOS regulates use of the SIO integer dividers.
 Either core may at any time - including in thread mode or in an ISR - use the / or %
 operators for integer division or modulo.
 
