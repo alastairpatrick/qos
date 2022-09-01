@@ -202,8 +202,8 @@ provided by the boot ROM. The easiest way to accomplish this is to use the softw
 subroutines provided by GCC instead of those in the boot ROM. Less imposing approaches might be
 provided in the future.
 
-Additionally, the functions below are available in thread and have lower overhead than the / and %
-operators.
+Additionally, the functions below are available in thread mode and have lower overhead than
+the / and % operators.
 
 ```c
 int32_t qos_div(int32_t dividend, int32_t divisor);
