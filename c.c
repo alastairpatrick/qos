@@ -4,6 +4,7 @@
 #include "divide.h"
 #include "dlist.h"
 #include "interrupt.h"
+#include "io.h"
 #include "mutex.h"
 #include "mutex.internal.h"
 #include "parallel.h"

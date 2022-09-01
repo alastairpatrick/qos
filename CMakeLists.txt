@@ -20,6 +20,7 @@ add_executable(qos
   queue.cpp
   svc.S
   semaphore.cpp
+  stdio_uart.cpp
   task.cpp
   task.S
   time.cpp
@@ -28,7 +29,8 @@ add_executable(qos
 
 pico_add_extra_outputs(qos)
 
-pico_enable_stdio_usb(qos 1)
+pico_enable_stdio_usb(qos 0)
+pico_enable_stdio_uart(qos 0)
 
 target_link_libraries(qos
   hardware_claim

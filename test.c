@@ -1,6 +1,7 @@
 #include "atomic.h"
 #include "divide.h"
 #include "interrupt.h"
+#include "io.h"
 #include "mutex.h"
 #include "parallel.h"
 #include "task.h"
@@ -14,9 +15,9 @@
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
 #include "hardware/pwm.h"
-#include "hardware/uart.h"
 #include "hardware/structs/interp.h"
 #include "pico/sync.h"
+#include "pico/stdio.h"
 #include "pico/time.h"
 
 #define PWM_SLICE 0
@@ -158,22 +159,12 @@ void do_parallel_sum_task() {
   }
 }
 
-void do_uart_echo_task() {
-  uart_init(UART, BAUD_RATE);
-  gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-  gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-
-  qos_init_await_irq(UART_IRQ);
-
+void do_stdio_echo_task() {
   for (;;) {
-    while (!uart_is_readable(UART)) {
-      if (!qos_await_irq(UART_IRQ, &UART_HW->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, 1000000)) {
-        uart_putc(UART, '?');
-      }
+    char c = getchar();
+    if (c >= 0) {
+      putchar(c + 1);
     }
-
-    char c = uart_getc(UART);
-    uart_putc(UART, c);
   }
 }
 
@@ -240,7 +231,7 @@ void init_core0() {
   qos_new_task(1, do_observe_cond_var_task1, 1024);
   qos_new_task(1, do_migrating_task, 1024);
   qos_new_task(1, do_parallel_sum_task, 1024);
-  qos_new_task(2, do_uart_echo_task, 1024);
+  qos_new_task(2, do_stdio_echo_task, 1024);
 
   qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
@@ -263,6 +254,9 @@ void init_core1() {
 }
 
 int main() {
+  stdio_init_all();
+  qos_stdio_uart_init_full(uart0, 115200, PICO_DEFAULT_UART_TX_PIN, PICO_DEFAULT_UART_RX_PIN);
+
   gpio_init(PICO_DEFAULT_LED_PIN);
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 

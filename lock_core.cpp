@@ -30,6 +30,7 @@ bool qos_lock_core_busy_block_until(absolute_time_t until) {
     return best_effort_wfe_or_timeout(until);
   } else {
     qos_call_supervisor(busy_block_supervisor, nullptr);
+    return time_reached(until);
   }
 }
 
