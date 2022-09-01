@@ -194,16 +194,17 @@ all the tasks to migrate to the same core before accessing them. This is how IPC
 ### Division
 
 To reduce context switching overhead, qOS regulates use of the SIO integer dividers.
-Either core may at any time - including in thread mode or in an ISR - use the / or %
-operators for integer division or modulo.
+Either core may at any time - including in thread mode or in an ISR - use the C language / or %
+operators for integer or floating point division or modulo.
 
-Once the RTOS starts, neither core may use the floating point division or tangent functions
-provided by the boot ROM. The easiest way to accomplish this is to use the software floating point
-subroutines provided by GCC instead of those in the boot ROM. Less imposing approaches might be
-provided in the future.
+Once the RTOS starts, neither core may manipulate the SIO integer dividers directly. With regard
+to the Pico SDK, this means do not use the hardware_divider or pico_divider modules and do not use
+the division and tangent subroutines in pico_float or pico_double. Also do not use the floating point
+division or tangent subroutines in the boot ROM. The easiest way to accomplish this is to use the
+software floating point subroutines provided by GCC instead of those in the boot ROM. Less imposing
+approaches might be provided in the future.
 
-Additionally, the functions below are available in thread mode and have lower overhead than
-the / and % operators.
+The functions below are available in thread mode and have lower overhead than the / and % operators.
 
 ```c
 int32_t qos_div(int32_t dividend, int32_t divisor);
