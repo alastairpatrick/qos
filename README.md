@@ -32,30 +32,13 @@ cores while running. This is the underlying mechanism upon which multi-core IPC 
 #### Example
 
 ```c
-// Task repeatedly migrates from core 1 to core 0 and back every tick.
+// Task repeatedly migrates from core 0 to core 1 and back every tick.
 void migrating_task() {
-  qos_migrate_core(0);
-  assert(get_core_num() == 0);
-
   qos_migrate_core(1);
   assert(get_core_num() == 1);
-}
 
-void init_core0() {
+  qos_migrate_core(0);
   assert(get_core_num() == 0);
-}
-
-void init_core1() {
-  assert(get_core_num() == 1);
-
-  qos_new_task(1, migrating_task, 1024);
-}
-
-int main() {
-  qos_start_tasks(NUM_CORES, (qos_proc_t[]) { init_core0, init_core1 });
-
-  // Not reached
-  assert(false);
 }
 ```
 
