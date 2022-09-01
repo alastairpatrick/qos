@@ -103,9 +103,9 @@ qos_internal_atomic_write_fifo:
       DMB
       NOP
       
-      LDR     R1, [R2, #SIO_DIV_REMAINDER_OFFSET]
+      LDR     R3, [R2, #SIO_DIV_REMAINDER_OFFSET]
 1:    LDR     R0, [R2, #SIO_DIV_QUOTIENT_OFFSET]  // On context switch, restart from idivmod_fast if would return before this point
-      
+      MOV     R1, R3
       BX      LR
 .ENDM
 
