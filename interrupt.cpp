@@ -100,6 +100,11 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
 }
 
 bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
+  // Make this function safe to call from an ISR.
+  if (__get_current_exception()) {
+    return true;
+  }
+
   assert(irq >= 0 && irq < QOS_MAX_IRQS);
   qos_normalize_time(&timeout);
   assert(timeout != 0);
