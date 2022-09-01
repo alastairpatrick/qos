@@ -1,4 +1,5 @@
 #include "atomic.h"
+#include "event.h"
 #include "divide.h"
 #include "interrupt.h"
 #include "io.h"
@@ -30,6 +31,7 @@
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 
+struct qos_event_t* g_event;
 struct qos_queue_t* g_queue;
 struct qos_mutex_t* g_mutex;
 struct qos_condition_var_t* g_cond_var;
@@ -50,6 +52,17 @@ void do_delay_task() {
     time = qos_time();
     qos_sleep(1000000);
   }
+}
+
+void do_await_event_task() {
+  qos_await_event(g_event, QOS_NO_TIMEOUT);
+  printf("Received event");
+}
+
+void do_signal_event_task() {
+  qos_signal_event(g_event);
+  qos_migrate_core(1 - get_core_num());
+  qos_sleep(100000);
 }
 
 void do_producer_task1() {
@@ -232,7 +245,8 @@ void init_core0() {
   qos_new_task(1, do_migrating_task, 1024);
   qos_new_task(1, do_parallel_sum_task, 1024);
   qos_new_task(2, do_stdio_echo_task, 1024);
-
+  qos_new_task(1, do_await_event_task, 1024);
+  qos_new_task(1, do_signal_event_task, 1024);
   qos_new_task(100, do_lock_core_mutex_task1, 1024);
 }
 
@@ -264,6 +278,8 @@ int main() {
   add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
 
   mutex_init(&g_lock_core_mutex);
+
+  g_event = qos_new_event(0);
 
   qos_start_tasks(2, (qos_proc_t[]) { init_core0, init_core1 });
 

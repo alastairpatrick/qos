@@ -26,6 +26,15 @@ qos_internal_init_stacks:
         BX      LR
 
 
+// void qos_roll_back_atomic_from_isr()
+.GLOBAL qos_roll_back_atomic_from_isr
+.TYPE qos_roll_back_atomic_from_isr, %function
+qos_roll_back_atomic_from_isr:
+        PUSH    {LR}
+        MRS     R3, PSP
+        B       roll_back_atomic
+
+
 // void qos_supervisor_svc_handler()
 .GLOBAL qos_supervisor_svc_handler
 .TYPE qos_supervisor_svc_handler, %function
@@ -93,6 +102,14 @@ qos_supervisor_systick_handler:
 qos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
+
+        ADD     R0, SP, #4
+        BL      qos_supervisor_pendsv
+
+        CMP     R0, #0
+        BNE     context_switch_ready
+
+        POP     {PC}
 
 
 context_switch_ready:

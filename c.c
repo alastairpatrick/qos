@@ -3,6 +3,7 @@
 #include "atomic.h"
 #include "divide.h"
 #include "dlist.h"
+#include "event.h"
 #include "interrupt.h"
 #include "io.h"
 #include "mutex.h"

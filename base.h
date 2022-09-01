@@ -23,6 +23,10 @@
 #endif
 #endif
 
+#ifndef QOS_MAX_EVENTS_PER_CORE
+#define QOS_MAX_EVENTS_PER_CORE 8
+#endif
+
 #ifdef __cplusplus
 #define QOS_BEGIN_EXTERN_C extern "C" {
 #define QOS_END_EXTERN_C }

@@ -2,6 +2,7 @@
 
 #include "dlist.h"
 #include "dlist_it.h"
+#include "event.internal.h"
 #include "svc.h"
 #include "task.h"
 #include "task.internal.h"
@@ -37,6 +38,7 @@ void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
   }
 
   if (should_preempt) {
+    scheduler->pendsv_force_preempt = true;
     scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
   }
 }
@@ -110,4 +112,10 @@ bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_
   assert(timeout != 0);
 
   return qos_call_supervisor_va(qos_await_irq_supervisor, irq, enable, mask, timeout);
+}
+
+void qos_signal_event_from_isr(qos_event_t* event) {
+  assert(event->core = get_core_num());
+  *event->signalled = true;
+  scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }

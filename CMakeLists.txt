@@ -12,6 +12,7 @@ add_executable(qos
   atomic.S
   c.c
   dlist.cpp
+  event.cpp
   interrupt.cpp
   interrupt.S
   lock_core.cpp

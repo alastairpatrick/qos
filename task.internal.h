@@ -79,6 +79,7 @@ typedef struct qos_scheduler_t {
   qos_task_timout_dlist_t delayed;
 
   volatile bool ready_busy_blocked_tasks;
+  volatile bool pendsv_force_preempt;
   bool migrate_task;
 } qos_scheduler_t;
 

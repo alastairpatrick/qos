@@ -3,6 +3,7 @@
 
 #include "atomic.h"
 #include "dlist_it.h"
+#include "event.internal.h"
 #include "svc.h"
 #include "time.h"
 
@@ -38,6 +39,7 @@ extern "C" {
   void qos_supervisor_pendsv_handler();
   void qos_supervisor_fifo_handler();
   bool qos_supervisor_systick(qos_scheduler_t* scheduler);
+  bool qos_supervisor_pendsv(qos_scheduler_t* scheduler);
   bool qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
 }
@@ -105,7 +107,7 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
   task->priority = priority;
   task->stack = (char*) stack;
   task->stack_size = stack_size;
-    
+
   task->sp = task->stack + stack_size - sizeof(qos_exception_frame_t);
   auto frame = (qos_exception_frame_t*) task->sp;
 
@@ -247,12 +249,32 @@ bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   return should_yield;
 }
 
+bool STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
+  bool should_yield = scheduler->pendsv_force_preempt;
+  scheduler->pendsv_force_preempt = false;
+
+  should_yield |= qos_internal_check_signalled_events_supervisor(scheduler);
+
+  return should_yield;
+}
+
 bool STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
   bool should_yield = false;
+  bool check_events = false;
+
   while (multicore_fifo_rvalid()) {
-    auto task = (qos_task_t*) sio_hw->fifo_rd;
-    
-    should_yield |= qos_ready_task(scheduler, task);
+    auto data = sio_hw->fifo_rd;
+
+    // Zero means an event might be signalled, which we already checked
+    if (data) {    
+      should_yield |= qos_ready_task(scheduler, (qos_task_t*) data);
+    } else {
+      check_events = true;
+    }
+  }
+
+  if (check_events) {
+    should_yield |= qos_internal_check_signalled_events_supervisor(scheduler);
   }
 
   return should_yield;
