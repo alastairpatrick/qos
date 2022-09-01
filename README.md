@@ -95,6 +95,11 @@ struct qos_queue_t* qos_new_queue(int32_t capacity);
 void qos_init_queue(struct qos_queue_t* queue, void* buffer, int32_t capacity);
 bool qos_write_queue(struct qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
 bool qos_read_queue(struct qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
+
+struct qos_event_t* qos_new_event(int32_t core);
+void qos_init_event(struct qos_event_t* event, int32_t core);
+bool qos_await_event(struct qos_event_t* event, qos_time_t timeout);
+void qos_signal_event(struct qos_event_t* event);
 ```
 
 Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
@@ -140,6 +145,10 @@ int sum_array(const int* array, int size) {
 ```c
 void qos_init_await_irq(int32_t irq);
 bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout);
+
+void qos_roll_back_atomic_from_isr();
+
+void qos_signal_event_from_isr(struct qos_event_t* event);
 ```
 
 #### Example
