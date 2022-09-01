@@ -191,6 +191,27 @@ void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, v
 When tasks running on different cores must interact through atomics, the suggested approach is for
 all the tasks to migrate to the same core before accessing them. This is how IPC works.
 
+### Division
+
+To reduce context switching overhead, qOS regulates use of the SIO hardware integer dividers.
+Either core may at any time - including in thread mode or in an ISR - use the / or %
+operators for integer division or modulo.
+
+Once the RTOS starts, neither core may use the floating point division or tangent functions
+provided by the boot ROM. The easiest way to accomplish this is to use the software floating point
+subroutines provided by GCC instead of those in the boot ROM. Less imposing approaches might be
+provided in the future.
+
+Additionally, the functions below are available in thread and have lower overhead than the / and %
+operators.
+
+```c
+int32_t qos_div(int32_t dividend, int32_t divisor);
+qos_divmod_t qos_divmod(int32_t dividend, int32_t divisor);
+uint32_t qos_udiv(uint32_t dividend, uint32_t divisor);
+qos_udivmod_t qos_udivmod(uint32_t dividend, uint32_t divisor);
+```
+
 ### Doubly Linked Lists
 
 ```c
