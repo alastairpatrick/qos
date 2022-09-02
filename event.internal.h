@@ -1,6 +1,7 @@
 #ifndef QOS_EVENT_INTERNAL_H
 #define QOS_EVENT_INTERNAL_H
 
+#include "event.h"
 #include "task.internal.h"
 
 QOS_BEGIN_EXTERN_C

@@ -1,7 +1,7 @@
 #ifndef QOS_SEMAPHORE_INTERNAL_H
 #define QOS_SEMAPHORE_INTERNAL_H
 
-#include "base.h"
+#include "semaphore.h"
 #include "task.internal.h"
 
 typedef struct qos_semaphore_t {

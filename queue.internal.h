@@ -1,6 +1,7 @@
 #ifndef QOS_QUEUE_INTERNAL_H
 #define QOS_QUEUE_INTERNAL_H
 
+#include "queue.h"
 #include "semaphore.internal.h"
 #include "mutex.internal.h"
 
