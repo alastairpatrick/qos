@@ -13,7 +13,7 @@ bool qos_owns_mutex(struct qos_mutex_t* mutex);
 
 struct qos_condition_var_t* qos_new_condition_var(struct qos_mutex_t* mutex);
 void qos_init_condition_var(struct qos_condition_var_t* var, struct qos_mutex_t* mutex);
-void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout);
+bool qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout);
 bool qos_wait_condition_var(struct qos_condition_var_t* var, qos_time_t timeout);
 void qos_release_condition_var(struct qos_condition_var_t* var);
 void qos_release_and_signal_condition_var(struct qos_condition_var_t* var);

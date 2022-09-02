@@ -151,8 +151,8 @@ void qos_init_condition_var(qos_condition_var_t* var, qos_mutex_t* mutex) {
   qos_init_dlist(&var->waiting.tasks);
 }
 
-void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout) {
-  qos_acquire_mutex(var->mutex, timeout);
+bool qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout) {
+  return qos_acquire_mutex(var->mutex, timeout);
 }
 
 qos_task_state_t qos_wait_condition_var_supervisor(qos_scheduler_t* scheduler, va_list args) {
