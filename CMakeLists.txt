@@ -19,6 +19,7 @@ add_executable(qos
   mutex.cpp
   parallel.cpp
   queue.cpp
+  spsc_queue.cpp
   svc.S
   semaphore.cpp
   stdio_uart.cpp

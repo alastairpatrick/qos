@@ -369,8 +369,12 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
 
     if (new_state == QOS_TASK_BUSY_BLOCKED) {
       // Maintain blocked in descending priority order.
-      assert(empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority);
-      splice(end(busy_blocked), current_task);
+      if (empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority) {
+        // Fast path for common case.
+        splice(end(busy_blocked), current_task);
+      } else {
+        qos_internal_insert_scheduled_task(&busy_blocked, current_task);
+      }
     } else if (new_state == QOS_TASK_READY) {
       // Maintain ready in descending priority order.
       if (empty(begin(ready)) || current_priority <= (--end(ready))->priority) {

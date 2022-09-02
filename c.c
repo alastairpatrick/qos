@@ -13,6 +13,8 @@
 #include "queue.internal.h"
 #include "semaphore.h"
 #include "semaphore.internal.h"
+#include "spsc_queue.h"
+#include "spsc_queue.internal.h"
 #include "task.h"
 #include "task.internal.h"
 #include "time.h"

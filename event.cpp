@@ -83,7 +83,9 @@ bool qos_internal_check_signalled_events_supervisor(qos_scheduler_t* scheduler) 
       auto event = g_events[core][i];
       auto waiting = begin(event->waiting);
       if (!empty(waiting)) {
-        should_yield |= qos_ready_task(scheduler, &*waiting);
+        auto task = &*waiting;
+        qos_supervisor_call_result(scheduler, task, true);
+        should_yield |= qos_ready_task(scheduler, task);
       }
     }
   }
@@ -99,7 +101,9 @@ qos_task_state_t signal_event_supervisor(qos_scheduler_t* scheduler, void* p) {
     *event->signalled = true;
     return QOS_TASK_RUNNING;
   } else {
-    bool should_yield = qos_ready_task(scheduler, &*waiting);
+    auto task = &*waiting;
+    qos_supervisor_call_result(scheduler, task, true);
+    bool should_yield = qos_ready_task(scheduler, task);
     if (should_yield) {
       return QOS_TASK_READY;
     } else {
@@ -115,4 +119,10 @@ void qos_signal_event(qos_event_t* event) {
     *event->signalled = true;
     qos_internal_atomic_write_fifo(0);
   }
+}
+
+void qos_signal_event_from_isr(qos_event_t* event) {
+  assert(event->core = get_core_num());
+  *event->signalled = true;
+  scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }

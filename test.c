@@ -5,10 +5,11 @@
 #include "io.h"
 #include "mutex.h"
 #include "parallel.h"
+#include "queue.h"
+#include "spsc_queue.h"
 #include "task.h"
 #include "time.h"
-#include "queue.h"
-
+#
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@
 
 struct qos_event_t* g_event;
 struct qos_queue_t* g_queue;
+struct qos_spsc_queue_t* g_spsc_queue;
 struct qos_mutex_t* g_mutex;
 struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
@@ -86,6 +88,18 @@ void do_consumer_task2() {
   if (qos_read_queue(g_queue, buffer, 6, 100000)) {
     assert(strcmp(buffer, "hello") == 0 || strcmp(buffer, "world") == 0);
   }
+}
+
+void do_spsc_producer_task() {
+  qos_write_spsc_queue(g_spsc_queue, "hello", 6, QOS_NO_TIMEOUT);
+  qos_sleep(200);
+}
+
+void do_spsc_consumer_task() {
+  char buffer[10];
+  memset(buffer, 0, sizeof(buffer));
+  qos_read_spsc_queue(g_spsc_queue, buffer, 6, QOS_NO_TIMEOUT);
+  assert(strcmp(buffer, "hello") == 0);
 }
 
 void do_update_cond_var_task() {
@@ -237,10 +251,12 @@ void do_divide_task2() {
 
 void init_core0() {
   g_queue = qos_new_queue(100);
+  g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());
 
   qos_new_task(100, do_delay_task, 1024);
   qos_new_task(1, do_producer_task1, 1024);
   qos_new_task(1, do_consumer_task1, 1024);
+  qos_new_task(1, do_spsc_producer_task, 1024);
   qos_new_task(1, do_observe_cond_var_task1, 1024);
   qos_new_task(1, do_migrating_task, 1024);
   qos_new_task(1, do_parallel_sum_task, 1024);
@@ -256,6 +272,7 @@ void init_core1() {
 
   qos_new_task(1, do_producer_task2, 1024);
   qos_new_task(1, do_consumer_task2, 1024);
+  qos_new_task(1, do_spsc_consumer_task, 1024);
   qos_new_task(1, do_observe_cond_var_task2, 1024);
   qos_new_task(1, do_update_cond_var_task, 1024);
   qos_new_task(1, do_wait_pwm_wrap, 1024);

@@ -5,6 +5,7 @@
 
 QOS_BEGIN_EXTERN_C
 
+// Multi-producer / multi-consumer queue.
 struct qos_queue_t* qos_new_queue(int32_t capacity);
 void qos_init_queue(struct qos_queue_t* queue, void* buffer, int32_t capacity);
 bool qos_write_queue(struct qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);

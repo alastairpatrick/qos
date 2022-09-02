@@ -72,12 +72,14 @@ Multi-core IPC routines may be called on any core regardless of which core a syn
 was initialized on.
 
 ```c
+// Mutex
 struct qos_mutex_t* qos_new_mutex();
 void qos_init_mutex(struct qos_mutex_t* mutex);
 bool qos_acquire_mutex(struct qos_mutex_t* mutex, qos_time_t timeout);
 void qos_release_mutex(struct qos_mutex_t* mutex);
 bool qos_owns_mutex(struct qos_mutex_t* mutex);
 
+// Condition variable
 struct qos_condition_var_t* qos_new_condition_var(struct qos_mutex_t* mutex);
 void qos_init_condition_var(struct qos_condition_var_t* var, struct qos_mutex_t* mutex);
 void qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeout);
@@ -86,20 +88,29 @@ void qos_release_condition_var(struct qos_condition_var_t* var);
 void qos_release_and_signal_condition_var(struct qos_condition_var_t* var);
 void qos_release_and_broadcast_condition_var(struct qos_condition_var_t* var);
 
+// Event
+struct qos_event_t* qos_new_event(int32_t core);
+void qos_init_event(struct qos_event_t* event, int32_t core);
+bool qos_await_event(struct qos_event_t* event, qos_time_t timeout);
+void qos_signal_event(struct qos_event_t* event);
+
+// Semaphore
 struct qos_semaphore_t* qos_new_semaphore(int32_t initial_count);
 void qos_init_semaphore(struct qos_semaphore_t* semaphore, int32_t initial_count);
 bool qos_acquire_semaphore(struct qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout);
 void qos_release_semaphore(struct qos_semaphore_t* semaphore, int32_t count);
 
+// Multi-producer / multi-consumer queue
 struct qos_queue_t* qos_new_queue(int32_t capacity);
 void qos_init_queue(struct qos_queue_t* queue, void* buffer, int32_t capacity);
 bool qos_write_queue(struct qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
 bool qos_read_queue(struct qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 
-struct qos_event_t* qos_new_event(int32_t core);
-void qos_init_event(struct qos_event_t* event, int32_t core);
-bool qos_await_event(struct qos_event_t* event, qos_time_t timeout);
-void qos_signal_event(struct qos_event_t* event);
+// Single producer / single comsumer queue. Use qos_queue_t if there are multiple producers and/or consumers
+struct qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t producer_core, int32_t consumer_core);
+void qos_init_spsc_queue(struct qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t producer_core, int32_t consumer_core);
+bool STRIPED_RAM qos_write_spsc_queue(struct qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
+bool STRIPED_RAM qos_read_spsc_queue(struct qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 ```
 
 Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
@@ -143,12 +154,17 @@ int sum_array(const int* array, int size) {
 ### IRQs
 
 ```c
-void qos_init_await_irq(int32_t irq);
-bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout);
-
+// Interact with atomics in ISR
 void qos_roll_back_atomic_from_isr();
 
+// Use synchronization objects from ISR
 void qos_signal_event_from_isr(struct qos_event_t* event);
+bool qos_write_spsc_queue_from_isr(struct qos_spsc_queue_t* queue, const void* data, int32_t size);
+bool qos_read_spsc_queue_from_isr(struct qos_spsc_queue_t* queue, void* data, int32_t size);
+
+// Deferred IRQ handling
+void qos_init_await_irq(int32_t irq);
+bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout);
 ```
 
 #### Example
@@ -167,8 +183,8 @@ void write_uart(const char* buffer, int32_t size) {
 ### Atomics
 
 These are atomic only with respect to multiple tasks running on the same core but not between tasks
-running on different cores or with ISRs. Atomics run wholly in thread mode and incur no supervisor
-call overhead.
+running on different cores or between ISRs. There is support for atomicity between tasks and ISRs
+running on the same core. Atomics do not incur no supervisor call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;

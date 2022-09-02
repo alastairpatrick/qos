@@ -1,7 +1,7 @@
 #ifndef QOS_MUTEX_INTERNAL_H
 #define QOS_MUTEX_INTERNAL_H
 
-#include "base.h"
+#include "mutex.h"
 #include "task.internal.h"
 
 typedef struct qos_mutex_t {
