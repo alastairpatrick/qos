@@ -355,36 +355,26 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   auto& idle_task = scheduler->idle_task;
   auto current_priority = current_task->priority;
 
-  if (current_task != &idle_task) {
-    // The idle task does not use any optional context.
-    if (current_task->save_context) {
-      save_interp_context(&current_task->interp_contexts[0], interp0_hw);
-      save_interp_context(&current_task->interp_contexts[1], interp1_hw);
-    }
+  assert(new_state  != QOS_TASK_RUNNING);
+  assert(current_task != &idle_task || new_state == QOS_TASK_READY);
+  
+  if (current_task->save_context) {
+    save_interp_context(&current_task->interp_contexts[0], interp0_hw);
+    save_interp_context(&current_task->interp_contexts[1], interp1_hw);
+  }
 
-    if (scheduler->migrate_task) {
-      sio_hw->fifo_wr = (int32_t) scheduler->current_task;
-      scheduler->migrate_task = false;
-    }
+  if (scheduler->migrate_task) {
+    sio_hw->fifo_wr = (int32_t) scheduler->current_task;
+    scheduler->migrate_task = false;
+  }
 
-    if (new_state == QOS_TASK_BUSY_BLOCKED) {
-      // Maintain blocked in descending priority order.
-      if (empty(begin(busy_blocked)) || current_priority <= (--end(busy_blocked))->priority) {
-        // Fast path for common case.
-        splice(end(busy_blocked), current_task);
-      } else {
-        qos_internal_insert_scheduled_task(&busy_blocked, current_task);
-      }
-    } else if (new_state == QOS_TASK_READY) {
-      // Maintain ready in descending priority order.
-      if (empty(begin(ready)) || current_priority <= (--end(ready))->priority) {
-        // Fast path for common case.
-        splice(end(ready), current_task);
-      } else {
-        qos_internal_insert_scheduled_task(&ready, current_task);
-      }
+  if (new_state != QOS_TASK_SYNC_BLOCKED) {
+    auto& task_list = new_state == QOS_TASK_BUSY_BLOCKED ? busy_blocked : ready;
+    if (empty(begin(task_list)) || current_priority <= (--end(task_list))->priority) {
+      // Fast path for common case.
+      splice(end(task_list), current_task);
     } else {
-      assert(new_state == QOS_TASK_SYNC_BLOCKED);
+      qos_internal_insert_scheduled_task(&task_list, current_task);
     }
   }
 
@@ -392,17 +382,15 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
     qos_swap_dlist(&pending.tasks, &ready.tasks);
   }
 
-  if (empty(begin(pending))) {
-    current_task = &idle_task;
-  } else {
-    current_task = &*begin(pending);
-    remove(begin(pending));
+  // The idle task is always ready.
+  assert(!empty(begin(pending)));
 
-    // The idle task does not use any optional context.
-    if (current_task->save_context) {
-      restore_interp_context(&current_task->interp_contexts[0], interp0_hw);
-      restore_interp_context(&current_task->interp_contexts[1], interp1_hw);
-    }
+  current_task = &*begin(pending);
+  remove(begin(pending));
+
+  if (current_task->save_context) {
+    restore_interp_context(&current_task->interp_contexts[0], interp0_hw);
+    restore_interp_context(&current_task->interp_contexts[1], interp1_hw);
   }
 
   return current_task;
