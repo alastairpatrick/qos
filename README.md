@@ -108,9 +108,9 @@ bool qos_read_queue(struct qos_queue_t* queue, void* data, int32_t size, qos_tim
 
 // Single producer / single comsumer queue. Use qos_queue_t if there are multiple producers and/or consumers
 struct qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t producer_core, int32_t consumer_core);
-void qos_init_spsc_queue(struct qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t producer_core, int32_t consumer_core);
-bool STRIPED_RAM qos_write_spsc_queue(struct qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
-bool STRIPED_RAM qos_read_spsc_queue(struct qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
+void qos_init_spsc_queue(struct qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t prod_core, int32_t cons_core);
+bool qos_write_spsc_queue(struct qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
+bool qos_read_spsc_queue(struct qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 ```
 
 Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
@@ -188,7 +188,7 @@ running on the same core. Atomics do not incur no supervisor call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;
-typedef volatile void* qos_atomic_ptr_t;
+typedef void* volatile qos_atomic_ptr_t;
 
 int32_t qos_atomic_add(qos_atomic32_t* atomic, int32_t addend);
 int32_t qos_atomic_xor(qos_atomic32_t* atomic, int32_t bitmask);

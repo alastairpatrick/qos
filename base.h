@@ -38,7 +38,7 @@
 #define STRIPED_RAM __attribute__((section(".time_critical.qos")))
 
 typedef volatile int32_t qos_atomic32_t;
-typedef volatile void* qos_atomic_ptr_t;
+typedef void* volatile qos_atomic_ptr_t;
 
 // <-1: Absolute time in ms, starting at INT64_MIN
 //  -1: Special value meaning no timeout
