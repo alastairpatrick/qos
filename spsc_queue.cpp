@@ -50,8 +50,6 @@ void STRIPED_RAM internal_write_spsc_queue(qos_spsc_queue_t* queue, const void* 
   memcpy(queue->buffer, copy_size + (const char*) data, size - copy_size);
 
   queue->producer_tail = queue->producer_head;
-
-  qos_signal_event(&queue->consumer_event);
 }
 
 bool STRIPED_RAM qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
@@ -64,6 +62,7 @@ bool STRIPED_RAM qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data,
   }
 
   internal_write_spsc_queue(queue, data, size);
+  qos_signal_event(&queue->consumer_event);
   return true;
 }
 
@@ -73,6 +72,7 @@ bool STRIPED_RAM qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const vo
   }
 
   internal_write_spsc_queue(queue, data, size);
+  qos_signal_event_from_isr(&queue->consumer_event);
   return true;
 }
 
@@ -97,8 +97,6 @@ void STRIPED_RAM internal_read_spsc_queue(qos_spsc_queue_t* queue, void* data, i
   memcpy(copy_size + (char*) data, queue->buffer, size - copy_size);
 
   queue->consumer_tail = queue->consumer_head;
-
-  qos_signal_event(&queue->producer_event);
 }
 
 bool STRIPED_RAM qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
@@ -111,6 +109,7 @@ bool STRIPED_RAM qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_
   }
 
   internal_read_spsc_queue(queue, data, size);
+  qos_signal_event(&queue->producer_event);
   return true;
 }
 
@@ -120,5 +119,6 @@ bool STRIPED_RAM qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* dat
   }
 
   internal_read_spsc_queue(queue, data, size);
+  qos_signal_event_from_isr(&queue->producer_event);
   return true;
 }

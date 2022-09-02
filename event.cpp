@@ -57,7 +57,7 @@ static qos_task_state_t STRIPED_RAM await_event_supervisor(qos_scheduler_t* sche
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-bool qos_await_event(qos_event_t* event, qos_time_t timeout) {
+bool STRIPED_RAM qos_await_event(qos_event_t* event, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   qos_core_migrator migrator(event->core);
@@ -74,7 +74,7 @@ bool qos_await_event(qos_event_t* event, qos_time_t timeout) {
   return qos_call_supervisor_va(await_event_supervisor, event, timeout);
 }
 
-bool qos_internal_check_signalled_events_supervisor(qos_scheduler_t* scheduler) {
+bool STRIPED_RAM qos_internal_check_signalled_events_supervisor(qos_scheduler_t* scheduler) {
   auto core = get_core_num();
 
   auto should_yield = false;
@@ -93,7 +93,7 @@ bool qos_internal_check_signalled_events_supervisor(qos_scheduler_t* scheduler) 
   return should_yield;
 }
 
-qos_task_state_t signal_event_supervisor(qos_scheduler_t* scheduler, void* p) {
+qos_task_state_t STRIPED_RAM signal_event_supervisor(qos_scheduler_t* scheduler, void* p) {
   auto event = (qos_event_t*) p;
 
   auto waiting = begin(event->waiting);
@@ -112,7 +112,7 @@ qos_task_state_t signal_event_supervisor(qos_scheduler_t* scheduler, void* p) {
   }
 }
 
-void qos_signal_event(qos_event_t* event) {
+void STRIPED_RAM qos_signal_event(qos_event_t* event) {
   if (event->core == get_core_num()) {
     qos_call_supervisor(signal_event_supervisor, event);
   } else {
@@ -121,7 +121,7 @@ void qos_signal_event(qos_event_t* event) {
   }
 }
 
-void qos_signal_event_from_isr(qos_event_t* event) {
+void STRIPED_RAM qos_signal_event_from_isr(qos_event_t* event) {
   assert(event->core = get_core_num());
   *event->signalled = true;
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
