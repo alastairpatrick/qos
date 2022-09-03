@@ -98,20 +98,3 @@ void qos_stdio_uart_init_full(uart_inst_t *uart, int32_t baud_rate, int32_t tx_p
 
   stdio_set_driver_enabled(&g_drivers[uart_idx], true);
 }
-
-void qos_stdio_uart_init_full(uart_inst_t *uart, int32_t baud_rate, int32_t tx_pin, int32_t rx_pin) {
-  uart_init(uart, baud_rate);
-
-  if (tx_pin >= 0) {
-    gpio_set_function(tx_pin, GPIO_FUNC_UART);
-  }
-
-  if (rx_pin >= 0) {
-    gpio_set_function(rx_pin, GPIO_FUNC_UART);
-  }
-
-  int uart_idx = uart == uart0 ? 0 : 1;
-  qos_init_await_irq(UART0_IRQ + uart_idx);
-
-  stdio_set_driver_enabled(&g_drivers[uart_idx], true);
-}
