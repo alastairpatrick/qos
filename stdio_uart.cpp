@@ -1,6 +1,7 @@
 #include "io.h"
 
 #include "interrupt.h"
+#include "task.h"
 
 #include "hardware/gpio.h"
 #include "hardware/irq.h"
@@ -18,6 +19,13 @@ static void out_char(int32_t uart_idx, const char *buf, int len) {
       qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
     }
     uart_putc((uart_inst_t*) hw, buf[i]);
+  }
+}
+
+static void out_flush(int32_t uart_idx) {
+  auto hw = g_uart_hws[uart_idx];
+  while (uart_get_hw((uart_inst_t*) hw)->fr & UART_UARTFR_BUSY_BITS) {
+    qos_yield();
   }
 }
 
@@ -42,6 +50,10 @@ static void out_chars0(const char *buf, int len) {
   return out_char(0, buf, len);
 }
 
+static void out_flush0() {
+  return out_flush(0);
+}
+
 static int in_chars0(char *buf, int len) {
   return in_chars(0, buf, len);
 }
@@ -54,12 +66,18 @@ static int in_chars1(char *buf, int len) {
   return in_chars(1, buf, len);
 }
 
+static void out_flush1() {
+  return out_flush(1);
+}
+
 static stdio_driver_t g_drivers[2] = {
   {
     .out_chars = out_chars0,
+    .out_flush = out_flush0,
     .in_chars = in_chars0,
   }, {
     .out_chars = out_chars1,
+    .out_flush = out_flush1,
     .in_chars = in_chars1,
   }
 };

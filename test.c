@@ -58,13 +58,13 @@ void do_delay_task() {
 
 void do_await_event_task() {
   qos_await_event(g_event, QOS_NO_TIMEOUT);
-  printf("Received event");
+  printf("Received event\n\r");
 }
 
 void do_signal_event_task() {
   qos_signal_event(g_event);
   qos_migrate_core(1 - get_core_num());
-  qos_sleep(100000);
+  qos_sleep(1000000);
 }
 
 void do_producer_task1() {
