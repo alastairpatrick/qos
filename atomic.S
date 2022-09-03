@@ -62,6 +62,21 @@ qos_atomic_compare_and_set_ptr:
         BX      LR
 
 
+// qos_dnode_t* qos_internal_atomic_wfe(qos_dlist_t* ready)
+.BALIGN 32
+.GLOBAL qos_internal_atomic_wfe
+.TYPE qos_internal_atomic_wfe, %function
+        B       0f
+.SPACE  22 - (1f - 0f)
+qos_internal_atomic_wfe:
+0:      LDR     R3, [R0]
+        CMP     R3, R0
+        BNE     return_zero
+1:      WFE                   // byte offset 24
+2:      MOVS    R0, #1
+        BX      LR
+
+
 // void qos_internal_atomic_write_fifo(qos_fifo_handler_t*)
 .BALIGN 32
 .GLOBAL qos_internal_atomic_write_fifo
@@ -117,6 +132,11 @@ qos_internal_atomic_write_fifo:
 .GLOBAL qos_internal_atomic_end
 .TYPE qos_internal_atomic_end, %function
 qos_internal_atomic_end:
+
+
+return_zero:
+      MOVS    R0, #0
+      BX      LR
 
 
 .MACRO divmod label1, label2, inner

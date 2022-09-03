@@ -42,6 +42,7 @@ extern "C" {
   bool qos_supervisor_pendsv(qos_scheduler_t* scheduler);
   bool qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
+  qos_dnode_t* qos_internal_atomic_wfe(qos_dlist_t* ready);
 }
 
 static void run_idle_task();
@@ -201,6 +202,8 @@ void qos_save_context(uint32_t save_context) {
 static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler, void*) {
   auto& busy_blocked = scheduler->busy_blocked;
 
+  scheduler->ready_busy_blocked_tasks = false;
+
   bool should_yield = false;
   auto position = begin(busy_blocked);
   while (position != end(busy_blocked)) {
@@ -223,12 +226,15 @@ void STRIPED_RAM qos_ready_busy_blocked_tasks() {
 static void run_idle_task() {
   auto& scheduler = get_scheduler();
   for (;;) {
-    scheduler.ready_busy_blocked_tasks = false;
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
 
     __dsb();
     while (!scheduler.ready_busy_blocked_tasks) {
-      __wfe();
+      // WFE if there are no ready tasks - this idle task is not ready because it is running. Otherwise yield
+      // to a ready task.
+      if (!qos_internal_atomic_wfe(&scheduler.ready.tasks)) {
+        qos_yield();
+      }
     }
   }
 }
@@ -379,6 +385,9 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
 
   current_task = &*begin(pending);
   remove(begin(pending));
+
+  // The idle task only runs if no other task is ready.
+  assert(current_task == &idle_task || !empty(begin(pending)));
 
   if (current_task->save_context) {
     restore_interp_context(&current_task->interp_contexts[0], interp0_hw);

@@ -76,6 +76,9 @@ qos_supervisor_fifo_handler:
         CMP     R0, #0
         BNE     context_switch_ready
 
+        // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
+        // ready, it has a priority greater than the idle task, which would cause
+        // a context switch.
         POP     {PC}
 
 
@@ -93,6 +96,9 @@ qos_supervisor_systick_handler:
         CMP     R0, #0
         BNE     context_switch_ready
 
+        // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
+        // ready, it has a priority greater than the idle task, which would cause
+        // a context switch.
         POP     {PC}
 
 
@@ -109,6 +115,9 @@ qos_supervisor_pendsv_handler:
         CMP     R0, #0
         BNE     context_switch_ready
 
+        // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
+        // ready, it has a priority greater than the idle task, which would cause
+        // a context switch.
         POP     {PC}
 
 

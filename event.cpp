@@ -129,7 +129,6 @@ void STRIPED_RAM qos_signal_event(qos_event_t* event) {
   if (event->core == get_core_num()) {
     qos_call_supervisor(signal_event_supervisor, event);
   } else {
-    *event->signalled = true;
     qos_internal_atomic_write_fifo(&event->signal_handler);
   }
 }
