@@ -16,10 +16,10 @@ static void out_char(int32_t uart_idx, const char *buf, int len) {
   auto hw = g_uart_hws[uart_idx];
 
   for (auto i = 0; i < len; ++i) {
-    while (!uart_is_writable((uart_inst_t*) hw)) {
+    while (hw->fr & UART_UARTFR_TXFF_BITS) {
       qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
     }
-    uart_putc((uart_inst_t*) hw, buf[i]);
+    hw->dr = buf[i];
   }
 }
 
@@ -28,8 +28,7 @@ static void out_flush(int32_t uart_idx) {
 
   while (hw->fr & UART_UARTFR_BUSY_BITS) {
     // Ideally this would block until level == 0. Actually this blocks until the 0 <= level <= 4 characters.
-    // The UART does not provide an interrupt for TX FIFO empty. When 1 <= level <= 4, this at least yields,
-    // allowing the idle task to run once but not sleep.
+    // The UART does not provide an interrupt for TX FIFO empty. When 1 <= level <= 4, this at least yields.
     qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
   }
 }
@@ -39,12 +38,12 @@ static int in_chars(int32_t uart_idx, char *buf, int len) {
 
   auto i = 0;
   for (; i < len; ++i) {
-    while (!uart_is_readable((uart_inst_t*) hw)) {
+    while (hw->fr & UART_UARTFR_RXFE_BITS) {
       if (!qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, QOS_TIMEOUT_NEXT_TICK)) {
         goto timeout;
       }
     }
-    buf[i] = uart_getc((uart_inst_t*) hw);
+    buf[i] = hw->dr;
   }
 
 timeout:
