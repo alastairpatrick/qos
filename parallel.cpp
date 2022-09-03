@@ -4,10 +4,6 @@
 #include "task.h"
 #include "task.internal.h"
 
-extern "C" {
-  void qos_internal_atomic_write_fifo(qos_task_t*);
-}
-
 static qos_task_state_t STRIPED_RAM suspend_supervisor(qos_scheduler_t* scheduler, void* p) {
   auto done = (qos_proc_int32_t*) p;
   *done = nullptr;
@@ -46,7 +42,7 @@ void STRIPED_RAM qos_parallel(qos_proc_int32_t entry) {
   auto current_task = qos_current_task();
   auto parallel_task = current_task->parallel_task;
   parallel_task->parallel_entry = entry;
-  qos_internal_atomic_write_fifo(parallel_task);
+  qos_internal_atomic_write_fifo(&parallel_task->ready_handler);
 
   entry(get_core_num());
 

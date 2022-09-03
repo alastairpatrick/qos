@@ -62,7 +62,7 @@ qos_atomic_compare_and_set_ptr:
         BX      LR
 
 
-// void qos_internal_atomic_write_fifo(int32_t data)
+// void qos_internal_atomic_write_fifo(qos_fifo_handler_t*)
 .BALIGN 32
 .GLOBAL qos_internal_atomic_write_fifo
 .TYPE qos_internal_atomic_write_fifo, %function

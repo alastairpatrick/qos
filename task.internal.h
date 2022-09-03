@@ -13,7 +13,11 @@
 
 #define QOS_MAX_IRQS 32
 
+QOS_BEGIN_EXTERN_C
+
 typedef void (*qos_task_proc_t)(struct qos_task_t*);
+
+typedef bool (*qos_fifo_handler_t)(struct qos_scheduler_t*, intptr_t);
 
 typedef struct qos_interp_context_t {
   int32_t accum0, accum1;
@@ -55,6 +59,9 @@ typedef struct qos_task_t {
 
   struct qos_task_t* parallel_task;
   qos_proc_int32_t parallel_entry;
+
+  // FIFO handlers
+  qos_fifo_handler_t ready_handler;
 } qos_task_t;
 
 typedef struct qos_task_scheduling_dlist_t {
@@ -96,6 +103,9 @@ struct qos_exception_frame_t {
 
 // Insert task into linked list, maintaining descending priority order.
 void qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_task_t* task);
+void qos_internal_atomic_write_fifo(qos_fifo_handler_t*);
+
+QOS_END_EXTERN_C
 
 #ifdef __cplusplus
 
