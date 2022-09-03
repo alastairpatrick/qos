@@ -7,6 +7,7 @@
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "hardware/structs/uart.h"
+#include "hardware/sync.h"
 #include "pico/stdio/driver.h"
 
 static uart_hw_t* const g_uart_hws[2] = { uart0_hw, uart1_hw };
@@ -24,8 +25,12 @@ static void out_char(int32_t uart_idx, const char *buf, int len) {
 
 static void out_flush(int32_t uart_idx) {
   auto hw = g_uart_hws[uart_idx];
-  while (uart_get_hw((uart_inst_t*) hw)->fr & UART_UARTFR_BUSY_BITS) {
-    qos_yield();
+
+  while (hw->fr & UART_UARTFR_BUSY_BITS) {
+    // Ideally this would block until level == 0. Actually this blocks until the 0 <= level <= 4 characters.
+    // The UART does not provide an interrupt for TX FIFO empty. When 1 <= level <= 4, this at least yields,
+    // allowing the idle task to run once but not sleep.
+    qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_TXIM_BITS, QOS_NO_TIMEOUT);
   }
 }
 
@@ -35,7 +40,7 @@ static int in_chars(int32_t uart_idx, char *buf, int len) {
   auto i = 0;
   for (; i < len; ++i) {
     while (!uart_is_readable((uart_inst_t*) hw)) {
-      if (!qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_TXIM_BITS, 1000)) {
+      if (!qos_await_irq(UART0_IRQ + uart_idx, &hw->imsc, UART_UARTIMSC_RXIM_BITS | UART_UARTIMSC_RTIM_BITS, QOS_TIMEOUT_NEXT_TICK)) {
         goto timeout;
       }
     }
@@ -83,7 +88,12 @@ static stdio_driver_t g_drivers[2] = {
 };
 
 void qos_stdio_uart_init_full(uart_inst_t *uart, int32_t baud_rate, int32_t tx_pin, int32_t rx_pin) {
+  auto hw = (uart_hw_t*) uart;
+
   uart_init(uart, baud_rate);
+
+  // Interrupt when RX level >= 1/2 full or TX level <= 1/8 full.
+  hw->ifls = 2 << UART_UARTIFLS_RXIFLSEL_LSB;
 
   if (tx_pin >= 0) {
     gpio_set_function(tx_pin, GPIO_FUNC_UART);

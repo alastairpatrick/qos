@@ -40,12 +40,14 @@
 typedef volatile int32_t qos_atomic32_t;
 typedef void* volatile qos_atomic_ptr_t;
 
-// <-1: Absolute time in ms, starting at INT64_MIN
+// <-1: Absolute time in us, starting at INT64_MIN
 //  -1: Special value meaning no timeout
 //   0: Special value usually meaning return immediately rather than block
-//  >0: Duration in ms
+//   1: Special value meaning timeout next tick
+//  >0: Duration in us
 #define QOS_NO_TIMEOUT -1LL
 #define QOS_NO_BLOCKING 0LL
+#define QOS_TIMEOUT_NEXT_TICK 1LL
 typedef int64_t qos_time_t;
 
 typedef enum qos_task_state_t {
