@@ -32,6 +32,7 @@
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 
+struct qos_event_t* g_trigger_event;
 struct qos_event_t* g_event;
 struct qos_queue_t* g_queue;
 struct qos_spsc_queue_t* g_spsc_queue;
@@ -40,14 +41,28 @@ struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
 mutex_t g_lock_core_mutex;
 
-
+qos_atomic32_t g_trigger_count;
 int g_observed_count;
 
 bool repeating_timer_isr(repeating_timer_t* timer) {
+  qos_roll_back_atomic_from_isr();
+  ++g_trigger_count;
+  qos_signal_event_from_isr(g_trigger_event);
   return true;
 }
 
 int64_t time;
+
+void do_deferred_printf_task() {
+  for (;;) {
+    qos_await_event(g_trigger_event, QOS_NO_TIMEOUT);
+
+    while (g_trigger_count) {
+      printf("Repeating timer triggered\r\n");
+      qos_atomic_add(&g_trigger_count, -1);
+    }
+  };
+}
 
 void do_delay_task() {
   for(;;) {
@@ -253,6 +268,7 @@ void init_core0() {
   g_queue = qos_new_queue(100);
   g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());
 
+  qos_new_task(1, do_deferred_printf_task, 1024);
   qos_new_task(100, do_delay_task, 1024);
   qos_new_task(1, do_producer_task1, 1024);
   qos_new_task(1, do_consumer_task1, 1024);
@@ -292,8 +308,9 @@ int main() {
   gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 
   alarm_pool_init_default();
-  add_repeating_timer_ms(100, repeating_timer_isr, 0, &g_repeating_timer);
-
+  g_trigger_event = qos_new_event(0);
+  add_repeating_timer_ms(2000, repeating_timer_isr, 0, &g_repeating_timer);
+  
   mutex_init(&g_lock_core_mutex);
 
   g_event = qos_new_event(0);

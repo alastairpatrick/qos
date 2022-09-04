@@ -74,49 +74,44 @@ bool STRIPED_RAM qos_await_event(qos_event_t* event, qos_time_t timeout) {
   return qos_call_supervisor_va(await_event_supervisor, event, timeout);
 }
 
-void STRIPED_RAM qos_internal_check_signalled_events_supervisor(qos_scheduler_t* scheduler, qos_task_state_t* task_state) {
-  auto core = get_core_num();
+static void STRIPED_RAM handle_signalled_supervisor(qos_scheduler_t* scheduler, qos_task_state_t* task_state, qos_event_t* event) {
+  assert(event->signalled);
 
-  for (auto i = 0; i < QOS_MAX_EVENTS_PER_CORE; ++i) {
-    if (g_signalled[core][i]) {
-      auto event = g_events[core][i];
-      auto waiting = begin(event->waiting);
-      if (!empty(waiting)) {
-        auto task = &*waiting;
-        qos_supervisor_call_result(scheduler, task, true);
-        qos_ready_task(scheduler, task_state, task);
-      }
-    }
-  }
-}
-
-static void STRIPED_RAM signal_event_handler(qos_scheduler_t* scheduler, qos_task_state_t* task_state, intptr_t handler) {
-  auto event = (qos_event_t*) (handler - offsetof(qos_event_t, signal_handler));
   auto waiting = begin(event->waiting);
   if (empty(waiting)) {
-    *event->signalled = true;
     return;
   }
+
+  // Can be true here if signalled from ISR or other core.
+  *event->signalled = false;
 
   auto task = &*waiting;
   qos_supervisor_call_result(scheduler, task, true);
   qos_ready_task(scheduler, task_state, task);
 }
 
+void STRIPED_RAM qos_internal_handle_signalled_events_supervisor(qos_scheduler_t* scheduler, qos_task_state_t* task_state) {
+  auto core = get_core_num();
+
+  for (auto i = 0; i < QOS_MAX_EVENTS_PER_CORE; ++i) {
+    if (g_signalled[core][i]) {
+      handle_signalled_supervisor(scheduler, task_state, g_events[core][i]);
+    }
+  }
+}
+
+static void STRIPED_RAM signal_event_handler(qos_scheduler_t* scheduler, qos_task_state_t* task_state, intptr_t handler) {
+  auto event = (qos_event_t*) (handler - offsetof(qos_event_t, signal_handler));
+  if (*event->signalled) {
+    handle_signalled_supervisor(scheduler, task_state, event);
+  }
+}
+
 qos_task_state_t STRIPED_RAM signal_event_supervisor(qos_scheduler_t* scheduler, void* p) {
   auto event = (qos_event_t*) p;
   auto task_state = QOS_TASK_RUNNING;
-
-  auto waiting = begin(event->waiting);
-  if (empty(waiting)) {
-    *event->signalled = true;
-    return QOS_TASK_RUNNING;
-  }
-
-  auto task = &*waiting;
-  qos_supervisor_call_result(scheduler, task, true);
-  qos_ready_task(scheduler, &task_state, task);
-
+  *event->signalled = true;
+  handle_signalled_supervisor(scheduler, &task_state, event);
   return task_state;
 }
 
@@ -124,12 +119,13 @@ void STRIPED_RAM qos_signal_event(qos_event_t* event) {
   if (event->core == get_core_num()) {
     qos_call_supervisor(signal_event_supervisor, event);
   } else {
+    *event->signalled = true;
     qos_internal_atomic_write_fifo(&event->signal_handler);
   }
 }
 
 void STRIPED_RAM qos_signal_event_from_isr(qos_event_t* event) {
-  assert(event->core = get_core_num());
+  assert(event->core == get_core_num());
   *event->signalled = true;
   scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
 }

@@ -124,8 +124,9 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
 }
 
 static void init_fifo() {
+  multicore_fifo_drain();
   multicore_fifo_clear_irq();
-
+  
   auto irq = SIO_IRQ_PROC0 + get_core_num();
   irq_set_exclusive_handler(irq, qos_supervisor_fifo_handler);
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
@@ -171,27 +172,42 @@ static void core_start_scheduler() {
   run_idle_task();
 }
 
-static volatile qos_proc_t g_init_core1;
+static volatile qos_proc_t g_init_core;
 
 static void start_core1() {
-  g_init_core1();
+  g_init_core();
 
-  g_qos_internal_started = true;
+  g_init_core = nullptr;
+  __sev();
 
   core_start_scheduler();
 }
 
 void qos_start_tasks(int32_t num, const qos_proc_t* init_procs) {
-  assert(num == NUM_CORES);
+  assert(num >= 0);
+  assert(num <= NUM_CORES);
   assert(get_core_num() == 0);
 
-  init_procs[0]();
+  for (auto i = 0; i < num; ++i) {
+    auto init_proc = init_procs[i];
+    if (!init_proc) {
+      continue;
+    }
 
-  g_init_core1 = init_procs[1];
-  multicore_launch_core1(start_core1);
-  while (!g_qos_internal_started) {}
+    if (i == 0) {
+      init_proc();
+    } else {
+      g_init_core = init_proc;
+      multicore_launch_core1(start_core1);
+      while (g_init_core) {}
+    }
+  }
 
-  core_start_scheduler();
+  g_qos_internal_started = true;
+
+  if (num > 0 && init_procs[0]) {
+    core_start_scheduler();
+  }
 }
 
 void qos_save_context(uint32_t save_context) {
@@ -263,7 +279,7 @@ qos_task_state_t STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
   auto task_state = scheduler->pendsv_task_state;
   scheduler->pendsv_task_state = QOS_TASK_RUNNING;
 
-  qos_internal_check_signalled_events_supervisor(scheduler, &task_state);
+  qos_internal_handle_signalled_events_supervisor(scheduler, &task_state);
 
   return task_state;
 }
