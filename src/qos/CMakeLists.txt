@@ -22,7 +22,7 @@ target_sources(qos INTERFACE
   time.cpp
 )
 
-target_include_directories(qos INTERFACE .)
+target_include_directories(qos INTERFACE ..)
 
 target_link_libraries(qos INTERFACE
   hardware_exception
