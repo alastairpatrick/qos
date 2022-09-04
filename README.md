@@ -225,8 +225,8 @@ void an_interrupt_service_routine() {
 void a_task() {
   do {
     // Must not assume that qos_await_event() returns once for each call to
-    // qos_signal_event_from_isr(); by design, signals may be spurious. Instead, combine the
-    // event with an atomic count and only print the message for non-zero counts.
+    // qos_signal_event_from_isr(); events could be missed or spuriously reported. Instead,
+    // combine the event with an atomic count and only print the message for non-zero counts.
     qos_await_event(g_trigger_event, QOS_NO_TIMEOUT);
 
     while (g_trigger_count) {
