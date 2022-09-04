@@ -34,7 +34,7 @@ void qos_ready_busy_blocked_tasks();
 
 // May only be called from critical section
 struct qos_scheduler_t;
-bool qos_ready_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task);
+void qos_ready_task(struct qos_scheduler_t* scheduler, qos_task_state_t* task_state, struct qos_task_t* task);
 void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, qos_time_t time);
 
 QOS_END_EXTERN_C

@@ -30,15 +30,15 @@ void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
   __dsb();
   __isb();
 
-  bool should_preempt = false;
+  auto task_state = QOS_TASK_RUNNING;
   while (!empty(begin(tasks))) {
     auto task = &*begin(tasks);
     qos_supervisor_call_result(scheduler, task, true);
-    should_preempt |= qos_ready_task(scheduler, task);
+    qos_ready_task(scheduler, &task_state, task);
   }
 
-  if (should_preempt) {
-    scheduler->pendsv_force_preempt = true;
+  if (task_state != QOS_TASK_RUNNING) {
+    scheduler->pendsv_task_state = task_state;
     scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
   }
 }

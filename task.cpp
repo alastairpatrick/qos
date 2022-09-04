@@ -38,9 +38,9 @@ extern "C" {
   void qos_supervisor_systick_handler();
   void qos_supervisor_pendsv_handler();
   void qos_supervisor_fifo_handler();
-  bool qos_supervisor_systick(qos_scheduler_t* scheduler);
-  bool qos_supervisor_pendsv(qos_scheduler_t* scheduler);
-  bool qos_supervisor_fifo(qos_scheduler_t* scheduler);
+  qos_task_state_t qos_supervisor_systick(qos_scheduler_t* scheduler);
+  qos_task_state_t qos_supervisor_pendsv(qos_scheduler_t* scheduler);
+  qos_task_state_t qos_supervisor_fifo(qos_scheduler_t* scheduler);
   qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t* scheduler, qos_task_t* current);
   qos_dnode_t* qos_internal_atomic_wfe(qos_dlist_t* ready);
 }
@@ -89,9 +89,9 @@ qos_task_t *qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size)
   return task;
 }
 
-static bool STRIPED_RAM ready_task_handler(qos_scheduler_t* scheduler, intptr_t handler) {
+static void STRIPED_RAM ready_task_handler(qos_scheduler_t* scheduler, qos_task_state_t* task_state, intptr_t handler) {
   auto task = (qos_task_t*) (handler - offsetof(qos_task_t, ready_handler));
-  return qos_ready_task(scheduler, task);
+  qos_ready_task(scheduler, task_state, task);
 }
 
 void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size) {
@@ -201,19 +201,19 @@ void qos_save_context(uint32_t save_context) {
 
 static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_scheduler_t* scheduler, void*) {
   auto& busy_blocked = scheduler->busy_blocked;
+  auto task_state = QOS_TASK_RUNNING;
 
   scheduler->ready_busy_blocked_tasks = false;
 
-  bool should_yield = false;
   auto position = begin(busy_blocked);
   while (position != end(busy_blocked)) {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= qos_ready_task(scheduler, task);
+    qos_ready_task(scheduler, &task_state, task);
   }
 
-  return should_yield ? QOS_TASK_READY : QOS_TASK_RUNNING;
+  return task_state;
 }
 
 void STRIPED_RAM qos_ready_busy_blocked_tasks() {
@@ -230,8 +230,7 @@ static void run_idle_task() {
 
     __dsb();
     while (!scheduler.ready_busy_blocked_tasks) {
-      // WFE if there are no ready tasks - this idle task is not ready because it is running. Otherwise yield
-      // to a ready task.
+      // WFE if there are no ready tasks. Otherwise yield to a ready task.
       if (!qos_internal_atomic_wfe(&scheduler.ready.tasks)) {
         qos_yield();
       }
@@ -239,43 +238,45 @@ static void run_idle_task() {
   }
 }
 
-bool STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
+qos_task_state_t STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) {
   auto& delayed = scheduler->delayed;
-  
+
   auto time = qos_time();
 
   // The priority of a busy blocked task is dynamically reduced until it is readied. To mitigate the
   // possibility that it might never otherwise run again on account of higher priority tasks, periodically
   // elevate it to its original priority by readying it. This also solves the problem of how to ready it on timeout.
-  bool should_yield = ready_busy_blocked_tasks_supervisor(scheduler, nullptr);
+  auto task_state = ready_busy_blocked_tasks_supervisor(scheduler, nullptr);
 
   auto position = begin(delayed);
   while (position != end(delayed) && position->awaken_time <= time) {
     auto task = &*position;
     position = remove(position);
 
-    should_yield |= qos_ready_task(scheduler, task);
+    qos_ready_task(scheduler, &task_state, task);
   }
 
-  return should_yield;
+  return task_state;
 }
 
-bool STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
-  bool should_yield = scheduler->pendsv_force_preempt;
-  scheduler->pendsv_force_preempt = false;
+qos_task_state_t STRIPED_RAM qos_supervisor_pendsv(qos_scheduler_t* scheduler) {
+  auto task_state = scheduler->pendsv_task_state;
+  scheduler->pendsv_task_state = QOS_TASK_RUNNING;
 
-  should_yield |= qos_internal_check_signalled_events_supervisor(scheduler);
+  qos_internal_check_signalled_events_supervisor(scheduler, &task_state);
 
-  return should_yield;
+  return task_state;
 }
 
-bool STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
-  bool should_yield = false;
+qos_task_state_t STRIPED_RAM qos_supervisor_fifo(qos_scheduler_t* scheduler) {
+  auto task_state = QOS_TASK_RUNNING;
+
   while (multicore_fifo_rvalid()) {
     auto handler = (qos_fifo_handler_t*) sio_hw->fifo_rd;
-    should_yield |= (*handler)(scheduler, intptr_t(handler));
+    (*handler)(scheduler, &task_state, intptr_t(handler));
   }
-  return should_yield;
+
+  return task_state;
 }
 
 static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_scheduler_t* scheduler, void* p) {
@@ -397,7 +398,7 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   return current_task;
 }
 
-bool STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_t* task) {
+void STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_state_t* task_state, qos_task_t* task) {
   if (task->sync_unblock_task_proc) {
     task->sync_unblock_task_proc(task);
   }
@@ -410,7 +411,9 @@ bool STRIPED_RAM qos_ready_task(qos_scheduler_t* scheduler, qos_task_t* task) {
 
   qos_internal_insert_scheduled_task(&scheduler->ready, task);
 
-  return task->priority > scheduler->current_task->priority;
+  if (task->priority > scheduler->current_task->priority) {
+    *task_state = QOS_TASK_READY;
+  }
 }
 
 void STRIPED_RAM qos_supervisor_call_result(qos_scheduler_t* scheduler, qos_task_t* task, int32_t result) {

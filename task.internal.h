@@ -16,8 +16,7 @@
 QOS_BEGIN_EXTERN_C
 
 typedef void (*qos_task_proc_t)(struct qos_task_t*);
-
-typedef bool (*qos_fifo_handler_t)(struct qos_scheduler_t*, intptr_t);
+typedef void (*qos_fifo_handler_t)(struct qos_scheduler_t*, qos_task_state_t* task_state, intptr_t);
 
 typedef struct qos_interp_context_t {
   int32_t accum0, accum1;
@@ -86,7 +85,7 @@ typedef struct qos_scheduler_t {
   qos_task_timout_dlist_t delayed;
 
   volatile bool ready_busy_blocked_tasks;
-  volatile bool pendsv_force_preempt;
+  volatile qos_task_state_t pendsv_task_state;
   bool migrate_task;
 } qos_scheduler_t;
 

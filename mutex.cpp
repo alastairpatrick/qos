@@ -89,6 +89,7 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
 
 static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* scheduler, void* m) {
   auto mutex = (qos_mutex_t*) m;
+  auto task_state = QOS_TASK_RUNNING;
 
   auto current_task = scheduler->current_task;
 
@@ -98,23 +99,20 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* sc
 
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
-    return QOS_TASK_RUNNING;
+    return task_state;
   }
 
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
   qos_supervisor_call_result(scheduler, resumed, true);
-  bool should_yield = qos_ready_task(scheduler, resumed);
+
+  qos_ready_task(scheduler, &task_state, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(resumed, state);
 
-  if (should_yield) {
-    return QOS_TASK_READY;
-  } else {
-    return QOS_TASK_RUNNING;
-  }
+  return task_state;
 }
 
 void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
