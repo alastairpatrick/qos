@@ -196,8 +196,12 @@ int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
 ```
 
+When tasks running on different cores must interact through atomics, the suggested approach is for
+all the tasks to migrate to the same core before accessing them. This is how IPC works.
+
 #### Example
 
+```c
 struct qos_event_t* g_trigger_event;
 qos_atomic32_t g_trigger_count;
 
@@ -235,9 +239,7 @@ void a_task() {
     }
   } while (true);
 }
-
-When tasks running on different cores must interact through atomics, the suggested approach is for
-all the tasks to migrate to the same core before accessing them. This is how IPC works.
+```
 
 ### Division
 
