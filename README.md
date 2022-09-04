@@ -34,7 +34,42 @@ int32_t qos_migrate_core(int32_t dest_core);
 Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other
 cores while running. This is the underlying mechanism upon which multi-core IPC is built.
 
-#### Example
+#### Example 1
+
+```c
+// Run two tasks on core 0 and one task on core 1.
+
+void task0a() {
+  printf("Hello\n");
+}
+
+void task0b() {
+  printf("World");
+}
+
+void task1() {
+  led_on();
+  sleep(500000);
+  led_off();
+  sleep(500000);
+}
+
+void init_core0() {
+  qos_new_task(1, task0a, 1024);
+  qos_new_task(1, task0b, 1024);
+}
+
+void init_core1() {
+  qos_new_task(1, task1, 1024);
+}
+
+int main() {
+  qos_start_tasks(2, (qos_proc_t[]) { init_core1, init_core2 });
+  assert(false);  // Never reached.
+}
+```
+
+#### Example 2
 
 ```c
 // Task repeatedly migrates from core 0 to core 1 and back every tick.
