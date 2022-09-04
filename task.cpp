@@ -210,6 +210,14 @@ void qos_start_tasks(int32_t num, const qos_proc_t* init_procs) {
   }
 }
 
+qos_error_t STRIPED_RAM qos_get_error() {
+  return qos_current_task()->error;
+}
+
+void STRIPED_RAM qos_set_error(qos_error_t error) {
+  qos_current_task()->error = error;
+}
+
 void qos_save_context(uint32_t save_context) {
   auto task = qos_current_task();
   task->save_context |= save_context;
@@ -269,6 +277,10 @@ qos_task_state_t STRIPED_RAM qos_supervisor_systick(qos_scheduler_t* scheduler) 
     auto task = &*position;
     position = remove(position);
 
+    if (!task->sleeping) {
+      task->error = QOS_TIMEOUT;
+    }
+    task->sleeping = false;
     qos_ready_task(scheduler, &task_state, task);
   }
 
@@ -304,6 +316,7 @@ static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_scheduler_t* scheduler,
     return QOS_TASK_READY;
   }
 
+  current_task->sleeping = true;
   qos_delay_task(scheduler, current_task, timeout);
 
   return QOS_TASK_SYNC_BLOCKED;

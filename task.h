@@ -21,6 +21,9 @@ static inline struct qos_task_t* qos_current_task() {
   return *pp;                         // scheduler->current_task
 }
 
+qos_error_t qos_get_error();
+void qos_set_error(qos_error_t error);
+
 enum {
   QOS_SAVE_INTERP_REGS   = 0x1,
 };

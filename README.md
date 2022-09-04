@@ -20,10 +20,15 @@ switch to another task; the highest priority ready task on any given core runs.
 ```c
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size);
 void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size);
-void qos_yield();
-struct qos_task_t* qos_current_task();
-int32_t qos_migrate_core(int32_t dest_core);
+
 void qos_start_tasks(int32_t num_procs, const qos_proc_t* init_procs);
+
+struct qos_task_t* qos_current_task();
+qos_error_t qos_get_error();
+void qos_set_error(qos_error_t error);
+
+void qos_yield();
+int32_t qos_migrate_core(int32_t dest_core);
 ```
 
 Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other

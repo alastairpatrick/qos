@@ -50,6 +50,11 @@ typedef void* volatile qos_atomic_ptr_t;
 #define QOS_TIMEOUT_NEXT_TICK 1LL
 typedef int64_t qos_time_t;
 
+typedef enum qos_error_t {
+  QOS_SUCCESS,
+  QOS_TIMEOUT,
+} qos_error_t;
+
 typedef enum qos_task_state_t {
   QOS_TASK_RUNNING,
   QOS_TASK_READY,

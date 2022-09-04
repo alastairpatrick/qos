@@ -46,6 +46,8 @@ typedef struct qos_task_t {
   
   qos_dnode_t scheduling_node;
 
+  qos_error_t error;
+
   // May be used by synchronization primitive during TASK_SYNC_BLOCKING. Must be
   // zero at all other times. sync_unblock_task_proc must be called before making
   // the task ready.
@@ -55,6 +57,7 @@ typedef struct qos_task_t {
 
   qos_dnode_t timeout_node;
   qos_time_t awaken_time;
+  bool sleeping;
 
   struct qos_task_t* parallel_task;
   qos_proc_int32_t parallel_entry;
