@@ -4,7 +4,7 @@
         {
             "name": "Debug RTOS",
             "cwd": "${workspaceRoot}",
-            "executable": "${workspaceRoot}/build/qos.elf",
+            "executable": "${workspaceRoot}/build/examples/qos_test.elf",
             "request": "launch",
             "type": "cortex-debug",
             "servertype": "openocd",
