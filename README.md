@@ -196,6 +196,46 @@ int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
 ```
 
+#### Example
+
+struct qos_event_t* g_trigger_event;
+qos_atomic32_t g_trigger_count;
+
+void an_interrupt_service_routine() {
+  acknowledge_interrupt();
+
+  // Prefer not to call printf from an ISR; it's expensive.
+  //printf("ISR triggered\n");  <-- BAD PRACTICE
+
+  // Now atomics executed by tasks running on the same core are atomic with respect to this ISR.
+  qos_roll_back_atomic_from_isr();
+  
+  // Note that this is not qos_atomic_add(), which is for use in tasks only. In an ISR, just
+  // use regular C arithmetic operators, after calling qos_roll_back_atomic_from_isr().
+  ++g_trigger_count;
+
+  // Defer printf-ing the diagnostic message to a task.
+  qos_signal_event_from_isr(g_trigger_event);
+}
+
+void a_task() {
+  do {
+    // Must not assume that qos_await_event() returns once for each call to
+    // qos_signal_event_from_isr(); by design, signals may be spurious. Instead, combine the
+    // event with an atomic count and only print the message for non-zero counts.
+    qos_await_event(g_trigger_event, QOS_NO_TIMEOUT);
+
+    while (g_trigger_count) {
+      // Expensive printf deferred to this task.
+      printf("ISR triggered\n");
+
+      // This decrement is atomic with respect to other tasks running on the same core and atomic
+      // with rescpect to the ISR, even if preempted mid-execution.
+      qos_atomic_add(&g_trigger_count, -1);
+    }
+  } while (true);
+}
+
 When tasks running on different cores must interact through atomics, the suggested approach is for
 all the tasks to migrate to the same core before accessing them. This is how IPC works.
 
