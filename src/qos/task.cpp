@@ -22,14 +22,13 @@
 #include "pico/multicore.h"
 #include "pico/platform.h"
 
-const static int SUPERVISOR_SIZE = 1024;
 
 struct supervisor_t {
-  char exception_stack[SUPERVISOR_SIZE - sizeof(qos_scheduler_t)];
+  char exception_stack[QOS_EXCEPTION_STACK_SIZE];
   qos_scheduler_t scheduler;
 };
 
-static supervisor_t g_supervisors[NUM_CORES];
+static supervisor_t* g_supervisors[NUM_CORES];
 volatile bool g_qos_internal_started;
 
 extern "C" {
@@ -45,34 +44,31 @@ extern "C" {
   qos_dnode_t* qos_internal_atomic_wfe(qos_dlist_t* ready);
 }
 
-static void run_idle_task();
+static void run_idle_task(qos_scheduler_t*);
 
-static qos_scheduler_t& STRIPED_RAM get_scheduler() {
-  return g_supervisors[get_core_num()].scheduler;
+static qos_scheduler_t* STRIPED_RAM get_scheduler() {
+  return &g_supervisors[get_core_num()]->scheduler;
 }
 
-static void init_scheduler(qos_scheduler_t& scheduler) {
-  if (scheduler.ready.tasks.sentinel.next) {
-    return;
-  }
+static void init_scheduler(qos_scheduler_t* scheduler) {
+  scheduler->core = get_core_num();
 
-  scheduler.core = get_core_num();
+  qos_init_dlist(&scheduler->ready.tasks);
+  qos_init_dlist(&scheduler->busy_blocked.tasks);
+  qos_init_dlist(&scheduler->pending.tasks);
+  qos_init_dlist(&scheduler->delayed.tasks);
 
-  qos_init_dlist(&scheduler.ready.tasks);
-  qos_init_dlist(&scheduler.busy_blocked.tasks);
-  qos_init_dlist(&scheduler.pending.tasks);
-  qos_init_dlist(&scheduler.delayed.tasks);
-
-  for (auto& awaiting : scheduler.awaiting_irq) {
+  for (auto& awaiting : scheduler->awaiting_irq) {
     qos_init_dlist(&awaiting.tasks);
   }
 
-  qos_init_dnode(&scheduler.idle_task.scheduling_node);
-  qos_init_dnode(&scheduler.idle_task.timeout_node);
-  scheduler.idle_task.priority = -1;
-  scheduler.current_task = &scheduler.idle_task;
-  scheduler.migrate_task = false;
-  scheduler.ready_busy_blocked_tasks = false;
+  memset(&scheduler->idle_task, 0, sizeof(scheduler->idle_task));
+  qos_init_dnode(&scheduler->idle_task.scheduling_node);
+  qos_init_dnode(&scheduler->idle_task.timeout_node);
+  scheduler->idle_task.priority = -1;
+  scheduler->current_task = &scheduler->idle_task;
+  scheduler->migrate_task = false;
+  scheduler->ready_busy_blocked_tasks = false;
 }
 
 static void run_task(qos_proc_t entry) {
@@ -95,10 +91,9 @@ static void STRIPED_RAM ready_task_handler(qos_scheduler_t* scheduler, qos_task_
 }
 
 void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size) {
-  auto& scheduler = get_scheduler();
-  init_scheduler(scheduler);
+  auto scheduler = get_scheduler();
 
-  auto& ready = scheduler.ready;
+  auto& ready = scheduler->ready;
 
   memset(task, 0, sizeof(*task));
 
@@ -133,14 +128,20 @@ static void init_fifo() {
   irq_set_enabled(irq, true);
 }
 
-static void core_start_scheduler() {
-  auto& scheduler = get_scheduler();
-  auto& idle_task = scheduler.idle_task;
+static void start_core_scheduler(qos_proc_t init_proc, qos_scheduler_t* scheduler) {
+  init_proc();
 
-  init_scheduler(scheduler);
+  if (get_core_num() == 0) {
+    g_qos_internal_started = true;
+    __sev();
+  } else {
+    while (!g_qos_internal_started) {
+      __wfe();
+    }
+  }
+
   init_fifo();
-
-  qos_internal_init_stacks(&scheduler);
+  qos_internal_init_stacks(scheduler);
 
   systick_hw->csr = 0;
   __dsb();
@@ -169,45 +170,36 @@ static void core_start_scheduler() {
 
   qos_yield();
 
-  run_idle_task();
+  // The core's initial main stack, allocated in the core's dedicated scratch RAM bank, becomes the idle
+  // tasks's stack. This means saving and restoring context on IRQ is jitter free when the idle task runs.
+  run_idle_task(scheduler);
 }
 
-static volatile qos_proc_t g_init_core;
+static void start_core(qos_proc_t init_proc) {
+  // Allocate the supervisor and exception stack in a scratch RAM bank dedicated to this core. Reasons:
+  //  - the other bus masters never access these data
+  //  - reduces interrupt jitter
+  //  - reduces runtime of supervisor exceptions, which reduces inter-task priority inversion
+  supervisor_t supervisor;
+  g_supervisors[get_core_num()] = &supervisor;
+
+  init_scheduler(&supervisor.scheduler);
+  start_core_scheduler(init_proc, &supervisor.scheduler);
+}
+
+static volatile qos_proc_t g_init_core1;
 
 static void start_core1() {
-  g_init_core();
-
-  g_init_core = nullptr;
-  __sev();
-
-  core_start_scheduler();
+  start_core(g_init_core1);
 }
 
-void qos_start_tasks(int32_t num, const qos_proc_t* init_procs) {
-  assert(num >= 0);
-  assert(num <= NUM_CORES);
+void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
   assert(get_core_num() == 0);
 
-  for (auto i = 0; i < num; ++i) {
-    auto init_proc = init_procs[i];
-    if (!init_proc) {
-      continue;
-    }
+  g_init_core1 = init_core1;
+  multicore_launch_core1(start_core1);
 
-    if (i == 0) {
-      init_proc();
-    } else {
-      g_init_core = init_proc;
-      multicore_launch_core1(start_core1);
-      while (g_init_core) {}
-    }
-  }
-
-  g_qos_internal_started = true;
-
-  if (num > 0 && init_procs[0]) {
-    core_start_scheduler();
-  }
+  start_core(init_core0);
 }
 
 qos_error_t STRIPED_RAM qos_get_error() {
@@ -242,20 +234,19 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_sche
 
 void STRIPED_RAM qos_ready_busy_blocked_tasks() {
   for (auto i = 0; i < NUM_CORES; ++i) {
-    g_supervisors[i].scheduler.ready_busy_blocked_tasks = true;
+    g_supervisors[i]->scheduler.ready_busy_blocked_tasks = true;
   }
   __sev();
 }
 
-static void run_idle_task() {
-  auto& scheduler = get_scheduler();
+static void run_idle_task(qos_scheduler_t* scheduler) {
   for (;;) {
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
 
     __dsb();
-    while (!scheduler.ready_busy_blocked_tasks) {
+    while (!scheduler->ready_busy_blocked_tasks) {
       // WFE if there are no ready tasks. Otherwise yield to a ready task.
-      if (!qos_internal_atomic_wfe(&scheduler.ready.tasks)) {
+      if (!qos_internal_atomic_wfe(&scheduler->ready.tasks)) {
         qos_yield();
       }
     }

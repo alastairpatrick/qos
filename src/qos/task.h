@@ -8,7 +8,7 @@ QOS_BEGIN_EXTERN_C
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size);
 void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size);
 
-void qos_start_tasks(int32_t num_procs, const qos_proc_t* init_procs);
+void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1);
 
 static inline bool qos_is_started() {
   extern volatile bool g_qos_internal_started;

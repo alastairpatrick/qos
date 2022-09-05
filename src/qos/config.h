@@ -21,4 +21,8 @@
 #define QOS_MAX_EVENTS_PER_CORE 8
 #endif
 
+#ifndef QOS_EXCEPTION_STACK_SIZE
+#define QOS_EXCEPTION_STACK_SIZE 3072
+#endif
+
 #endif  // QOS_CONFIG_H

@@ -315,7 +315,7 @@ int main() {
 
   g_event = qos_new_event(0);
 
-  qos_start_tasks(2, (qos_proc_t[]) { init_core0, init_core1 });
+  qos_start_tasks(init_core0, init_core1);
 
   // Not reached.
   assert(false);
