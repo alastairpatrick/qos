@@ -21,7 +21,7 @@ switch to another task; the highest priority ready task on any given core runs.
 struct qos_task_t* qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size);
 void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, void* stack, int32_t stack_size);
 
-void qos_start_tasks(int32_t num_procs, const qos_proc_t* init_procs);
+void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1);
 
 struct qos_task_t* qos_current_task();
 qos_error_t qos_get_error();
@@ -41,10 +41,12 @@ cores while running. This is the underlying mechanism upon which multi-core IPC 
 
 void task0a() {
   printf("Hello\n");
+  sleep(1000000);
 }
 
 void task0b() {
-  printf("World");
+  printf("World\n");
+  sleep(1000000);
 }
 
 void task1() {
@@ -64,7 +66,7 @@ void init_core1() {
 }
 
 int main() {
-  qos_start_tasks(2, (qos_proc_t[]) { init_core1, init_core2 });
+  qos_start_tasks(init_core0, init_core1);
   assert(false);  // Never reached.
 }
 ```
