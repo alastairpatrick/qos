@@ -93,7 +93,7 @@ static qos_supervisor_t* STRIPED_RAM get_supervisor() {
   return g_supervisors[get_core_num()];
 }
 
-static void init_supervisor(qos_supervisor_t* supervisor, void* exception_stack) {
+static void init_supervisor(qos_supervisor_t* supervisor) {
   memset(supervisor, 0, sizeof(*supervisor));
 
   supervisor->core = get_core_num();
@@ -111,10 +111,6 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* exception_stack)
   qos_init_dnode(&supervisor->idle_task.timeout_node);
   supervisor->idle_task.priority = -1;
   supervisor->current_task = &supervisor->idle_task;
-
-  if (QOS_PROTECT_EXCEPTION_STACK) {
-    add_stack_guard(supervisor, exception_stack);
-  }
 }
 
 static void run_task(qos_proc_t entry) {
@@ -178,7 +174,7 @@ static void init_fifo() {
   irq_set_enabled(irq, true);
 }
 
-static void start_core_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor) {
+static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor) {
   init_proc();
 
   if (get_core_num() == 0) {
@@ -226,22 +222,32 @@ static void start_core_supervisor(qos_proc_t init_proc, qos_supervisor_t* superv
   run_idle_task(supervisor);
 }
 
-static void start_core(qos_proc_t init_proc) {
+static void start_core(qos_proc_t init_proc, void* idle_stack) {
   // Allocate the supervisor and exception stack in a scratch RAM bank dedicated to this core. Reasons:
   //  - the other bus masters never access these data
   //  - reduces interrupt jitter
   //  - reduces runtime of supervisor exceptions, which reduces inter-task priority inversion
   supervisor_and_stack_t supervisor_and_stack;
-  g_supervisors[get_core_num()] = &supervisor_and_stack.supervisor;
+  auto supervisor = g_supervisors[get_core_num()] = &supervisor_and_stack.supervisor;
 
-  init_supervisor(&supervisor_and_stack.supervisor, supervisor_and_stack.exception_stack);
-  start_core_supervisor(init_proc, &supervisor_and_stack.supervisor);
+  init_supervisor(supervisor);
+ 
+  if (QOS_PROTECT_EXCEPTION_STACK) {
+    add_stack_guard(supervisor, supervisor_and_stack.exception_stack);
+  }
+
+  if (QOS_PROTECT_IDLE_STACK) {
+    add_stack_guard(supervisor, idle_stack);
+  }
+
+  start_supervisor(init_proc, supervisor);
 }
 
 static volatile qos_proc_t g_init_core1;
 
 static void start_core1() {
-  start_core(g_init_core1);
+  extern char __StackOneBottom;
+  start_core(g_init_core1, &__StackOneBottom);
 }
 
 void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
@@ -250,7 +256,8 @@ void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
   g_init_core1 = init_core1;
   multicore_launch_core1(start_core1);
 
-  start_core(init_core0);
+  extern char __StackBottom;
+  start_core(init_core0, &__StackBottom);
 }
 
 qos_error_t STRIPED_RAM qos_get_error() {
