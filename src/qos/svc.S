@@ -16,7 +16,7 @@ supervisor_call_va_internal:
     BX      R3
 
 
-// void qos_current_supervisor_call_result(qos_scheduler_t*, int32_t result)
+// void qos_current_supervisor_call_result(qos_supervisor_t*, int32_t result)
 .GLOBAL qos_current_supervisor_call_result
 .TYPE qos_current_supervisor_call_result, %function
 qos_current_supervisor_call_result:

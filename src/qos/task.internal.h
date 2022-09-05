@@ -16,7 +16,7 @@
 QOS_BEGIN_EXTERN_C
 
 typedef void (*qos_task_proc_t)(struct qos_task_t*);
-typedef void (*qos_fifo_handler_t)(struct qos_scheduler_t*, qos_task_state_t* task_state, intptr_t);
+typedef void (*qos_fifo_handler_t)(struct qos_supervisor_t*, qos_task_state_t* task_state, intptr_t);
 
 typedef struct qos_interp_context_t {
   int32_t accum0, accum1;
@@ -74,8 +74,8 @@ typedef struct qos_task_timout_dlist_t {
   qos_dlist_t tasks;
 } qos_task_timout_dlist_t;
 
-typedef struct qos_scheduler_t {
-  // Must be the first field of qos_scheduler_t so that MSP points to it when the
+typedef struct qos_supervisor_t {
+  // Must be the first field of qos_supervisor_t so that MSP points to it when the
   // exception stack is empty.
   qos_task_t* current_task;
 
@@ -90,7 +90,7 @@ typedef struct qos_scheduler_t {
   volatile bool ready_busy_blocked_tasks;
   volatile qos_task_state_t pendsv_task_state;
   bool migrate_task;
-} qos_scheduler_t;
+} qos_supervisor_t;
 
 struct qos_exception_frame_t {
   int32_t r0;

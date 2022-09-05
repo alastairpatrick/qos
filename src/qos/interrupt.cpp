@@ -15,15 +15,15 @@
 
 extern "C" {
   void qos_supervisor_await_irq_handler();
-  void qos_supervisor_await_irq(qos_scheduler_t* scheduler);
+  void qos_supervisor_await_irq(qos_supervisor_t* supervisor);
 }
 
-void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
+void STRIPED_RAM qos_supervisor_await_irq(qos_supervisor_t* supervisor) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
 
-  auto& tasks = scheduler->awaiting_irq[irq];
+  auto& tasks = supervisor->awaiting_irq[irq];
   
   // Atomically disable IRQ but leave it pending.
   *((io_rw_32 *) (PPB_BASE + M0PLUS_NVIC_ICER_OFFSET)) = 1 << irq;
@@ -33,12 +33,12 @@ void STRIPED_RAM qos_supervisor_await_irq(qos_scheduler_t* scheduler) {
   auto task_state = QOS_TASK_RUNNING;
   while (!empty(begin(tasks))) {
     auto task = &*begin(tasks);
-    qos_supervisor_call_result(scheduler, task, true);
-    qos_ready_task(scheduler, &task_state, task);
+    qos_supervisor_call_result(supervisor, task, true);
+    qos_ready_task(supervisor, &task_state, task);
   }
 
   if (task_state != QOS_TASK_RUNNING) {
-    scheduler->pendsv_task_state = task_state;
+    supervisor->pendsv_task_state = task_state;
     scb_hw->icsr = M0PLUS_ICSR_PENDSVSET_BITS;
   }
 }
@@ -58,14 +58,14 @@ static void STRIPED_RAM unblock_await_irq(qos_task_t* task) {
   }
 }
 
-qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler, va_list args) {
+qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_time_t);
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
-  auto& awaiting_irq = scheduler->awaiting_irq;
+  auto& awaiting_irq = supervisor->awaiting_irq;
   auto irq_mask = 1 << irq;
 
   // Enable interrupt.
@@ -96,7 +96,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_scheduler_t* scheduler
   current_task->sync_unblock_task_proc = unblock_await_irq;
 
   qos_internal_insert_scheduled_task(&awaiting_irq[irq], current_task);
-  qos_delay_task(scheduler, current_task, timeout);
+  qos_delay_task(supervisor, current_task, timeout);
 
   return QOS_TASK_SYNC_BLOCKED;
 }

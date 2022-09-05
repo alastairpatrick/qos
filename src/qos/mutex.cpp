@@ -41,13 +41,13 @@ static int32_t STRIPED_RAM pack_owner_state(qos_task_t* owner, mutex_state_t sta
   return int32_t(owner) | state;
 }
 
-static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* scheduler, va_list args) {
+static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
   
   assert (timeout != 0);
 
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
@@ -55,14 +55,14 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_scheduler_t* sc
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-    qos_current_supervisor_call_result(scheduler, true);
+    qos_current_supervisor_call_result(supervisor, true);
     return QOS_TASK_RUNNING;
   }
 
   mutex->owner_state = pack_owner_state(owner, ACQUIRED_CONTENDED);
 
   qos_internal_insert_scheduled_task(&mutex->waiting, current_task);
-  qos_delay_task(scheduler, current_task, timeout);
+  qos_delay_task(supervisor, current_task, timeout);
 
   return QOS_TASK_SYNC_BLOCKED;
 }
@@ -87,11 +87,11 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   return qos_call_supervisor_va(acquire_mutex_supervisor, mutex, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* scheduler, void* m) {
+static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* supervisor, void* m) {
   auto mutex = (qos_mutex_t*) m;
   auto task_state = QOS_TASK_RUNNING;
 
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
@@ -105,9 +105,9 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_scheduler_t* sc
   assert(state == ACQUIRED_CONTENDED);
 
   auto resumed = &*begin(mutex->waiting);
-  qos_supervisor_call_result(scheduler, resumed, true);
+  qos_supervisor_call_result(supervisor, resumed, true);
 
-  qos_ready_task(scheduler, &task_state, resumed);
+  qos_ready_task(supervisor, &task_state, resumed);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(resumed, state);
@@ -153,18 +153,18 @@ bool qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeo
   return qos_acquire_mutex(var->mutex, timeout);
 }
 
-qos_task_state_t qos_wait_condition_var_supervisor(qos_scheduler_t* scheduler, va_list args) {
+qos_task_state_t qos_wait_condition_var_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto var = va_arg(args, qos_condition_var_t*);
   auto timeout = va_arg(args, qos_time_t);
 
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
   // _Atomically_ release mutex and add to condition variable waiting list.
 
-  release_mutex_supervisor(scheduler, var->mutex);
+  release_mutex_supervisor(supervisor, var->mutex);
 
   qos_internal_insert_scheduled_task(&var->waiting, current_task);
-  qos_delay_task(scheduler, current_task, timeout);
+  qos_delay_task(supervisor, current_task, timeout);
 
   return QOS_TASK_SYNC_BLOCKED;
 }
@@ -183,10 +183,10 @@ void qos_release_condition_var(qos_condition_var_t* var) {
   qos_release_mutex(var->mutex);
 }
 
-static qos_task_state_t release_and_signal_condition_var_supervisor(qos_scheduler_t* scheduler, void* v) {
+static qos_task_state_t release_and_signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
   auto signalled_it = begin(var->waiting);
   if (!empty(signalled_it)) {
@@ -203,7 +203,7 @@ static qos_task_state_t release_and_signal_condition_var_supervisor(qos_schedule
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_supervisor(scheduler, var->mutex);
+  return release_mutex_supervisor(supervisor, var->mutex);
 }
 
 void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
@@ -213,10 +213,10 @@ void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
   qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
 }
 
-static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_scheduler_t* scheduler, void* v) {
+static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
-  auto current_task = scheduler->current_task;
+  auto current_task = supervisor->current_task;
 
   while (!empty(begin(var->waiting))) {
     auto signalled_task = &*begin(var->waiting);
@@ -232,7 +232,7 @@ static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_sched
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
-  return release_mutex_supervisor(scheduler, var->mutex);
+  return release_mutex_supervisor(supervisor, var->mutex);
 }
 
 void qos_release_and_broadcast_condition_var(qos_condition_var_t* var) {

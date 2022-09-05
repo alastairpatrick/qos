@@ -9,8 +9,8 @@
 
 QOS_BEGIN_EXTERN_C
 
-typedef qos_task_state_t (*supervisor_proc_t)(struct qos_scheduler_t* scheduler, void*);
-typedef qos_task_state_t (*supervisor_va_proc_t)(struct qos_scheduler_t* scheduler, va_list args);
+typedef qos_task_state_t (*supervisor_proc_t)(struct qos_supervisor_t* supervisor, void*);
+typedef qos_task_state_t (*supervisor_va_proc_t)(struct qos_supervisor_t* supervisor, va_list args);
 
 int32_t qos_call_supervisor(supervisor_proc_t proc, void*);
 
@@ -24,8 +24,8 @@ static inline int32_t qos_call_supervisor_va(supervisor_va_proc_t proc, ...) {
   return r; 
 }
 
-void qos_supervisor_call_result(struct qos_scheduler_t* scheduler, struct qos_task_t* task, int32_t result);
-void qos_current_supervisor_call_result(struct qos_scheduler_t* scheduler, int32_t result);
+void qos_supervisor_call_result(struct qos_supervisor_t* supervisor, struct qos_task_t* task, int32_t result);
+void qos_current_supervisor_call_result(struct qos_supervisor_t* supervisor, int32_t result);
 
 QOS_END_EXTERN_C
 

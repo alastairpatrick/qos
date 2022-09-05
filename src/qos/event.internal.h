@@ -15,7 +15,7 @@ typedef struct qos_event_t {
   qos_fifo_handler_t signal_handler;
 } qos_event_t;
 
-void qos_internal_handle_signalled_events_supervisor(qos_scheduler_t* scheduler, qos_task_state_t* task_state);
+void qos_internal_handle_signalled_events_supervisor(qos_supervisor_t* supervisor, qos_task_state_t* task_state);
 
 QOS_END_EXTERN_C
 

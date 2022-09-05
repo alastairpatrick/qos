@@ -9,7 +9,7 @@
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
 .EQU    QOS_TASK_READY, 1               // Must match enum TastState.
 
-// void qos_internal_init_stacks(qos_scheduler_t* exception_stack_top)
+// void qos_internal_init_stacks(qos_supervisor_t* exception_stack_top)
 .GLOBAL qos_internal_init_stacks
 .TYPE qos_internal_init_stacks, %function
 qos_internal_init_stacks:
@@ -69,7 +69,7 @@ qos_supervisor_svc_handler:
 qos_supervisor_fifo_handler:
         PUSH    {LR}
         
-        // bool qos_supervisor_fifo(qos_scheduler_t*)
+        // bool qos_supervisor_fifo(qos_supervisor_t*)
         ADD     R0, SP, #4
         BL      qos_supervisor_fifo
         
@@ -89,7 +89,7 @@ qos_supervisor_systick_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        // bool qos_supervisor_systick(qos_scheduler_t*)
+        // bool qos_supervisor_systick(qos_supervisor_t*)
         ADD     R0, SP, #4
         BL      qos_supervisor_systick
 
@@ -143,7 +143,7 @@ context_switch:
         MOV     R7, R11
         STM     R1!, {R4-R7}
 
-        // qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_scheduler_t*, qos_task_t* current);
+        // qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_supervisor_t*, qos_task_t* current);
         ADD     R1, SP, #4
         BL      qos_supervisor_context_switch
 

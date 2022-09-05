@@ -99,7 +99,7 @@ void qos_lock_core_ready_busy_blocked_tasks();
  * until the specified time.
  *
  * By default this method does nothing, however it can be overridden (for example by an
- * RTOS which is able to block the current task until the scheduler tick before
+ * RTOS which is able to block the current task until the supervisor tick before
  * the given time)
  *
  * \param until the \ref absolute_time_t value

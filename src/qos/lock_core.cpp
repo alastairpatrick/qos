@@ -9,7 +9,7 @@ QOS_BEGIN_EXTERN_C
 void qos_lock_core_busy_block();
 bool qos_lock_core_busy_block_until(absolute_time_t until);
 
-static qos_task_state_t busy_block_supervisor(qos_scheduler_t*, void*) {
+static qos_task_state_t busy_block_supervisor(qos_supervisor_t*, void*) {
   return QOS_TASK_BUSY_BLOCKED;
 }
 

@@ -17,8 +17,8 @@ static inline bool qos_is_started() {
 
 static inline struct qos_task_t* qos_current_task() {
   struct qos_task_t** pp;
-  __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to qos_scheduler_t in thread mode
-  return *pp;                         // scheduler->current_task
+  __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to qos_supervisor_t in thread mode
+  return *pp;                         // supervisor->current_task
 }
 
 qos_error_t qos_get_error();
@@ -36,9 +36,9 @@ int32_t qos_migrate_core(int32_t dest_core);
 void qos_ready_busy_blocked_tasks();
 
 // May only be called from critical section
-struct qos_scheduler_t;
-void qos_ready_task(struct qos_scheduler_t* scheduler, qos_task_state_t* task_state, struct qos_task_t* task);
-void qos_delay_task(struct qos_scheduler_t* scheduler, struct qos_task_t* task, qos_time_t time);
+struct qos_supervisor_t;
+void qos_ready_task(struct qos_supervisor_t* supervisor, qos_task_state_t* task_state, struct qos_task_t* task);
+void qos_delay_task(struct qos_supervisor_t* supervisor, struct qos_task_t* task, qos_time_t time);
 
 QOS_END_EXTERN_C
 
