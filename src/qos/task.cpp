@@ -15,6 +15,7 @@
 #include "hardware/irq.h"
 #include "hardware/regs/m0plus.h"
 #include "hardware/structs/interp.h"
+#include "hardware/structs/mpu.h"
 #include "hardware/structs/scb.h"
 #include "hardware/structs/sio.h"
 #include "hardware/structs/systick.h"
@@ -31,6 +32,10 @@ struct supervisor_and_stack_t {
 static qos_supervisor_t* g_supervisors[NUM_CORES];
 volatile bool g_qos_internal_started;
 
+// This can't go in qos_supervisor_t because it's a case where core A pokes core B's supervisor state.
+// It's allocated in striped SRAM so the MPU doesn't prevent cross-core access.
+volatile bool g_ready_busy_blocked_tasks[NUM_CORES];
+
 extern "C" {
   void qos_internal_init_stacks(qos_supervisor_t* exception_stack_top);
   void qos_supervisor_svc_handler();
@@ -46,11 +51,51 @@ extern "C" {
 
 static void run_idle_task(qos_supervisor_t*);
 
+static void add_mpu_region(qos_supervisor_t* supervisor, int32_t addr, int32_t rasr) {
+  if (supervisor->next_mpu_region >= 8) {
+    return;
+  }
+
+  mpu_hw->rbar = (addr & ~0xFF) | M0PLUS_MPU_RBAR_VALID_BITS | supervisor->next_mpu_region;
+  mpu_hw->rasr = rasr;
+
+  ++supervisor->next_mpu_region;
+}
+
+static void add_stack_guard(qos_supervisor_t* supervisor, void* stack) {
+  // Mask out 32-byte sub-region.
+  auto addr = (intptr_t) stack;
+  addr += 31;
+  auto sdr = 0xFF ^ (1 << ((addr >> 5) & 7));
+
+  auto rasr = 0x10000000 /* XN */ | (sdr << M0PLUS_MPU_RASR_SRD_LSB) | (7 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(7+1) = 256
+  add_mpu_region(supervisor, addr, rasr);
+}
+
+static void disable_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
+  auto rasr = 0x10000000 /* XN */ | (11 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(11+1) = 4K
+  add_mpu_region(supervisor, base, rasr);
+}
+
+static void init_mpu(qos_supervisor_t* supervisor) {
+  // Check MPU is not already in use.
+  assert(mpu_hw->ctrl == 0);
+
+  mpu_hw->ctrl = M0PLUS_MPU_CTRL_PRIVDEFENA_BITS | M0PLUS_MPU_CTRL_ENABLE_BITS;
+
+  if (QOS_PROTECT_SCRATCH_BANK) {
+    // Prevent access to the other core's dedicated SRAM bank.
+    disable_scratch_bank(supervisor, get_core_num() == 0 ? SRAM4_BASE : SRAM5_BASE);
+  }
+}
+
 static qos_supervisor_t* STRIPED_RAM get_supervisor() {
   return g_supervisors[get_core_num()];
 }
 
-static void init_supervisor(qos_supervisor_t* supervisor) {
+static void init_supervisor(qos_supervisor_t* supervisor, void* exception_stack) {
+  memset(supervisor, 0, sizeof(*supervisor));
+
   supervisor->core = get_core_num();
 
   qos_init_dlist(&supervisor->ready.tasks);
@@ -62,13 +107,14 @@ static void init_supervisor(qos_supervisor_t* supervisor) {
     qos_init_dlist(&awaiting.tasks);
   }
 
-  memset(&supervisor->idle_task, 0, sizeof(supervisor->idle_task));
   qos_init_dnode(&supervisor->idle_task.scheduling_node);
   qos_init_dnode(&supervisor->idle_task.timeout_node);
   supervisor->idle_task.priority = -1;
   supervisor->current_task = &supervisor->idle_task;
-  supervisor->migrate_task = false;
-  supervisor->ready_busy_blocked_tasks = false;
+
+  if (QOS_PROTECT_EXCEPTION_STACK) {
+    add_stack_guard(supervisor, exception_stack);
+  }
 }
 
 static void run_task(qos_proc_t entry) {
@@ -110,6 +156,10 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
   task->stack_size = stack_size;
   task->ready_handler = ready_task_handler;
 
+  if (QOS_PROTECT_TASK_STACK) {
+    add_stack_guard(supervisor, task->stack);
+  }
+
   task->sp = task->stack + stack_size - sizeof(qos_exception_frame_t);
   auto frame = (qos_exception_frame_t*) task->sp;
   frame->lr = 0;
@@ -140,6 +190,7 @@ static void start_core_supervisor(qos_proc_t init_proc, qos_supervisor_t* superv
     }
   }
 
+  init_mpu(supervisor);
   init_fifo();
   qos_internal_init_stacks(supervisor);
 
@@ -183,7 +234,7 @@ static void start_core(qos_proc_t init_proc) {
   supervisor_and_stack_t supervisor_and_stack;
   g_supervisors[get_core_num()] = &supervisor_and_stack.supervisor;
 
-  init_supervisor(&supervisor_and_stack.supervisor);
+  init_supervisor(&supervisor_and_stack.supervisor, supervisor_and_stack.exception_stack);
   start_core_supervisor(init_proc, &supervisor_and_stack.supervisor);
 }
 
@@ -219,7 +270,7 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_supe
   auto& busy_blocked = supervisor->busy_blocked;
   auto task_state = QOS_TASK_RUNNING;
 
-  supervisor->ready_busy_blocked_tasks = false;
+  g_ready_busy_blocked_tasks[get_core_num()] = false;
 
   auto position = begin(busy_blocked);
   while (position != end(busy_blocked)) {
@@ -234,17 +285,18 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_supe
 
 void STRIPED_RAM qos_ready_busy_blocked_tasks() {
   for (auto i = 0; i < NUM_CORES; ++i) {
-    g_supervisors[i]->ready_busy_blocked_tasks = true;
+    g_ready_busy_blocked_tasks[i] = true;
   }
   __sev();
 }
 
 static void run_idle_task(qos_supervisor_t* supervisor) {
+  auto core = get_core_num();
   for (;;) {
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
 
     __dsb();
-    while (!supervisor->ready_busy_blocked_tasks) {
+    while (!g_ready_busy_blocked_tasks[core]) {
       // WFE if there are no ready tasks. Otherwise yield to a ready task.
       if (!qos_internal_atomic_wfe(&supervisor->ready.tasks)) {
         qos_yield();

@@ -20,6 +20,7 @@ static void STRIPED_RAM run_parallel() {
 
 void qos_init_parallel(int32_t parallel_stack_size) {
   assert(parallel_stack_size >= 0);
+  assert((parallel_stack_size & 3) == 0);
 
   auto current_task = qos_current_task();
   assert(!current_task->parallel_task);
@@ -27,10 +28,10 @@ void qos_init_parallel(int32_t parallel_stack_size) {
 
   // Allocate a new qos_task_t and stack.
   auto addr = (int32_t) current_task->stack;
-  auto parallel_task = (qos_task_t*) current_task->stack;
-  current_task->stack += sizeof(*parallel_task);
   auto parallel_stack = current_task->stack;
   current_task->stack += parallel_stack_size;
+  auto parallel_task = (qos_task_t*) current_task->stack;
+  current_task->stack += sizeof(*parallel_task);
   current_task->stack_size -= sizeof(sizeof(*parallel_task)) + parallel_stack_size;
 
   qos_init_task(parallel_task, current_task->priority, run_parallel, parallel_stack, parallel_stack_size);

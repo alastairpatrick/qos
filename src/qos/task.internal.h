@@ -43,7 +43,7 @@ typedef struct qos_task_t {
   qos_proc_t entry;
   char* stack;
   int32_t stack_size;
-  
+
   qos_dnode_t scheduling_node;
 
   qos_error_t error;
@@ -87,9 +87,10 @@ typedef struct qos_supervisor_t {
   qos_task_scheduling_dlist_t awaiting_irq[QOS_MAX_IRQS];
   qos_task_timout_dlist_t delayed;
 
-  volatile bool ready_busy_blocked_tasks;
   volatile qos_task_state_t pendsv_task_state;
   bool migrate_task;
+  
+  int8_t next_mpu_region;
 } qos_supervisor_t;
 
 struct qos_exception_frame_t {
