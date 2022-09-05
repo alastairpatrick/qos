@@ -1,7 +1,9 @@
 ## qOS
 
-This is an experimental / hobby RTOS for Raspberry Pi Pico. Its main distinguishing feature is it
+This is an experimental / hobby RTOS for RP2040. Its main distinguishing feature is it
 never disables interrupts or does anything else that would cause priority inversion of IRQs.
+It is also influenced by RP2040's unique SMP architecture. I wouldn't have come up with
+this design for any other MCU.
 
 It isn't ready for use in other projects. I'll update this document if it ever is.
 
