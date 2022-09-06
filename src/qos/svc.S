@@ -4,8 +4,6 @@
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
-.EQU    r0_offset, 0
-
 // qos_task_state_t STRIPED_RAM qos_call_supervisor(supervisor_proc_t proc, void* ctx)
 .GLOBAL qos_call_supervisor
 .GLOBAL supervisor_call_va_internal
@@ -23,5 +21,5 @@ supervisor_call_va_internal:
 .TYPE qos_current_supervisor_call_result, %function
 qos_current_supervisor_call_result:
     MRS     R3, PSP
-    STR     R1, [R3, #r0_offset]
+    STR     R1, [R3, #EXC_FRAME_R0_OFFSET]
     BX      LR

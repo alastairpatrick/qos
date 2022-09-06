@@ -5,11 +5,7 @@
 .THUMB_FUNC
 .BALIGN 4
 
-.EQU    return_addr_offset, 0x18    // See ARM v6 reference manual, section B1.5.6
-.EQU    r0_offset, 0
-.EQU    r1_offset, 4
 .EQU    task_CONTROL, 2             // SPSEL=1, i.e. tasks use PSP stack, exceptions use MSP stack
-.EQU    QOS_TASK_READY, 1               // Must match enum TastState.
 
 // void qos_internal_init_stacks(qos_supervisor_t* exception_stack_top)
 .GLOBAL qos_internal_init_stacks
@@ -45,21 +41,21 @@ qos_supervisor_svc_handler:
 
         // Load proc to call.
         MRS     R3, PSP
-        LDR     R2, [R3, #r0_offset]
+        LDR     R2, [R3, #EXC_FRAME_R0_OFFSET]
 
         // Store 0 as default return value
         MOVS    R1, #0
-        STR     R1, [R3, #r0_offset]
+        STR     R1, [R3, #EXC_FRAME_R0_OFFSET]
 
         // Load call context.
-        LDR     R1, [R3, #r1_offset]
+        LDR     R1, [R3, #EXC_FRAME_R1_OFFSET]
 
         // Invoke critical section callback.
         LDR     R0, [SP, #4]
         BLX     R2
 
         // Context switch if running state not wanted.
-        CMP     R0, #0
+        CMP     R0, #QOS_TASK_RUNNING
         BNE     context_switch
 
         POP     {PC}
@@ -75,7 +71,7 @@ qos_supervisor_fifo_handler:
         LDR     R0, [SP, #4]
         BL      qos_supervisor_fifo
         
-        CMP     R0, #0
+        CMP     R0, #QOS_TASK_RUNNING
         BNE     context_switch_ready
 
         // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
@@ -95,7 +91,7 @@ qos_supervisor_systick_handler:
         LDR     R0, [SP, #4]
         BL      qos_supervisor_systick
 
-        CMP     R0, #0
+        CMP     R0, #QOS_TASK_RUNNING
         BNE     context_switch_ready
 
         // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
@@ -114,7 +110,7 @@ qos_supervisor_pendsv_handler:
         LDR     R0, [SP, #4]
         BL      qos_supervisor_pendsv
 
-        CMP     R0, #0
+        CMP     R0, #QOS_TASK_RUNNING
         BNE     context_switch_ready
 
         // Should never need to roll back qos_internal_atomic_wfe here; if a new task becomes
@@ -176,7 +172,7 @@ context_switch:
 
 roll_back_atomic:
         // Get return address.
-        LDR     R1, [R3, #return_addr_offset]
+        LDR     R1, [R3, #EXC_FRAME_RETURN_ADDR_OFFSET]
 
         // Was task running an atomic operation?
         LDR     R2, =qos_internal_atomic_start
@@ -195,7 +191,7 @@ roll_back_atomic:
         // Rollback atomic operation in progress to beginning.
         LSRS    R1, R1, #5
         LSLS    R1, R1, #5
-        STR     R1, [R3, #return_addr_offset]
+        STR     R1, [R3, #EXC_FRAME_RETURN_ADDR_OFFSET]
 
         // EXC_RETURN value.
 0:      POP     {PC}
