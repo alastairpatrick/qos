@@ -121,6 +121,18 @@ qos_supervisor_pendsv_handler:
         POP     {PC}
 
 
+.GLOBAL qos_supervisor_await_irq_handler
+.TYPE qos_supervisor_await_irq_handler, %function
+qos_supervisor_await_irq_handler:
+        PUSH    {LR}
+
+        // void qos_supervisor_await_irq(qos_supervisor_t* supervisor)
+        LDR     R0, [SP, #4]
+        BL      qos_supervisor_await_irq
+
+        POP     {PC}
+
+
 context_switch_ready:
         // R0 becomes the first parameter of qos_supervisor_context_switch.
         MOVS    R0, #QOS_TASK_READY

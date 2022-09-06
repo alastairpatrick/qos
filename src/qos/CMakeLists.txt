@@ -8,7 +8,6 @@ target_sources(qos INTERFACE
   dlist.cpp
   event.cpp
   interrupt.cpp
-  interrupt.S
   lock_core.cpp
   mutex.cpp
   parallel.cpp
