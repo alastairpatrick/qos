@@ -16,9 +16,9 @@ static inline bool qos_is_started() {
 }
 
 static inline struct qos_task_t* qos_current_task() {
-  struct qos_task_t** pp;
-  __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to qos_supervisor_t in thread mode
-  return *pp;                         // supervisor->current_task
+  struct qos_task_t*** pp;
+  __asm__("MRS %0, MSP" : "=l"(pp));  // MSP points to qos_supervisor_t* in thread mode
+  return **pp;                        // supervisor->current_task
 }
 
 qos_error_t qos_get_error();

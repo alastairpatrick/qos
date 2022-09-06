@@ -26,10 +26,10 @@
 
 struct supervisor_and_stack_t {
   char exception_stack[QOS_EXCEPTION_STACK_SIZE];
-  qos_supervisor_t supervisor;
+  qos_supervisor_t* supervisor;
 };
 
-static qos_supervisor_t* g_supervisors[NUM_CORES];
+static qos_supervisor_t g_supervisors[NUM_CORES];
 volatile bool g_qos_internal_started;
 
 // This can't go in qos_supervisor_t because it's a case where core A pokes core B's supervisor state.
@@ -37,7 +37,7 @@ volatile bool g_qos_internal_started;
 volatile bool g_ready_busy_blocked_tasks[NUM_CORES];
 
 extern "C" {
-  void qos_internal_init_stacks(qos_supervisor_t* exception_stack_top);
+  void qos_internal_init_stacks(void* exception_stack_top);
   void qos_supervisor_svc_handler();
   void qos_supervisor_systick_handler();
   void qos_supervisor_pendsv_handler();
@@ -90,10 +90,10 @@ static void init_mpu(qos_supervisor_t* supervisor) {
 }
 
 static qos_supervisor_t* STRIPED_RAM get_supervisor() {
-  return g_supervisors[get_core_num()];
+  return &g_supervisors[get_core_num()];
 }
 
-static void init_supervisor(qos_supervisor_t* supervisor) {
+static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   memset(supervisor, 0, sizeof(*supervisor));
 
   supervisor->core = get_core_num();
@@ -111,6 +111,7 @@ static void init_supervisor(qos_supervisor_t* supervisor) {
   qos_init_dnode(&supervisor->idle_task.timeout_node);
   supervisor->idle_task.priority = -1;
   supervisor->current_task = &supervisor->idle_task;
+  supervisor->idle_task.stack = (char*) idle_stack;
 }
 
 static void run_task(qos_proc_t entry) {
@@ -174,7 +175,7 @@ static void init_fifo() {
   irq_set_enabled(irq, true);
 }
 
-static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor) {
+static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor, void* exception_stack_top) {
   init_proc();
 
   if (get_core_num() == 0) {
@@ -188,7 +189,7 @@ static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor)
 
   init_mpu(supervisor);
   init_fifo();
-  qos_internal_init_stacks(supervisor);
+  qos_internal_init_stacks(exception_stack_top);
 
   systick_hw->csr = 0;
   __dsb();
@@ -218,19 +219,20 @@ static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor)
   qos_yield();
 
   // The core's initial main stack, allocated in the core's dedicated scratch RAM bank, becomes the idle
-  // tasks's stack. This means saving and restoring context on IRQ is jitter free when the idle task runs.
+  // tasks's stack. This reduces interrupt jitter while the idle task is running.
   run_idle_task(supervisor);
 }
 
 static void start_core(qos_proc_t init_proc, void* idle_stack) {
-  // Allocate the supervisor and exception stack in a scratch RAM bank dedicated to this core. Reasons:
-  //  - the other bus masters never access these data
+  // Allocate the exception stack in a scratch RAM bank dedicated to this core. Reasons:
+  //  - the other core never access these data
   //  - reduces interrupt jitter
   //  - reduces runtime of supervisor exceptions, which reduces inter-task priority inversion
+  auto supervisor = get_supervisor();
   supervisor_and_stack_t supervisor_and_stack;
-  auto supervisor = g_supervisors[get_core_num()] = &supervisor_and_stack.supervisor;
+  supervisor_and_stack.supervisor = supervisor;
 
-  init_supervisor(supervisor);
+  init_supervisor(supervisor, idle_stack);
  
   if (QOS_PROTECT_EXCEPTION_STACK) {
     add_stack_guard(supervisor, supervisor_and_stack.exception_stack);
@@ -240,7 +242,7 @@ static void start_core(qos_proc_t init_proc, void* idle_stack) {
     add_stack_guard(supervisor, idle_stack);
   }
 
-  start_supervisor(init_proc, supervisor);
+  start_supervisor(init_proc, supervisor, &supervisor_and_stack.supervisor);
 }
 
 static volatile qos_proc_t g_init_core1;
@@ -474,6 +476,7 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
     restore_interp_context(&current_task->interp_contexts[1], interp1_hw);
   }
 
+  supervisor->current_task = current_task;
   return current_task;
 }
 

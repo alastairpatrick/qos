@@ -23,3 +23,7 @@ pico_enable_stdio_uart(qos_test 0)
 pico_set_float_implementation(qos_test compiler)
 pico_set_double_implementation(qos_test compiler)
 pico_set_divider_implementation(qos_test qos)
+
+target_compile_definitions(qos_test PRIVATE
+  PICO_STACK_SIZE=2048
+)

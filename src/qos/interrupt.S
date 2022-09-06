@@ -8,7 +8,7 @@ qos_supervisor_await_irq_handler:
         PUSH    {LR}
 
         // void qos_supervisor_await_irq(qos_supervisor_t* supervisor)
-        ADD     R0, SP, #4
+        LDR     R0, [SP, #4]
         BL      qos_supervisor_await_irq
 
         POP     {PC}

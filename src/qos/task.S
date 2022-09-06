@@ -53,7 +53,7 @@ qos_supervisor_svc_handler:
         LDR     R1, [R3, #r1_offset]
 
         // Invoke critical section callback.
-        ADD     R0, SP, #4
+        LDR     R0, [SP, #4]
         BLX     R2
 
         // Context switch if running state not wanted.
@@ -70,7 +70,7 @@ qos_supervisor_fifo_handler:
         PUSH    {LR}
         
         // bool qos_supervisor_fifo(qos_supervisor_t*)
-        ADD     R0, SP, #4
+        LDR     R0, [SP, #4]
         BL      qos_supervisor_fifo
         
         CMP     R0, #0
@@ -90,7 +90,7 @@ qos_supervisor_systick_handler:
         PUSH    {LR}
 
         // bool qos_supervisor_systick(qos_supervisor_t*)
-        ADD     R0, SP, #4
+        LDR     R0, [SP, #4]
         BL      qos_supervisor_systick
 
         CMP     R0, #0
@@ -109,7 +109,7 @@ qos_supervisor_pendsv_handler:
         // EXC_RETURN value.
         PUSH    {LR}
 
-        ADD     R0, SP, #4
+        LDR     R0, [SP, #4]
         BL      qos_supervisor_pendsv
 
         CMP     R0, #0
@@ -131,24 +131,21 @@ context_switch:
 
         // Get yielding task's TCB.
         LDR     R1, [SP, #4]
-        MOVS    R2, R1
+        LDR     R2, [R1]
 
         // Save SP, R4-R7 in TCB
-        STM     R1!, {R3, R4-R7}
+        STM     R2!, {R3, R4-R7}  // 5 words
 
         // Save R8-R11 & LR in TCB.
         MOV     R4, R8
         MOV     R5, R9
         MOV     R6, R10
         MOV     R7, R11
-        STM     R1!, {R4-R7}
+        STM     R2!, {R4-R7}  // 4 words
 
-        // qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_supervisor_t*, qos_task_t* current);
-        ADD     R1, SP, #4
+        // qos_task_t* qos_supervisor_context_switch(qos_task_state_t new_state, qos_supervisor_t*, qos_task_t*);
+        SUBS    R2, R2, #4*9
         BL      qos_supervisor_context_switch
-
-        // Store new TCB.
-        STR     R0, [SP, #4]
 
         // Restore R8-R11 & LR from TCB.
         MOVS    R1, R0
