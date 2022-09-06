@@ -21,6 +21,8 @@ static inline struct qos_task_t* qos_current_task() {
   return **pp;                        // supervisor->current_task
 }
 
+void qos_check_stack_overflow();
+
 qos_error_t qos_get_error();
 void qos_set_error(qos_error_t error);
 
@@ -35,7 +37,7 @@ int32_t qos_migrate_core(int32_t dest_core);
 
 void qos_ready_busy_blocked_tasks();
 
-// May only be called from critical section
+// May only be called from supervisor
 struct qos_supervisor_t;
 void qos_ready_task(struct qos_supervisor_t* supervisor, qos_task_state_t* task_state, struct qos_task_t* task);
 void qos_delay_task(struct qos_supervisor_t* supervisor, struct qos_task_t* task, qos_time_t time);

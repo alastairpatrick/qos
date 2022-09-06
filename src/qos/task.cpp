@@ -269,6 +269,16 @@ void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
   start_core(init_core0, &__StackBottom);
 }
 
+void qos_check_stack_overflow() {
+  auto current_task = qos_current_task();
+
+  // This comparison runs in thread mode so have to account for context pushed on exception.
+  if (&current_task < (void*) (current_task->stack + sizeof(qos_exception_frame_t))) {
+    // assert (or anything) not expected to work reliably after a stack overflow.
+    __breakpoint();
+  }
+}
+
 qos_error_t STRIPED_RAM qos_get_error() {
   return qos_current_task()->error;
 }
@@ -306,7 +316,15 @@ void STRIPED_RAM qos_ready_busy_blocked_tasks() {
   __sev();
 }
 
+static void STRIPED_RAM check_task_stack_overflow(qos_supervisor_t* supervisor) {
+  char* p;
+  __asm__("MRS %0, PSP" : "=l"(p));
+
+  assert(p > supervisor->current_task->stack);
+}
+
 static void run_idle_task(qos_supervisor_t* supervisor) {
+  qos_check_stack_overflow();
   auto core = get_core_num();
   for (;;) {
     qos_call_supervisor(ready_busy_blocked_tasks_supervisor, nullptr);
@@ -325,6 +343,10 @@ qos_task_state_t STRIPED_RAM qos_supervisor_systick(qos_supervisor_t* supervisor
   auto& delayed = supervisor->delayed;
 
   auto time = qos_time();
+
+  if (QOS_SYSTICK_CHECKS_STACK_OVERFLOW) {
+    check_task_stack_overflow(supervisor);
+  }
 
   // The priority of a busy blocked task is dynamically reduced until it is readied. To mitigate the
   // possibility that it might never otherwise run again on account of higher priority tasks, periodically

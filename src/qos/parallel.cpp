@@ -27,7 +27,6 @@ void qos_init_parallel(int32_t parallel_stack_size) {
   assert(parallel_stack_size <= current_task->stack_size / 2);
 
   // Allocate a new qos_task_t and stack.
-  auto addr = (int32_t) current_task->stack;
   auto parallel_stack = current_task->stack;
   current_task->stack += parallel_stack_size;
   auto parallel_task = (qos_task_t*) current_task->stack;
