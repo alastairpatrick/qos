@@ -1,3 +1,5 @@
+#include "base.S.h"
+
 .SECTION .time_critical.qos
 .SYNTAX UNIFIED
 .THUMB_FUNC
