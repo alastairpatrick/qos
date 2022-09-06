@@ -345,7 +345,6 @@ qOS reserves:
 * Inter-core FIFOs and associated IRQs of both cores
 * Dividers of both cores
 * Both stack pointers: MSP & PSP
-* All MPU memory regions of both cores
 * Neither of the spin locks reserved for it by the SDK
 
 Tasks should usually avoid using the WFE instruction; it is usually more appropriate to yield or block

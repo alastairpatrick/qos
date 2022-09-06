@@ -58,6 +58,7 @@ static void add_mpu_region(qos_supervisor_t* supervisor, int32_t addr, int32_t r
 
   mpu_hw->rbar = (addr & ~0xFF) | M0PLUS_MPU_RBAR_VALID_BITS | supervisor->next_mpu_region;
   mpu_hw->rasr = rasr;
+  mpu_hw->rnr = 0;
 
   ++supervisor->next_mpu_region;
 }
@@ -83,7 +84,11 @@ static void init_mpu(qos_supervisor_t* supervisor) {
 
   mpu_hw->ctrl = M0PLUS_MPU_CTRL_PRIVDEFENA_BITS | M0PLUS_MPU_CTRL_ENABLE_BITS;
 
-  if (QOS_PROTECT_SCRATCH_BANK) {
+  // This might look backwards. When core 0's scratch bank is protected, it is being protected _from_ core 1 so
+  // it is core 1's MPU that is configured.
+  bool protect_scratch = get_core_num() == 1 ? QOS_PROTECT_CORE0_SCRATCH_BANK : QOS_PROTECT_CORE1_SCRATCH_BANK;
+
+  if (protect_scratch) {
     // Prevent access to the other core's dedicated SRAM bank.
     disable_scratch_bank(supervisor, get_core_num() == 0 ? SRAM4_BASE : SRAM5_BASE);
   }
@@ -106,6 +111,8 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   for (auto& awaiting : supervisor->awaiting_irq) {
     qos_init_dlist(&awaiting.tasks);
   }
+
+  supervisor->next_mpu_region = QOS_APP_MPU_REGIONS;
 
   qos_init_dnode(&supervisor->idle_task.scheduling_node);
   qos_init_dnode(&supervisor->idle_task.timeout_node);
