@@ -7,6 +7,7 @@
 typedef struct qos_mutex_t {
   int8_t core;
   qos_atomic32_t owner_state;
+  struct qos_mutex_t* next_owned;
   qos_task_scheduling_dlist_t waiting;
 } qos_mutex_t;
 

@@ -26,6 +26,7 @@ qos_mutex_t* qos_new_mutex() {
 void qos_init_mutex(qos_mutex_t* mutex) {
   mutex->core = get_core_num();
   mutex->owner_state = AVAILABLE;
+  mutex->next_owned = nullptr;
   qos_init_dlist(&mutex->waiting.tasks);
 }
 
@@ -55,6 +56,11 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
+
+    assert(mutex->next_owned == nullptr);
+    mutex->next_owned = current_task->first_owned_mutex;
+    current_task->first_owned_mutex = mutex;
+
     qos_current_supervisor_call_result(supervisor, true);
     return QOS_TASK_RUNNING;
   }
@@ -77,6 +83,9 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   auto current_task = qos_current_task();
 
   if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
+    assert(mutex->next_owned == nullptr);
+    mutex->next_owned = current_task->first_owned_mutex;
+    current_task->first_owned_mutex = mutex;
     return true;
   }
   
@@ -97,6 +106,12 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
+  // qos_release_mutex() might have unlinked the mutex already.
+  if (mutex->next_owned) {
+    current_task->first_owned_mutex = mutex->next_owned;
+    mutex->next_owned = nullptr;
+  }
+
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
     return task_state;
@@ -112,15 +127,22 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
   mutex->owner_state = pack_owner_state(resumed, state);
 
+  mutex->next_owned = resumed->first_owned_mutex;
+  resumed->first_owned_mutex = mutex;
+
   return task_state;
 }
 
 void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
   qos_core_migrator migrator(mutex->core);
 
-  assert(qos_owns_mutex(mutex));
-
   auto current_task = qos_current_task();
+
+  // For deadlock avoidance, mutexs must be acquired and released in FIFO order.
+  assert(current_task->first_owned_mutex == mutex);
+
+  current_task->first_owned_mutex = mutex->next_owned;
+  mutex->next_owned = nullptr;
 
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
