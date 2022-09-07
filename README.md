@@ -2,8 +2,6 @@
 
 This is an experimental / hobby RTOS for RP2040. Its main distinguishing feature is it
 never disables interrupts or does anything else that would cause priority inversion of IRQs.
-It is also influenced by RP2040's unique SMP architecture. I wouldn't have come up with
-this design for any other MCU.
 
 It isn't ready for use in other projects. I'll update this document if it ever is.
 
@@ -35,6 +33,9 @@ int32_t qos_migrate_core(int32_t dest_core);
 
 Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other
 cores while running. This is the underlying mechanism upon which multi-core IPC is built.
+
+Task migration is motivated by RP2040's unique dual-core SMP architecture, which does _not_ provide
+inter-core atomic instructions, such as atomic compare and set.
 
 #### Example 1
 
