@@ -184,7 +184,7 @@ Note that boost priority only applies when a task runs while holding a mutex; it
 blocked waiting for a mutex to become available.
 
 If boost priority is not configured, the default is auto boost priority. In this mode, whenever a mutex is acquired,
-its boost priority is set to the task's priority, only if that would result in an increase. This often leads
+its boost priority is set to the task's priority minus one, but only if that would result in an increase. This often leads
 to the system stabilizing on suitable mutex boost priorities and, where it doesn't, they can be optimally configured.
 
 

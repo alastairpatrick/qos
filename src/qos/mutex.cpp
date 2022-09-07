@@ -78,8 +78,8 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
-  if (mutex->boost_priority < current_task->priority && mutex->auto_boost_priority) {
-    mutex->boost_priority = current_task->priority;
+  if (mutex->auto_boost_priority && mutex->boost_priority < current_task->priority - 1) {
+    mutex->boost_priority = current_task->priority - 1;
   }
 
   if (state == AVAILABLE) {
@@ -117,7 +117,7 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
 
   auto current_task = qos_current_task();
 
-  if (current_task->priority == mutex->boost_priority) {
+  if (current_task->priority >= mutex->boost_priority) {
     // Fast path
     if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
       mutex->saved_priority = current_task->priority;
