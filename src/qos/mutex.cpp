@@ -17,14 +17,15 @@ enum mutex_state_t {
   ACQUIRED_CONTENDED,
 };
 
-qos_mutex_t* qos_new_mutex() {
+qos_mutex_t* qos_new_mutex(uint8_t boost_priority) {
   auto mutex = new qos_mutex_t;
-  qos_init_mutex(mutex);
+  qos_init_mutex(mutex, boost_priority);
   return mutex;
 }
 
-void qos_init_mutex(qos_mutex_t* mutex) {
+void qos_init_mutex(qos_mutex_t* mutex, uint8_t boost_priority) {
   mutex->core = get_core_num();
+  mutex->boost_priority = boost_priority;
   mutex->owner_state = AVAILABLE;
   mutex->next_owned = nullptr;
   qos_init_dlist(&mutex->waiting.tasks);
@@ -57,7 +58,7 @@ static void STRIPED_RAM pop_owned(qos_task_t* task, qos_mutex_t* mutex) {
 static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
-  
+
   assert (timeout != 0);
 
   auto current_task = supervisor->current_task;
@@ -70,6 +71,17 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
     push_owned(current_task, mutex);
     qos_current_supervisor_call_result(supervisor, true);
+
+    // Boost priority of task acquiring mutex.
+    mutex->saved_priority = current_task->priority;
+    if (mutex->boost_priority > current_task->priority) {
+      current_task->priority = mutex->boost_priority;
+    }
+
+    return QOS_TASK_RUNNING;
+  }
+
+  if (timeout == 0) {
     return QOS_TASK_RUNNING;
   }
 
@@ -90,20 +102,25 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
 
   auto current_task = qos_current_task();
 
-  if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
-    push_owned(current_task, mutex);
-    return true;
-  }
-  
-  if (timeout == 0) {
-    return false;
+  if (current_task->priority == mutex->boost_priority) {
+    // Fast path
+    if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
+      mutex->saved_priority = current_task->priority;
+      push_owned(current_task, mutex);
+      return true;
+    }
+    
+    if (timeout == 0) {
+      return false;
+    }
   }
 
   return qos_call_supervisor_va(acquire_mutex_supervisor, mutex, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* supervisor, void* m) {
-  auto mutex = (qos_mutex_t*) m;
+static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* supervisor, void* p) {
+  auto mutex = (qos_mutex_t*) p;
+
   auto task_state = QOS_TASK_RUNNING;
 
   auto current_task = supervisor->current_task;
@@ -112,6 +129,14 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
+  if (!empty(begin(supervisor->ready))) {
+    auto ready_priority = begin(supervisor->ready)->priority;
+    if (mutex->saved_priority < ready_priority) {
+      task_state = QOS_TASK_READY;
+    }
+  }
+  current_task->priority = mutex->saved_priority;
+
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
     return task_state;
@@ -119,16 +144,20 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
 
   assert(state == ACQUIRED_CONTENDED);
 
-  auto resumed = &*begin(mutex->waiting);
-  qos_supervisor_call_result(supervisor, resumed, true);
-
-  qos_ready_task(supervisor, &task_state, resumed);
+  auto ready_task = &*begin(mutex->waiting);
+  qos_supervisor_call_result(supervisor, ready_task, true);
+  qos_ready_task(supervisor, &task_state, ready_task);
 
   state = empty(begin(mutex->waiting)) ? ACQUIRED_UNCONTENDED : ACQUIRED_CONTENDED;
-  mutex->owner_state = pack_owner_state(resumed, state);
+  mutex->owner_state = pack_owner_state(ready_task, state);
+  
+  push_owned(ready_task, mutex);
 
-  mutex->next_owned = resumed->first_owned_mutex;
-  resumed->first_owned_mutex = mutex;
+  // Boost priority of task acquiring mutex.
+  mutex->saved_priority = ready_task->priority;
+  if (mutex->boost_priority > ready_task->priority) {
+    ready_task->priority = mutex->boost_priority;
+  }
 
   return task_state;
 }
@@ -143,10 +172,12 @@ void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
 
   pop_owned(current_task, mutex);
 
-  // Fast path when no tasks waiting.
-  int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-  if (qos_atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
-    return;
+  if (current_task->priority == mutex->saved_priority) {
+    // Fast path
+    int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
+    if (qos_atomic_compare_and_set(&mutex->owner_state, expected, AVAILABLE) == expected) {
+      return;
+    }
   }
 
   qos_call_supervisor(release_mutex_supervisor, mutex);

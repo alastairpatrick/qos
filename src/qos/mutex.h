@@ -5,8 +5,8 @@
 
 QOS_BEGIN_EXTERN_C
 
-struct qos_mutex_t* qos_new_mutex();
-void qos_init_mutex(struct qos_mutex_t* mutex);
+struct qos_mutex_t* qos_new_mutex(uint8_t boost_priority);
+void qos_init_mutex(struct qos_mutex_t* mutex, uint8_t boost_priority);
 bool qos_acquire_mutex(struct qos_mutex_t* mutex, qos_time_t timeout);
 void qos_release_mutex(struct qos_mutex_t* mutex);
 bool qos_owns_mutex(struct qos_mutex_t* mutex);
