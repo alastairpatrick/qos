@@ -34,8 +34,8 @@ int32_t qos_migrate_core(int32_t dest_core);
 Tasks have affinity to a particular core on which they run. Tasks can migrate themselves to other
 cores while running. This is the underlying mechanism upon which multi-core IPC is built.
 
-Task migration is motivated by RP2040's unique dual-core SMP architecture, which does _not_ provide
-inter-core atomic instructions, such as atomic compare and set.
+Task migration is motivated by RP2040's unique dual-core SMP architecture, which _does not_ provide
+inter-core atomic instructions, such as atomic compare-and-set.
 
 #### Example 1
 
