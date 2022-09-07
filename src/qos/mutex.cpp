@@ -42,6 +42,18 @@ static int32_t STRIPED_RAM pack_owner_state(qos_task_t* owner, mutex_state_t sta
   return int32_t(owner) | state;
 }
 
+static void STRIPED_RAM push_owned(qos_task_t* task, qos_mutex_t* mutex) {
+  assert(mutex->next_owned == nullptr);
+  mutex->next_owned = task->first_owned_mutex;
+  task->first_owned_mutex = mutex;
+}
+
+static void STRIPED_RAM pop_owned(qos_task_t* task, qos_mutex_t* mutex) {
+  assert(task->first_owned_mutex == mutex);
+  task->first_owned_mutex = mutex->next_owned;
+  mutex->next_owned = nullptr;
+}
+
 static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
@@ -56,11 +68,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
-
-    assert(mutex->next_owned == nullptr);
-    mutex->next_owned = current_task->first_owned_mutex;
-    current_task->first_owned_mutex = mutex;
-
+    push_owned(current_task, mutex);
     qos_current_supervisor_call_result(supervisor, true);
     return QOS_TASK_RUNNING;
   }
@@ -83,9 +91,7 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   auto current_task = qos_current_task();
 
   if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
-    assert(mutex->next_owned == nullptr);
-    mutex->next_owned = current_task->first_owned_mutex;
-    current_task->first_owned_mutex = mutex;
+    push_owned(current_task, mutex);
     return true;
   }
   
@@ -105,12 +111,6 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
-
-  // qos_release_mutex() might have unlinked the mutex already.
-  if (mutex->next_owned) {
-    current_task->first_owned_mutex = mutex->next_owned;
-    mutex->next_owned = nullptr;
-  }
 
   if (state == ACQUIRED_UNCONTENDED) {
     mutex->owner_state = pack_owner_state(nullptr, AVAILABLE);
@@ -141,8 +141,7 @@ void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
   // For deadlock avoidance, mutexs must be acquired and released in FIFO order.
   assert(current_task->first_owned_mutex == mutex);
 
-  current_task->first_owned_mutex = mutex->next_owned;
-  mutex->next_owned = nullptr;
+  pop_owned(current_task, mutex);
 
   // Fast path when no tasks waiting.
   int32_t expected = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);
@@ -183,6 +182,7 @@ qos_task_state_t qos_wait_condition_var_supervisor(qos_supervisor_t* supervisor,
 
   // _Atomically_ release mutex and add to condition variable waiting list.
 
+  pop_owned(current_task, var->mutex);
   release_mutex_supervisor(supervisor, var->mutex);
 
   qos_internal_insert_scheduled_task(&var->waiting, current_task);
@@ -225,6 +225,7 @@ static qos_task_state_t release_and_signal_condition_var_supervisor(qos_supervis
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
+  pop_owned(current_task, var->mutex);
   return release_mutex_supervisor(supervisor, var->mutex);
 }
 
@@ -254,6 +255,7 @@ static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_super
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
+  pop_owned(current_task, var->mutex);
   return release_mutex_supervisor(supervisor, var->mutex);
 }
 
