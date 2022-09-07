@@ -164,6 +164,26 @@ are faster and cause less inter-task priority inversion. When a task with affini
 a synchronization object, it first migrates to the same core as the synchronization object, then
 performs the operation on the synchronization object, and finally migrates back.
 
+
+### Priority Boost
+
+To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a boost priority.
+Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
+a mutex before task A attempts to acquire the same mutex. Next, task B preempts task A. The is a priority inversion
+because task A (the highest priority task) is waiting for task C to release the mutex. The fastest way to allow task
+A to run is to let task C continue. Task B should not run while task C holds the mutex, even though task B has higher
+priority than task C.
+
+To prevent this from happening the mutex can be configured with a boost priority. When a task acquires a mutex, the
+task's priority is replaced with the mutex's boost priority, but only if this results in an increase in priority.
+
+To use this to fix the opening example, the mutex's boost priority can be set to that of task B or higher. Then when
+task C acquires the mutex, task B cannot preempt it and there is no priority inversion.
+
+Note that boost priority only applies when a task runs while holding a mutex; it does _not_ apply while a task is
+blocked waiting for a mutex to become available.
+
+
 ### Parallel Tasks
 
 Tasks can execute on all cores in parallel.

@@ -55,11 +55,9 @@ typedef struct qos_task_t {
   int32_t sync_state;
   qos_task_proc_t sync_unblock_task_proc;
 
-  // This singly linked list of mutexs is currently only used to enforce FIFO
-  // acquisition / release order, which probably isn't worth the overhead, at least
-  // in optimized builds. TODO: actual goal is to use this list to implement priority
-  // inheritance, priority ceiling or similar method to prevent priority inversion
-  // when a low priority task acquires a mutex that a high priority task awaits.
+  // This singly linked list is used to enforce FIFO acquisition / release order.
+  // Aside from enforcing best practice to avoid deadlock, it is used to correctly
+  // restore task priorities after priority boost.
   struct qos_mutex_t* first_owned_mutex;
 
   qos_dnode_t timeout_node;
