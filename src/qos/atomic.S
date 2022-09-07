@@ -116,10 +116,11 @@ qos_internal_atomic_write_fifo:
       LDR     R3, =__aeabi_idiv0
       BX      R3
 2:
-      // 4 cycle NOP
+      // 5 cycle NOP
       DMB
-      NOP
-      
+      B       3f
+3:      
+
       LDR     R3, [R2, #SIO_DIV_REMAINDER_OFFSET]
 1:    LDR     R0, [R2, #SIO_DIV_QUOTIENT_OFFSET]  // On context switch, restart from idivmod_fast if would return before this point
       MOV     R1, R3
