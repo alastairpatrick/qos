@@ -265,7 +265,7 @@ void do_divide_task2() {
 }
 
 void init_core0() {
-  g_queue = qos_new_queue(100, 0);
+  g_queue = qos_new_queue(100);
   g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());
 
   qos_new_task(1, do_deferred_printf_task, 1024);
@@ -283,7 +283,7 @@ void init_core0() {
 }
 
 void init_core1() {
-  g_mutex = qos_new_mutex(2);
+  g_mutex = qos_new_mutex();
   g_cond_var = qos_new_condition_var(g_mutex);
 
   qos_new_task(1, do_producer_task2, 1024);

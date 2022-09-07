@@ -7,6 +7,7 @@
 typedef struct qos_mutex_t {
   int8_t core;
   uint8_t boost_priority;
+  bool auto_boost_priority;
   uint8_t saved_priority;
   qos_atomic32_t owner_state;
   struct qos_mutex_t* next_owned;

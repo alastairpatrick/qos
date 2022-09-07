@@ -11,18 +11,18 @@
 #include <algorithm>
 #include <cstring>
 
-qos_queue_t* qos_new_queue(int32_t capacity, uint8_t ceiling_priority) {
+qos_queue_t* qos_new_queue(int32_t capacity) {
   auto queue = new qos_queue_t;
-  qos_init_queue(queue, new char[capacity], capacity, ceiling_priority);
+  qos_init_queue(queue, new char[capacity], capacity);
   return queue;
 }
 
-void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity, uint8_t ceiling_priority) {
+void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   assert(capacity > 0);
   
   qos_init_semaphore(&queue->read_semaphore, 0);
   qos_init_semaphore(&queue->write_semaphore, capacity);
-  qos_init_mutex(&queue->mutex, ceiling_priority);
+  qos_init_mutex(&queue->mutex);
 
   queue->capacity = capacity;
   queue->read_idx = 0;

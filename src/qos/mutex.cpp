@@ -17,18 +17,29 @@ enum mutex_state_t {
   ACQUIRED_CONTENDED,
 };
 
-qos_mutex_t* qos_new_mutex(uint8_t boost_priority) {
+qos_mutex_t* qos_new_mutex() {
   auto mutex = new qos_mutex_t;
-  qos_init_mutex(mutex, boost_priority);
+  qos_init_mutex(mutex);
   return mutex;
 }
 
-void qos_init_mutex(qos_mutex_t* mutex, uint8_t boost_priority) {
+void qos_init_mutex(qos_mutex_t* mutex) {
   mutex->core = get_core_num();
-  mutex->boost_priority = boost_priority;
+  mutex->boost_priority = 0;
+  mutex->auto_boost_priority = true;
   mutex->owner_state = AVAILABLE;
   mutex->next_owned = nullptr;
   qos_init_dlist(&mutex->waiting.tasks);
+}
+
+void qos_set_mutex_boost_priority(struct qos_mutex_t* mutex, int32_t boost_priority) {
+  if (boost_priority < 0) {
+    mutex->boost_priority = 0;
+    mutex->auto_boost_priority = true;
+  } else {
+    mutex->boost_priority = boost_priority;
+    mutex->auto_boost_priority = false;
+  }
 }
 
 static qos_task_t* STRIPED_RAM unpack_owner(int32_t owner_state) {
@@ -66,6 +77,10 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
   auto owner_state = mutex->owner_state;
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
+
+  if (mutex->boost_priority < current_task->priority && mutex->auto_boost_priority) {
+    mutex->boost_priority = current_task->priority;
+  }
 
   if (state == AVAILABLE) {
     mutex->owner_state = pack_owner_state(current_task, ACQUIRED_UNCONTENDED);

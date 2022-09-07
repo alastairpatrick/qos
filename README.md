@@ -183,6 +183,10 @@ task C acquires the mutex, task B cannot preempt it and there is no priority inv
 Note that boost priority only applies when a task runs while holding a mutex; it does _not_ apply while a task is
 blocked waiting for a mutex to become available.
 
+If boost priority is not configured, the default is auto boost priority. In this mode, whenever a mutex is acquired,
+its boost priority is set to the task's priority, only if that would result in an increase. This often leads
+to the system stabilizing on suitable mutex boost priorities and, where it doesn't, they can be optimally configured.
+
 
 ### Parallel Tasks
 
