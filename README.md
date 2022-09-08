@@ -254,9 +254,9 @@ void write_uart(const char* buffer, int32_t size) {
 
 ### Atomic Operations
 
-These are atomic only with respect to multiple tasks running on the same core but not between tasks
-running on different cores or between ISRs. There is support for atomic operations between tasks and ISRs
-running on the same core. Atomic operations do not incur no supervisor call overhead.
+These are atomic with respect to multiple tasks running on the same core, (optionally) between
+tasks and ISRs running on the same core but not between tasks running on different cores or between ISRs.
+Atomic operations do not incur no supervisor call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;
