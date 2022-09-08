@@ -7,10 +7,10 @@
 
 typedef struct qos_spsc_queue_t {
   int32_t capacity;
-  qos_event_t producer_event;
-  qos_atomic32_t producer_head, producer_tail;
-  qos_event_t consumer_event;
-  qos_atomic32_t consumer_head, consumer_tail;
+  qos_event_t write_event;
+  qos_atomic32_t write_head, write_tail;
+  qos_event_t read_event;
+  qos_atomic32_t read_head, read_tail;
   char *buffer;
 } qos_spsc_queue_t;
 

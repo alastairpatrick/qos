@@ -5,33 +5,33 @@
 #include <algorithm>
 #include <cstring>
 
-qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t producer_core, int32_t consumer_core) {
+qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t write_core, int32_t read_core) {
   auto queue = new qos_spsc_queue_t;
-  qos_init_spsc_queue(queue, new char[capacity], capacity, producer_core, consumer_core);
+  qos_init_spsc_queue(queue, new char[capacity], capacity, write_core, read_core);
   return queue;
 }
 
-void qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t producer_core, int32_t consumer_core) {
+void qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t write_core, int32_t read_core) {
   assert(capacity > 0);
 
   queue->buffer = (char*) buffer;
   queue->capacity = capacity;
 
-  if (producer_core < 0) {
-    producer_core = get_core_num();
+  if (write_core < 0) {
+    write_core = get_core_num();
   }
-  qos_init_event(&queue->producer_event, producer_core);
-  queue->producer_head = queue->producer_tail = 0;
+  qos_init_event(&queue->write_event, write_core);
+  queue->write_head = queue->write_tail = 0;
 
-  if (consumer_core < 0) {
-    consumer_core = get_core_num();
+  if (read_core < 0) {
+    read_core = get_core_num();
   }
-  qos_init_event(&queue->consumer_event, consumer_core);
-  queue->consumer_head = queue->consumer_tail = 0;
+  qos_init_event(&queue->read_event, read_core);
+  queue->read_head = queue->read_tail = 0;
 }
 
 static int32_t STRIPED_RAM max_producer_avail(qos_spsc_queue_t* queue) {
-  auto avail = queue->consumer_tail - queue->producer_head;
+  auto avail = queue->read_tail - queue->write_head;
   if (avail <= 0) {
     avail += queue->capacity;
   }
@@ -40,29 +40,29 @@ static int32_t STRIPED_RAM max_producer_avail(qos_spsc_queue_t* queue) {
 }
 
 void STRIPED_RAM internal_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size) {
-  queue->producer_head += size;
-  if (queue->producer_head >= queue->capacity) {
-    queue->producer_head -= queue->capacity;
+  queue->write_head += size;
+  if (queue->write_head >= queue->capacity) {
+    queue->write_head -= queue->capacity;
   }
 
-  auto copy_size = std::min(size, queue->capacity - queue->producer_tail);
-  memcpy(&queue->buffer[queue->producer_tail], data, copy_size);
+  auto copy_size = std::min(size, queue->capacity - queue->write_tail);
+  memcpy(&queue->buffer[queue->write_tail], data, copy_size);
   memcpy(queue->buffer, copy_size + (const char*) data, size - copy_size);
 
-  queue->producer_tail = queue->producer_head;
+  queue->write_tail = queue->write_head;
 }
 
 bool STRIPED_RAM qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   while (max_producer_avail(queue) < size) {
-    if (!qos_await_event(&queue->producer_event, timeout)) {
+    if (!qos_await_event(&queue->write_event, timeout)) {
       return false;
     }
   }
 
   internal_write_spsc_queue(queue, data, size);
-  qos_signal_event(&queue->consumer_event);
+  qos_signal_event(&queue->read_event);
   return true;
 }
 
@@ -72,13 +72,13 @@ bool STRIPED_RAM qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const vo
   }
 
   internal_write_spsc_queue(queue, data, size);
-  qos_signal_event_from_isr(&queue->consumer_event);
+  qos_signal_event_from_isr(&queue->read_event);
   return true;
 }
 
 
 static int32_t STRIPED_RAM max_consumer_avail(qos_spsc_queue_t* queue) {
-  auto avail = queue->producer_tail - queue->consumer_head;
+  auto avail = queue->write_tail - queue->read_head;
   if (avail < 0) {
     avail += queue->capacity;
   }
@@ -87,29 +87,29 @@ static int32_t STRIPED_RAM max_consumer_avail(qos_spsc_queue_t* queue) {
 }
 
 void STRIPED_RAM internal_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size) {
-  queue->consumer_head += size;
-  if (queue->consumer_head >= queue->capacity) {
-    queue->consumer_head -= queue->capacity;
+  queue->read_head += size;
+  if (queue->read_head >= queue->capacity) {
+    queue->read_head -= queue->capacity;
   }
 
-  auto copy_size = std::min(size, queue->capacity - queue->consumer_tail);
-  memcpy(data, &queue->buffer[queue->consumer_tail], copy_size);
+  auto copy_size = std::min(size, queue->capacity - queue->read_tail);
+  memcpy(data, &queue->buffer[queue->read_tail], copy_size);
   memcpy(copy_size + (char*) data, queue->buffer, size - copy_size);
 
-  queue->consumer_tail = queue->consumer_head;
+  queue->read_tail = queue->read_head;
 }
 
 bool STRIPED_RAM qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   while (max_consumer_avail(queue) < size) {
-    if (!qos_await_event(&queue->consumer_event, timeout)) {
+    if (!qos_await_event(&queue->read_event, timeout)) {
       return false;
     }
   }
 
   internal_read_spsc_queue(queue, data, size);
-  qos_signal_event(&queue->producer_event);
+  qos_signal_event(&queue->write_event);
   return true;
 }
 
@@ -119,6 +119,6 @@ bool STRIPED_RAM qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* dat
   }
 
   internal_read_spsc_queue(queue, data, size);
-  qos_signal_event_from_isr(&queue->producer_event);
+  qos_signal_event_from_isr(&queue->write_event);
   return true;
 }

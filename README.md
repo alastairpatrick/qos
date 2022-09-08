@@ -152,11 +152,13 @@ bool qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_tim
 bool qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
 
 // Single producer / single comsumer queue.
-qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t prod_core, int32_t cons_core);
+qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t write_core, int32_t read_core);
 void qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity,
-                         int32_t prod_core, int32_t cons_core);
+                         int32_t write_core, int32_t read_core);
 bool qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout);
 bool qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout);
+bool qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const void* data, int32_t size);
+bool qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t size);
 ```
 
 Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
