@@ -17,29 +17,27 @@ enum mutex_state_t {
   ACQUIRED_CONTENDED,
 };
 
-qos_mutex_t* qos_new_mutex() {
+qos_mutex_t* qos_new_mutex(int32_t priority_ceiling) {
   auto mutex = new qos_mutex_t;
-  qos_init_mutex(mutex);
+  qos_init_mutex(mutex, priority_ceiling);
   return mutex;
 }
 
-void qos_init_mutex(qos_mutex_t* mutex) {
+void qos_init_mutex(qos_mutex_t* mutex, int32_t priority_ceiling) {
   mutex->core = get_core_num();
-  mutex->priority_ceiling = 0;
-  mutex->auto_priority_ceiling = true;
-  mutex->owner_state = AVAILABLE;
-  mutex->next_owned = nullptr;
-  qos_init_dlist(&mutex->waiting.tasks);
-}
 
-void qos_set_mutex_priority_ceiling(struct qos_mutex_t* mutex, int32_t priority_ceiling) {
-  if (priority_ceiling < 0) {
+  if (priority_ceiling == QOS_AUTO_PRIORITY_CEILING) {
     mutex->priority_ceiling = 0;
     mutex->auto_priority_ceiling = true;
   } else {
+    assert(priority_ceiling >= 0 && priority_ceiling < 256);
     mutex->priority_ceiling = priority_ceiling;
     mutex->auto_priority_ceiling = false;
   }
+
+  mutex->owner_state = AVAILABLE;
+  mutex->next_owned = nullptr;
+  qos_init_dlist(&mutex->waiting.tasks);
 }
 
 static qos_task_t* STRIPED_RAM unpack_owner(int32_t owner_state) {

@@ -22,7 +22,7 @@ void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   
   qos_init_semaphore(&queue->read_semaphore, 0);
   qos_init_semaphore(&queue->write_semaphore, capacity);
-  qos_init_mutex(&queue->mutex);
+  qos_init_mutex(&queue->mutex, QOS_AUTO_PRIORITY_CEILING);
 
   queue->capacity = capacity;
   queue->read_idx = 0;

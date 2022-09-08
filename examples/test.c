@@ -283,7 +283,7 @@ void init_core0() {
 }
 
 void init_core1() {
-  g_mutex = qos_new_mutex();
+  g_mutex = qos_new_mutex(QOS_AUTO_PRIORITY_CEILING);
   g_cond_var = qos_new_condition_var(g_mutex);
 
   qos_new_task(1, do_producer_task2, 1024);

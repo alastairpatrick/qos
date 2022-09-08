@@ -3,13 +3,13 @@
 
 #include "base.h"
 
-#define QOS_AUTO_priority_ceiling (-1)
+#define QOS_AUTO_PRIORITY_CEILING (-1)
+#define QOS_NO_PRIORITY_CEILING 0
 
 QOS_BEGIN_EXTERN_C
 
-struct qos_mutex_t* qos_new_mutex();
-void qos_init_mutex(struct qos_mutex_t* mutex);
-void qos_set_mutex_priority_ceiling(struct qos_mutex_t* mutex, int32_t priority_ceiling);
+struct qos_mutex_t* qos_new_mutex(int32_t priority_ceiling);
+void qos_init_mutex(struct qos_mutex_t* mutex, int32_t priority_ceiling);
 bool qos_acquire_mutex(struct qos_mutex_t* mutex, qos_time_t timeout);
 void qos_release_mutex(struct qos_mutex_t* mutex);
 bool qos_owns_mutex(struct qos_mutex_t* mutex);
