@@ -25,20 +25,20 @@ qos_mutex_t* qos_new_mutex() {
 
 void qos_init_mutex(qos_mutex_t* mutex) {
   mutex->core = get_core_num();
-  mutex->boost_priority = 0;
-  mutex->auto_boost_priority = true;
+  mutex->priority_ceiling = 0;
+  mutex->auto_priority_ceiling = true;
   mutex->owner_state = AVAILABLE;
   mutex->next_owned = nullptr;
   qos_init_dlist(&mutex->waiting.tasks);
 }
 
-void qos_set_mutex_boost_priority(struct qos_mutex_t* mutex, int32_t boost_priority) {
-  if (boost_priority < 0) {
-    mutex->boost_priority = 0;
-    mutex->auto_boost_priority = true;
+void qos_set_mutex_priority_ceiling(struct qos_mutex_t* mutex, int32_t priority_ceiling) {
+  if (priority_ceiling < 0) {
+    mutex->priority_ceiling = 0;
+    mutex->auto_priority_ceiling = true;
   } else {
-    mutex->boost_priority = boost_priority;
-    mutex->auto_boost_priority = false;
+    mutex->priority_ceiling = priority_ceiling;
+    mutex->auto_priority_ceiling = false;
   }
 }
 
@@ -78,8 +78,8 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
   auto owner = unpack_owner(owner_state);
   auto state = unpack_state(owner_state);
 
-  if (mutex->auto_boost_priority && mutex->boost_priority < current_task->priority - 1) {
-    mutex->boost_priority = current_task->priority - 1;
+  if (mutex->auto_priority_ceiling && mutex->priority_ceiling < current_task->priority - 1) {
+    mutex->priority_ceiling = current_task->priority - 1;
   }
 
   if (state == AVAILABLE) {
@@ -87,10 +87,10 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
     push_owned(current_task, mutex);
     qos_current_supervisor_call_result(supervisor, true);
 
-    // Boost priority of task acquiring mutex.
+    // Increase priority of task acquiring mutex.
     mutex->saved_priority = current_task->priority;
-    if (mutex->boost_priority > current_task->priority) {
-      current_task->priority = mutex->boost_priority;
+    if (mutex->priority_ceiling > current_task->priority) {
+      current_task->priority = mutex->priority_ceiling;
     }
 
     return QOS_TASK_RUNNING;
@@ -117,7 +117,7 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
 
   auto current_task = qos_current_task();
 
-  if (current_task->priority >= mutex->boost_priority) {
+  if (current_task->priority >= mutex->priority_ceiling) {
     // Fast path
     if (qos_atomic_compare_and_set(&mutex->owner_state, AVAILABLE, pack_owner_state(current_task, ACQUIRED_UNCONTENDED)) == AVAILABLE) {
       mutex->saved_priority = current_task->priority;
@@ -168,10 +168,10 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   
   push_owned(ready_task, mutex);
 
-  // Boost priority of task acquiring mutex.
+  // Increase priority of task acquiring mutex.
   mutex->saved_priority = ready_task->priority;
-  if (mutex->boost_priority > ready_task->priority) {
-    ready_task->priority = mutex->boost_priority;
+  if (mutex->priority_ceiling > ready_task->priority) {
+    ready_task->priority = mutex->priority_ceiling;
   }
 
   return task_state;
