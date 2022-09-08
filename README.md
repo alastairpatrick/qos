@@ -172,7 +172,7 @@ performs the operation on the synchronization object, and finally migrates back.
 
 To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a priority ceiling.
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
-a mutex before task A attempts to acquire the same mutex. Next, task B preempts task A. The is a priority inversion
+a mutex before task A attempts to acquire the same mutex. Next, task B preempts task A, which is a priority inversion
 because task A (the highest priority task) is waiting for task C to release the mutex. The fastest way to allow task
 A to run is to let task C continue. Task B should not run while task C holds the mutex, even though task B has higher
 priority than task C.
@@ -252,11 +252,11 @@ void write_uart(const char* buffer, int32_t size) {
 }
 ```
 
-### Atomics
+### Atomic Operations
 
 These are atomic only with respect to multiple tasks running on the same core but not between tasks
-running on different cores or between ISRs. There is support for atomicity between tasks and ISRs
-running on the same core. Atomics do not incur no supervisor call overhead.
+running on different cores or between ISRs. There is support for atomic operations between tasks and ISRs
+running on the same core. Atomic operations do not incur no supervisor call overhead.
 
 ```c
 typedef volatile int32_t qos_atomic32_t;
@@ -268,7 +268,7 @@ int32_t qos_atomic_compare_and_set(qos_atomic32_t* atomic, int32_t expected, int
 void* qos_atomic_compare_and_set_ptr(qos_atomic_ptr_t* atomic, void* expected, void* new_value);
 ```
 
-When tasks running on different cores must interact through atomics, the suggested approach is for
+When tasks running on different cores must interact through atomic operations, the suggested approach is for
 all the tasks to migrate to the same core before accessing them. This is how IPC works.
 
 #### Example
@@ -283,7 +283,7 @@ void an_interrupt_service_routine() {
   // Prefer not to call printf from an ISR; it's expensive.
   //printf("ISR triggered\n");  <-- BAD PRACTICE
 
-  // Now atomics executed by tasks running on the same core are atomic with respect to this ISR.
+  // Now atomic operations executed by tasks running on the same core are atomic with respect to this ISR.
   qos_roll_back_atomic_from_isr();
   
   // Note that this is not qos_atomic_add(), which is for use in tasks only. In an ISR, just
@@ -306,7 +306,7 @@ void a_task() {
       printf("ISR triggered\n");
 
       // This decrement is atomic with respect to other tasks running on the same core and atomic
-      // with rescpect to the ISR, even if preempted mid-execution.
+      // with respect to the ISR, even if preempted mid-execution.
       qos_atomic_add(&g_trigger_count, -1);
     }
   } while (true);
