@@ -57,7 +57,7 @@ typedef struct qos_task_t {
 
   // This singly linked list is used to enforce FIFO acquisition / release order.
   // Aside from enforcing best practice to avoid deadlock, it is used to correctly
-  // restore task priorities after priority boost.
+  // restore task priorities after adjusting for mutes priority ceiling.
   struct qos_mutex_t* first_owned_mutex;
 
   qos_dnode_t timeout_node;

@@ -165,27 +165,27 @@ a synchronization object, it first migrates to the same core as the synchronizat
 performs the operation on the synchronization object, and finally migrates back.
 
 
-### Priority Boost
+### Priority Ceiling
 
-To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a boost priority.
+To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a priority ceiling.
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
 a mutex before task A attempts to acquire the same mutex. Next, task B preempts task A. The is a priority inversion
 because task A (the highest priority task) is waiting for task C to release the mutex. The fastest way to allow task
 A to run is to let task C continue. Task B should not run while task C holds the mutex, even though task B has higher
 priority than task C.
 
-To prevent this from happening the mutex can be configured with a boost priority. When a task acquires a mutex, the
-task's priority is replaced with the mutex's boost priority, but only if this results in an increase in priority.
+To prevent this from happening a mutex can be configured with a priority ceiling. When a task acquires a mutex, the
+task's priority is replaced with the mutex's priority ceiling, but only if this results in an increase in priority.
 
-To use this to fix the opening example, the mutex's boost priority can be set to that of task B or higher. Then when
+To use this to fix the opening example, the mutex's priority ceiling can be set to that of task B or higher. Then when
 task C acquires the mutex, task B cannot preempt it and there is no priority inversion.
 
-Note that boost priority only applies when a task runs while holding a mutex; it does _not_ apply while a task is
+Note that the priority ceiling only applies when a task runs while holding a mutex; it does _not_ apply while a task is
 blocked waiting for a mutex to become available.
 
-If boost priority is not configured, the default is auto boost priority. In this mode, whenever a mutex is acquired,
-its boost priority is set to the task's priority minus one, but only if that would result in an increase. This often leads
-to the system stabilizing on suitable mutex boost priorities and, where it doesn't, they can be optimally configured.
+If a priority ceiling is not configured, the default is auto priority ceiling. In this mode, whenever a mutex is acquired,
+its priority ceiling is set to the task's priority minus one, but only if that would result in an increase. This often leads
+to the system settling on suitable mutex priorities ceilings and, where it doesn't, they can be optimally configured.
 
 
 ### Parallel Tasks
