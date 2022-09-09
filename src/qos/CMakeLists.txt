@@ -21,6 +21,10 @@ target_sources(qos INTERFACE
   time.cpp
 )
 
+target_compile_definitions(qos INTERFACE
+  PICO_CONFIG_RTOS_ADAPTER_HEADER=${CMAKE_CURRENT_LIST_DIR}/pico_sdk_config.h
+)
+
 target_include_directories(qos INTERFACE ..)
 
 target_link_libraries(qos INTERFACE
