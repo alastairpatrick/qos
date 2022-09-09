@@ -40,6 +40,7 @@ struct qos_mutex_t* g_mutex;
 struct qos_condition_var_t* g_cond_var;
 repeating_timer_t g_repeating_timer;
 mutex_t g_lock_core_mutex;
+recursive_mutex_t g_lock_core_recursive_mutex;
 
 qos_atomic32_t g_trigger_count;
 int g_observed_count;
@@ -164,14 +165,22 @@ void do_migrating_task() {
 
 void do_lock_core_mutex_task1() {
   mutex_enter_blocking(&g_lock_core_mutex);
+  recursive_mutex_enter_blocking(&g_lock_core_recursive_mutex);
+  recursive_mutex_enter_blocking(&g_lock_core_recursive_mutex);
   qos_sleep(500000);
   sio_hw->gpio_togl = 1 << PICO_DEFAULT_LED_PIN;
+  recursive_mutex_exit(&g_lock_core_recursive_mutex);
+  recursive_mutex_exit(&g_lock_core_recursive_mutex);
   mutex_exit(&g_lock_core_mutex);
 }
 
 void do_lock_core_mutex_task2() {
   mutex_enter_blocking(&g_lock_core_mutex);
+  recursive_mutex_enter_blocking(&g_lock_core_recursive_mutex);
+  recursive_mutex_enter_blocking(&g_lock_core_recursive_mutex);
   qos_sleep(500000);
+  recursive_mutex_exit(&g_lock_core_recursive_mutex);
+  recursive_mutex_exit(&g_lock_core_recursive_mutex);
   mutex_exit(&g_lock_core_mutex);
 }
 
@@ -306,6 +315,7 @@ int main() {
   add_repeating_timer_ms(2000, repeating_timer_isr, 0, &g_repeating_timer);
   
   mutex_init(&g_lock_core_mutex);
+  recursive_mutex_init(&g_lock_core_recursive_mutex);
 
   g_queue = qos_new_queue(100);
   g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());

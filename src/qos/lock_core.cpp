@@ -10,6 +10,22 @@ QOS_BEGIN_EXTERN_C
 void qos_lock_core_busy_block();
 bool qos_lock_core_busy_block_until(absolute_time_t until);
 
+// 0, 1: core number, when called before RTOS starts.
+// 2-62: exception number
+// other: TCB pointer
+int qos_lock_owner_id() {
+  if (!qos_is_started()) {
+    return get_core_num();
+  } else {
+    auto exception = qos_get_exception();
+    if (exception) {
+      return exception * 2;
+    } else {
+      return int(qos_current_task());
+    }
+  }
+}
+
 static qos_task_state_t busy_block_supervisor(qos_supervisor_t*, void*) {
   return QOS_TASK_BUSY_BLOCKED;
 }

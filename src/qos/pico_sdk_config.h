@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+int qos_lock_owner_id();
 void qos_lock_core_busy_block();
 bool qos_lock_core_busy_block_until(absolute_time_t until);
 void qos_lock_core_ready_busy_blocked_tasks();
@@ -14,6 +15,10 @@ void qos_lock_core_ready_busy_blocked_tasks();
 #ifdef __cplusplus
 }
 #endif
+
+#define lock_owner_id_t int
+#define LOCK_INVALID_OWNER_ID -1
+#define lock_get_caller_owner_id() qos_lock_owner_id()
 
 #ifndef lock_internal_spin_unlock_with_wait
 /*! \brief   Atomically unlock the lock's spin lock, and wait for a notification.
