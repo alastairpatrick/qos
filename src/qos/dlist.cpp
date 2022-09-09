@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-void STRIPED_RAM qos_splice_dlist(qos_dnode_t* dest, qos_dnode_t* begin, qos_dnode_t* end) {
+void QOS_HANDLER_MODE qos_splice_dlist(qos_dnode_t* dest, qos_dnode_t* begin, qos_dnode_t* end) {
   if (begin == end) {
     return;
   }
@@ -23,7 +23,7 @@ void STRIPED_RAM qos_splice_dlist(qos_dnode_t* dest, qos_dnode_t* begin, qos_dno
   dest->prev = c;
 }
 
-void STRIPED_RAM qos_swap_dlist(qos_dlist_t* a, qos_dlist_t* b) {
+void QOS_HANDLER_MODE qos_swap_dlist(qos_dlist_t* a, qos_dlist_t* b) {
   qos_dlist_t temp;
 
   qos_init_dlist(&temp);

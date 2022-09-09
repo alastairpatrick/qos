@@ -1,10 +1,10 @@
 #include "base.S.h"
 
-.SECTION .time_critical.qos
+.SECTION .time_critical.qos.handler
 .SYNTAX UNIFIED
 .THUMB_FUNC
 
-// qos_task_state_t STRIPED_RAM qos_call_supervisor(supervisor_proc_t proc, void* ctx)
+// qos_task_state_t qos_call_supervisor(supervisor_proc_t proc, void* ctx)
 .GLOBAL qos_call_supervisor
 .GLOBAL supervisor_call_va_internal
 .TYPE qos_call_supervisor, %function

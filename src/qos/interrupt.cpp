@@ -18,7 +18,7 @@ extern "C" {
   void qos_supervisor_await_irq(qos_supervisor_t* supervisor);
 }
 
-void STRIPED_RAM qos_supervisor_await_irq(qos_supervisor_t* supervisor) {
+void QOS_HANDLER_MODE qos_supervisor_await_irq(qos_supervisor_t* supervisor) {
   int32_t ipsr;
   __asm__ volatile ("mrs %0, ipsr" : "=r"(ipsr));
   auto irq = (ipsr & 0x3F) - 16;
@@ -50,7 +50,7 @@ void qos_init_await_irq(int32_t irq) {
   irq_set_priority(irq, PICO_LOWEST_IRQ_PRIORITY);
 }
 
-static void STRIPED_RAM unblock_await_irq(qos_task_t* task) {
+static void QOS_HANDLER_MODE unblock_await_irq(qos_task_t* task) {
   // Disable interrupt.
   if (task->sync_ptr) {
     hw_clear_bits((io_rw_32*) task->sync_ptr, task->sync_state);
@@ -58,7 +58,7 @@ static void STRIPED_RAM unblock_await_irq(qos_task_t* task) {
   }
 }
 
-qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_supervisor_t* supervisor, va_list args) {
+qos_task_state_t QOS_HANDLER_MODE qos_await_irq_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto irq = va_arg(args, int32_t);
   auto enable = va_arg(args, io_rw_32*);
   auto mask = va_arg(args, int32_t);
@@ -101,7 +101,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_supervisor_t* supervis
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
+bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
   // Make this function safe to call from an ISR.
   if (qos_get_exception()) {
     return true;

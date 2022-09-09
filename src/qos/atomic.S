@@ -3,7 +3,7 @@
 #include "hardware/regs/addressmap.h"
 #include "hardware/regs/sio.h"
 
-.SECTION .time_critical.qos
+.SECTION .time_critical.qos.misc
 .SYNTAX UNIFIED
 .THUMB_FUNC
 

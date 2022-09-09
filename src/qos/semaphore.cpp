@@ -25,7 +25,7 @@ void qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
   qos_init_dlist(&semaphore->waiting.tasks);
 }
 
-static qos_task_state_t STRIPED_RAM acquire_semaphore_supervisor(qos_supervisor_t* supervisor, va_list args) {
+static qos_task_state_t QOS_HANDLER_MODE acquire_semaphore_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
   auto timeout = va_arg(args, qos_time_t);
@@ -49,7 +49,7 @@ static qos_task_state_t STRIPED_RAM acquire_semaphore_supervisor(qos_supervisor_
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout) {
+bool qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count, qos_time_t timeout) {
   assert(count >= 0);
   qos_normalize_time(&timeout);
 
@@ -68,7 +68,7 @@ bool STRIPED_RAM qos_acquire_semaphore(qos_semaphore_t* semaphore, int32_t count
   return qos_call_supervisor_va(acquire_semaphore_supervisor, semaphore, count, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_semaphore_supervisor(qos_supervisor_t* supervisor, va_list args) {
+static qos_task_state_t QOS_HANDLER_MODE release_semaphore_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto semaphore = va_arg(args, qos_semaphore_t*);
   auto count = va_arg(args, int32_t);
   auto task_state = QOS_TASK_RUNNING;
@@ -94,7 +94,7 @@ static qos_task_state_t STRIPED_RAM release_semaphore_supervisor(qos_supervisor_
   return task_state;
 }
 
-void STRIPED_RAM qos_release_semaphore(qos_semaphore_t* semaphore, int32_t count) {
+void qos_release_semaphore(qos_semaphore_t* semaphore, int32_t count) {
   assert(count >= 0);
 
   qos_core_migrator migrator(semaphore->core);

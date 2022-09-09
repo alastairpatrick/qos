@@ -17,7 +17,11 @@
 #define QOS_END_EXTERN_C
 #endif
 
-#define STRIPED_RAM __attribute__((section(".time_critical.qos")))
+// Time critical because it executes in handler mode.
+#define QOS_HANDLER_MODE __attribute__((section(".time_critical.qos.handler")))
+
+// Time critical for some other reason.
+#define QOS_TIME_CRITICAL __attribute__((section(".time_critical.qos.misc")))
 
 typedef volatile int32_t qos_atomic32_t;
 typedef void* volatile qos_atomic_ptr_t;

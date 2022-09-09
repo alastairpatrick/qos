@@ -30,7 +30,7 @@ void qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity
   queue->read_head = queue->read_tail = 0;
 }
 
-static int32_t STRIPED_RAM max_producer_avail(qos_spsc_queue_t* queue) {
+static int32_t QOS_HANDLER_MODE max_producer_avail(qos_spsc_queue_t* queue) {
   auto avail = queue->read_tail - queue->write_head;
   if (avail <= 0) {
     avail += queue->capacity;
@@ -39,7 +39,7 @@ static int32_t STRIPED_RAM max_producer_avail(qos_spsc_queue_t* queue) {
   return avail;
 }
 
-void STRIPED_RAM internal_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size) {
+void QOS_HANDLER_MODE internal_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size) {
   queue->write_head += size;
   if (queue->write_head >= queue->capacity) {
     queue->write_head -= queue->capacity;
@@ -52,7 +52,7 @@ void STRIPED_RAM internal_write_spsc_queue(qos_spsc_queue_t* queue, const void* 
   queue->write_tail = queue->write_head;
 }
 
-bool STRIPED_RAM qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
+bool qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   while (max_producer_avail(queue) < size) {
@@ -66,7 +66,7 @@ bool STRIPED_RAM qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data,
   return true;
 }
 
-bool STRIPED_RAM qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const void* data, int32_t size) {
+bool QOS_HANDLER_MODE qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const void* data, int32_t size) {
   if (max_producer_avail(queue) < size) {
     return false;
   }
@@ -77,7 +77,7 @@ bool STRIPED_RAM qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const vo
 }
 
 
-static int32_t STRIPED_RAM max_consumer_avail(qos_spsc_queue_t* queue) {
+static int32_t QOS_HANDLER_MODE max_consumer_avail(qos_spsc_queue_t* queue) {
   auto avail = queue->write_tail - queue->read_head;
   if (avail < 0) {
     avail += queue->capacity;
@@ -86,7 +86,7 @@ static int32_t STRIPED_RAM max_consumer_avail(qos_spsc_queue_t* queue) {
   return avail;
 }
 
-void STRIPED_RAM internal_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size) {
+void QOS_HANDLER_MODE internal_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size) {
   queue->read_head += size;
   if (queue->read_head >= queue->capacity) {
     queue->read_head -= queue->capacity;
@@ -99,7 +99,7 @@ void STRIPED_RAM internal_read_spsc_queue(qos_spsc_queue_t* queue, void* data, i
   queue->read_tail = queue->read_head;
 }
 
-bool STRIPED_RAM qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
+bool qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   while (max_consumer_avail(queue) < size) {
@@ -113,7 +113,7 @@ bool STRIPED_RAM qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_
   return true;
 }
 
-bool STRIPED_RAM qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t size) {
+bool QOS_HANDLER_MODE qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t size) {
   if (max_consumer_avail(queue) < size) {
     return false;
   }

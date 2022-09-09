@@ -30,7 +30,7 @@ void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   queue->buffer = (char*) buffer;
 }
 
-bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
+bool qos_write_queue(qos_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   // This isn't actually needed but it reduces the number of task migrations.
@@ -61,7 +61,7 @@ bool STRIPED_RAM qos_write_queue(qos_queue_t* queue, const void* data, int32_t s
   return true;
 }
 
-bool STRIPED_RAM qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
+bool qos_read_queue(qos_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   // This isn't actually needed but it reduces the number of task migrations.

@@ -40,31 +40,31 @@ void qos_init_mutex(qos_mutex_t* mutex, int32_t priority_ceiling) {
   qos_init_dlist(&mutex->waiting.tasks);
 }
 
-static qos_task_t* STRIPED_RAM unpack_owner(int32_t owner_state) {
+static qos_task_t* QOS_HANDLER_MODE unpack_owner(int32_t owner_state) {
   return (qos_task_t*) (owner_state & ~3);
 }
 
-static mutex_state_t STRIPED_RAM unpack_state(int32_t owner_state) {
+static mutex_state_t QOS_HANDLER_MODE unpack_state(int32_t owner_state) {
   return mutex_state_t(owner_state & 3);
 }
 
-static int32_t STRIPED_RAM pack_owner_state(qos_task_t* owner, mutex_state_t state) {
+static int32_t QOS_HANDLER_MODE pack_owner_state(qos_task_t* owner, mutex_state_t state) {
   return int32_t(owner) | state;
 }
 
-static void STRIPED_RAM push_owned(qos_task_t* task, qos_mutex_t* mutex) {
+static void QOS_HANDLER_MODE push_owned(qos_task_t* task, qos_mutex_t* mutex) {
   assert(mutex->next_owned == nullptr);
   mutex->next_owned = task->first_owned_mutex;
   task->first_owned_mutex = mutex;
 }
 
-static void STRIPED_RAM pop_owned(qos_task_t* task, qos_mutex_t* mutex) {
+static void QOS_HANDLER_MODE pop_owned(qos_task_t* task, qos_mutex_t* mutex) {
   assert(task->first_owned_mutex == mutex);
   task->first_owned_mutex = mutex->next_owned;
   mutex->next_owned = nullptr;
 }
 
-static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
+static qos_task_state_t QOS_HANDLER_MODE acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
 
@@ -106,7 +106,7 @@ static qos_task_state_t STRIPED_RAM acquire_mutex_supervisor(qos_supervisor_t* s
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
+bool qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
   qos_core_migrator migrator(mutex->core);
@@ -131,7 +131,7 @@ bool STRIPED_RAM qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
   return qos_call_supervisor_va(acquire_mutex_supervisor, mutex, timeout);
 }
 
-static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* supervisor, void* p) {
+static qos_task_state_t QOS_HANDLER_MODE release_mutex_supervisor(qos_supervisor_t* supervisor, void* p) {
   auto mutex = (qos_mutex_t*) p;
 
   auto task_state = QOS_TASK_RUNNING;
@@ -175,7 +175,7 @@ static qos_task_state_t STRIPED_RAM release_mutex_supervisor(qos_supervisor_t* s
   return task_state;
 }
 
-void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
+void qos_release_mutex(qos_mutex_t* mutex) {
   qos_core_migrator migrator(mutex->core);
 
   auto current_task = qos_current_task();
@@ -196,7 +196,7 @@ void STRIPED_RAM qos_release_mutex(qos_mutex_t* mutex) {
   qos_call_supervisor(release_mutex_supervisor, mutex);
 }
 
-bool STRIPED_RAM qos_owns_mutex(qos_mutex_t* mutex) {
+bool QOS_HANDLER_MODE qos_owns_mutex(qos_mutex_t* mutex) {
   return unpack_owner(mutex->owner_state) == qos_current_task();
 }
 
@@ -218,7 +218,7 @@ bool qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeo
   return qos_acquire_mutex(var->mutex, timeout);
 }
 
-qos_task_state_t qos_wait_condition_var_supervisor(qos_supervisor_t* supervisor, va_list args) {
+qos_task_state_t QOS_HANDLER_MODE qos_wait_condition_var_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto var = va_arg(args, qos_condition_var_t*);
   auto timeout = va_arg(args, qos_time_t);
 
@@ -249,7 +249,7 @@ void qos_release_condition_var(qos_condition_var_t* var) {
   qos_release_mutex(var->mutex);
 }
 
-static qos_task_state_t release_and_signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+static qos_task_state_t QOS_HANDLER_MODE release_and_signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = supervisor->current_task;
@@ -280,7 +280,7 @@ void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
   qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
 }
 
-static qos_task_state_t release_and_broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+static qos_task_state_t QOS_HANDLER_MODE release_and_broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = supervisor->current_task;

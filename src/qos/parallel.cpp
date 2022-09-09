@@ -4,13 +4,13 @@
 #include "task.h"
 #include "task.internal.h"
 
-static qos_task_state_t STRIPED_RAM suspend_supervisor(qos_supervisor_t* supervisor, void* p) {
+static qos_task_state_t QOS_HANDLER_MODE suspend_supervisor(qos_supervisor_t* supervisor, void* p) {
   auto done = (qos_proc_int32_t*) p;
   *done = nullptr;
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-static void STRIPED_RAM run_parallel() {
+static void QOS_TIME_CRITICAL run_parallel() {
   auto task = qos_current_task();
   for (;;) {
     task->parallel_entry(get_core_num());
@@ -37,7 +37,7 @@ void qos_init_parallel(int32_t parallel_stack_size) {
   current_task->parallel_task = parallel_task;
 }
 
-void STRIPED_RAM qos_parallel(qos_proc_int32_t entry) {
+void QOS_TIME_CRITICAL qos_parallel(qos_proc_int32_t entry) {
   bool done = false;
   auto current_task = qos_current_task();
   auto parallel_task = current_task->parallel_task;

@@ -101,7 +101,7 @@ static void init_mpu(qos_supervisor_t* supervisor) {
   }
 }
 
-static qos_supervisor_t* STRIPED_RAM get_supervisor() {
+static qos_supervisor_t* QOS_HANDLER_MODE get_supervisor() {
   return &g_supervisors[get_core_num()];
 }
 
@@ -126,7 +126,7 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   supervisor->idle_task.stack = (char*) idle_stack;
 }
 
-static void STRIPED_RAM run_task(qos_proc_t entry) {
+static void QOS_HANDLER_MODE run_task(qos_proc_t entry) {
   for (;;) {
     entry();
     qos_sleep(1);
@@ -140,7 +140,7 @@ qos_task_t *qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size)
   return task;
 }
 
-static void STRIPED_RAM ready_task_handler(qos_supervisor_t* supervisor, qos_task_state_t* task_state, intptr_t handler) {
+static void QOS_HANDLER_MODE ready_task_handler(qos_supervisor_t* supervisor, qos_task_state_t* task_state, intptr_t handler) {
   auto task = (qos_task_t*) (handler - offsetof(qos_task_t, ready_handler));
   qos_ready_task(supervisor, task_state, task);
 }
@@ -187,7 +187,7 @@ static void init_fifo() {
   irq_set_enabled(irq, true);
 }
 
-static void STRIPED_RAM start_supervisor(qos_supervisor_t* supervisor) {
+static void start_supervisor(qos_supervisor_t* supervisor) {
   // Must not access flash RAM after this in case QOS_PROTECT_COREx_FLASH enabled.
   assert(mpu_hw->ctrl == 0);
   mpu_hw->ctrl = M0PLUS_MPU_CTRL_PRIVDEFENA_BITS | M0PLUS_MPU_CTRL_ENABLE_BITS;
@@ -289,11 +289,11 @@ void qos_check_stack_overflow() {
   }
 }
 
-qos_error_t STRIPED_RAM qos_get_error() {
+qos_error_t qos_get_error() {
   return qos_current_task()->error;
 }
 
-void STRIPED_RAM qos_set_error(qos_error_t error) {
+void qos_set_error(qos_error_t error) {
   qos_current_task()->error = error;
 }
 
@@ -302,7 +302,7 @@ void qos_save_context(uint32_t save_context) {
   task->save_context |= save_context;
 }
 
-static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_supervisor_t* supervisor, void*) {
+static qos_task_state_t QOS_HANDLER_MODE ready_busy_blocked_tasks_supervisor(qos_supervisor_t* supervisor, void*) {
   auto& busy_blocked = supervisor->busy_blocked;
   auto task_state = QOS_TASK_RUNNING;
 
@@ -319,14 +319,14 @@ static qos_task_state_t STRIPED_RAM ready_busy_blocked_tasks_supervisor(qos_supe
   return task_state;
 }
 
-void STRIPED_RAM qos_ready_busy_blocked_tasks() {
+void QOS_HANDLER_MODE qos_ready_busy_blocked_tasks() {
   for (auto i = 0; i < NUM_CORES; ++i) {
     g_ready_busy_blocked_tasks[i] = true;
   }
   __sev();
 }
 
-static void STRIPED_RAM check_task_stack_overflow(qos_supervisor_t* supervisor) {
+static void check_task_stack_overflow(qos_supervisor_t* supervisor) {
   char* p;
   __asm__("MRS %0, PSP" : "=l"(p));
 
@@ -349,7 +349,7 @@ static void run_idle_task(qos_supervisor_t* supervisor) {
   }
 }
 
-qos_task_state_t STRIPED_RAM qos_supervisor_systick(qos_supervisor_t* supervisor) {
+qos_task_state_t QOS_HANDLER_MODE qos_supervisor_systick(qos_supervisor_t* supervisor) {
   auto& delayed = supervisor->delayed;
 
   auto time = qos_time();
@@ -378,7 +378,7 @@ qos_task_state_t STRIPED_RAM qos_supervisor_systick(qos_supervisor_t* supervisor
   return task_state;
 }
 
-qos_task_state_t STRIPED_RAM qos_supervisor_pendsv(qos_supervisor_t* supervisor) {
+qos_task_state_t QOS_HANDLER_MODE qos_supervisor_pendsv(qos_supervisor_t* supervisor) {
   auto task_state = supervisor->pendsv_task_state;
   supervisor->pendsv_task_state = QOS_TASK_RUNNING;
 
@@ -387,7 +387,7 @@ qos_task_state_t STRIPED_RAM qos_supervisor_pendsv(qos_supervisor_t* supervisor)
   return task_state;
 }
 
-qos_task_state_t STRIPED_RAM qos_supervisor_fifo(qos_supervisor_t* supervisor) {
+qos_task_state_t QOS_HANDLER_MODE qos_supervisor_fifo(qos_supervisor_t* supervisor) {
   auto task_state = QOS_TASK_RUNNING;
 
   while (multicore_fifo_rvalid()) {
@@ -398,7 +398,7 @@ qos_task_state_t STRIPED_RAM qos_supervisor_fifo(qos_supervisor_t* supervisor) {
   return task_state;
 }
 
-static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_supervisor_t* supervisor, void* p) {
+static qos_task_state_t QOS_HANDLER_MODE sleep_supervisor(qos_supervisor_t* supervisor, void* p) {
   auto timeout = *(qos_time_t*) p;
 
   auto current_task = supervisor->current_task;
@@ -413,17 +413,17 @@ static qos_task_state_t STRIPED_RAM sleep_supervisor(qos_supervisor_t* superviso
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-void STRIPED_RAM qos_yield() {
+void qos_yield() {
   qos_time_t timeout = 0;
   qos_call_supervisor(sleep_supervisor, &timeout);
 }
 
-void STRIPED_RAM qos_sleep(qos_time_t timeout) {
+void qos_sleep(qos_time_t timeout) {
   qos_normalize_time(&timeout);
   qos_call_supervisor(sleep_supervisor, &timeout);
 }
 
-static qos_task_state_t migrate_core_supervisor(qos_supervisor_t* supervisor, void*) {
+static qos_task_state_t QOS_HANDLER_MODE migrate_core_supervisor(qos_supervisor_t* supervisor, void*) {
   if (!multicore_fifo_wready()) {
     return QOS_TASK_READY;
   }
@@ -434,7 +434,7 @@ static qos_task_state_t migrate_core_supervisor(qos_supervisor_t* supervisor, vo
   return QOS_TASK_SYNC_BLOCKED;
 }
 
-int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
+int32_t qos_migrate_core(int32_t dest_core) {
   assert(dest_core >= 0 && dest_core < NUM_CORES);
   int32_t source_core = get_core_num();
   if (dest_core == source_core) {
@@ -449,7 +449,7 @@ int32_t STRIPED_RAM qos_migrate_core(int32_t dest_core) {
   return source_core;
 }
 
-static void STRIPED_RAM save_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
+static void QOS_HANDLER_MODE save_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
   ctx->ctrl0 = hw->ctrl[0];
   ctx->ctrl1 = hw->ctrl[1];
   ctx->accum0 = hw->accum[0];
@@ -458,7 +458,7 @@ static void STRIPED_RAM save_interp_context(qos_interp_context_t* ctx, interp_hw
   ctx->base1 = hw->base[1];
 }
 
-static void STRIPED_RAM restore_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
+static void QOS_HANDLER_MODE restore_interp_context(qos_interp_context_t* ctx, interp_hw_t* hw) {
   hw->ctrl[0] = ctx->ctrl0;
   hw->ctrl[1] = ctx->ctrl1;
   hw->accum[0] = ctx->accum0;
@@ -467,7 +467,7 @@ static void STRIPED_RAM restore_interp_context(qos_interp_context_t* ctx, interp
   hw->base[1] = ctx->base1;
 }
 
-qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state, qos_supervisor_t* supervisor, qos_task_t* current_task) {
+qos_task_t* QOS_HANDLER_MODE qos_supervisor_context_switch(qos_task_state_t new_state, qos_supervisor_t* supervisor, qos_task_t* current_task) {
   auto& ready = supervisor->ready;
   auto& busy_blocked = supervisor->busy_blocked;
   auto& pending = supervisor->pending;
@@ -519,7 +519,7 @@ qos_task_t* STRIPED_RAM qos_supervisor_context_switch(qos_task_state_t new_state
   return current_task;
 }
 
-void STRIPED_RAM qos_ready_task(qos_supervisor_t* supervisor, qos_task_state_t* task_state, qos_task_t* task) {
+void QOS_HANDLER_MODE qos_ready_task(qos_supervisor_t* supervisor, qos_task_state_t* task_state, qos_task_t* task) {
   if (task->sync_unblock_task_proc) {
     task->sync_unblock_task_proc(task);
   }
@@ -537,7 +537,7 @@ void STRIPED_RAM qos_ready_task(qos_supervisor_t* supervisor, qos_task_state_t* 
   }
 }
 
-void STRIPED_RAM qos_supervisor_call_result(qos_supervisor_t* supervisor, qos_task_t* task, int32_t result) {
+void QOS_HANDLER_MODE qos_supervisor_call_result(qos_supervisor_t* supervisor, qos_task_t* task, int32_t result) {
   if (task == supervisor->current_task) {
     qos_current_supervisor_call_result(supervisor, result);
   } else {
@@ -546,7 +546,7 @@ void STRIPED_RAM qos_supervisor_call_result(qos_supervisor_t* supervisor, qos_ta
   }
 }
 
-void STRIPED_RAM qos_delay_task(qos_supervisor_t* supervisor, qos_task_t* task, qos_time_t time) {
+void QOS_HANDLER_MODE qos_delay_task(qos_supervisor_t* supervisor, qos_task_t* task, qos_time_t time) {
   if (time == QOS_NO_TIMEOUT) {
     return;
   }
@@ -562,7 +562,7 @@ void STRIPED_RAM qos_delay_task(qos_supervisor_t* supervisor, qos_task_t* task, 
   splice(position, task);
 }
 
-void STRIPED_RAM qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_task_t* task) {
+void QOS_HANDLER_MODE qos_internal_insert_scheduled_task(qos_task_scheduling_dlist_t* list, qos_task_t* task) {
   auto priority = task->priority;
   auto position = begin(*list);
   while (position != end(*list) && position->priority >= priority) {

@@ -1,6 +1,6 @@
 #include "base.S.h"
 
-.SECTION .time_critical.qos
+.SECTION .time_critical.qos.handler
 .SYNTAX UNIFIED
 .THUMB_FUNC
 .BALIGN 4
