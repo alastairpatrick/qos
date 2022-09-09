@@ -265,9 +265,6 @@ void do_divide_task2() {
 }
 
 void init_core0() {
-  g_queue = qos_new_queue(100);
-  g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());
-
   qos_new_task(1, do_deferred_printf_task, 1024);
   qos_new_task(100, do_delay_task, 1024);
   qos_new_task(1, do_producer_task1, 1024);
@@ -283,9 +280,6 @@ void init_core0() {
 }
 
 void init_core1() {
-  g_mutex = qos_new_mutex(QOS_AUTO_PRIORITY_CEILING);
-  g_cond_var = qos_new_condition_var(g_mutex);
-
   qos_new_task(1, do_producer_task2, 1024);
   qos_new_task(1, do_consumer_task2, 1024);
   qos_new_task(1, do_spsc_consumer_task, 1024);
@@ -312,6 +306,12 @@ int main() {
   add_repeating_timer_ms(2000, repeating_timer_isr, 0, &g_repeating_timer);
   
   mutex_init(&g_lock_core_mutex);
+
+  g_queue = qos_new_queue(100);
+  g_spsc_queue = qos_new_spsc_queue(100, get_core_num(), 1 - get_core_num());
+
+  g_mutex = qos_new_mutex(QOS_AUTO_PRIORITY_CEILING);
+  g_cond_var = qos_new_condition_var(g_mutex);
 
   g_event = qos_new_event(0);
 
