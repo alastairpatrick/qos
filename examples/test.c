@@ -164,14 +164,14 @@ void do_migrating_task() {
 
 void do_lock_core_mutex_task1() {
   mutex_enter_blocking(&g_lock_core_mutex);
-  sleep_ms(500);
+  qos_sleep(500000);
   sio_hw->gpio_togl = 1 << PICO_DEFAULT_LED_PIN;
   mutex_exit(&g_lock_core_mutex);
 }
 
 void do_lock_core_mutex_task2() {
   mutex_enter_blocking(&g_lock_core_mutex);
-  sleep_ms(500);
+  qos_sleep(500000);
   mutex_exit(&g_lock_core_mutex);
 }
 

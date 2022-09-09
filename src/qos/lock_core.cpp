@@ -1,3 +1,4 @@
+#include "interrupt.h"
 #include "svc.h"
 #include "task.h"
 
@@ -16,7 +17,7 @@ static qos_task_state_t busy_block_supervisor(qos_supervisor_t*, void*) {
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify or spuriously.
 void qos_lock_core_busy_block() {
   // Can't block if RTOS not started or if handling an exception.
-  if (!qos_is_started() || __get_current_exception()) {
+  if (!qos_is_started() || qos_get_exception()) {
     __wfe();
   } else {
     qos_call_supervisor(busy_block_supervisor, nullptr);
@@ -26,7 +27,7 @@ void qos_lock_core_busy_block() {
 // Block task and dynamically reduce its priority to lowest until ready. Unblocks on notify, after timeout or spuriously.
 bool qos_lock_core_busy_block_until(absolute_time_t until) {
   // Can't block if RTOS not started or if handling an exception.
-  if (!qos_is_started() || __get_current_exception()) {
+  if (!qos_is_started() || qos_get_exception()) {
     return best_effort_wfe_or_timeout(until);
   } else {
     qos_call_supervisor(busy_block_supervisor, nullptr);

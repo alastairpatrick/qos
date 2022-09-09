@@ -28,4 +28,6 @@ pico_set_divider_implementation(qos_test qos)
 
 target_compile_definitions(qos_test PRIVATE
   PICO_STACK_SIZE=2048
+  QOS_PROTECT_CORE0_FLASH=1
+  QOS_PROTECT_CORE1_FLASH=1  
 )

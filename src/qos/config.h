@@ -33,28 +33,45 @@
 #endif
 #endif
 
+// Reserve some MPU regions for the application.
 #ifndef QOS_APP_MPU_REGIONS
 #define QOS_APP_MPU_REGIONS 0
 #endif
 
+// Hard fault if guard region at end of any task other than idle task's stack is accessed.
 #ifndef QOS_PROTECT_TASK_STACK
 #define QOS_PROTECT_TASK_STACK 1
 #endif
 
+// Hard fault if guard region at end of exception stack is accessed.
 #ifndef QOS_PROTECT_EXCEPTION_STACK
 #define QOS_PROTECT_EXCEPTION_STACK 1
 #endif
 
+// Hard fault if guard region at end of idle task stack is accessed.
 #ifndef QOS_PROTECT_IDLE_STACK
 #define QOS_PROTECT_IDLE_STACK 1
 #endif
 
+// Hard fault if core 1 attempts to access core 0's scratch bank (bank 6)
 #ifndef QOS_PROTECT_CORE0_SCRATCH_BANK
 #define QOS_PROTECT_CORE0_SCRATCH_BANK 1
 #endif
 
+// Hard fault if core 0 attempts to access core 1's scratch bank (bank 5)
 #ifndef QOS_PROTECT_CORE1_SCRATCH_BANK
 #define QOS_PROTECT_CORE1_SCRATCH_BANK 1
 #endif
+
+// Hard fault if core 0 attempts to access flash RAM.
+#ifndef QOS_PROTECT_CORE0_FLASH
+#define QOS_PROTECT_CORE0_FLASH 0
+#endif
+
+// Hard fault if core 1 attempts to access flash RAM.
+#ifndef QOS_PROTECT_CORE1_FLASH
+#define QOS_PROTECT_CORE1_FLASH 0
+#endif
+
 
 #endif  // QOS_CONFIG_H

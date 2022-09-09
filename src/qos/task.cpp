@@ -73,24 +73,31 @@ static void add_stack_guard(qos_supervisor_t* supervisor, void* stack) {
   add_mpu_region(supervisor, addr, rasr);
 }
 
-static void disable_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
+static void protect_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
   auto rasr = 0x10000000 /* XN */ | (11 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(11+1) = 4K
   add_mpu_region(supervisor, base, rasr);
+}
+
+static void protect_flash_ram(qos_supervisor_t* supervisor) {
+  auto rasr = 0x10000000 /* XN */ | (23 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(23+1) = 16MB
+  add_mpu_region(supervisor, XIP_BASE, rasr);
 }
 
 static void init_mpu(qos_supervisor_t* supervisor) {
   // Check MPU is not already in use.
   assert(mpu_hw->ctrl == 0);
 
-  mpu_hw->ctrl = M0PLUS_MPU_CTRL_PRIVDEFENA_BITS | M0PLUS_MPU_CTRL_ENABLE_BITS;
-
   // This might look backwards. When core 0's scratch bank is protected, it is being protected _from_ core 1 so
   // it is core 1's MPU that is configured.
   bool protect_scratch = get_core_num() == 1 ? QOS_PROTECT_CORE0_SCRATCH_BANK : QOS_PROTECT_CORE1_SCRATCH_BANK;
-
   if (protect_scratch) {
     // Prevent access to the other core's dedicated SRAM bank.
-    disable_scratch_bank(supervisor, get_core_num() == 0 ? SRAM4_BASE : SRAM5_BASE);
+    protect_scratch_bank(supervisor, get_core_num() == 0 ? SRAM4_BASE : SRAM5_BASE);
+  }
+
+  bool protect_flash = get_core_num() == 0 ? QOS_PROTECT_CORE0_FLASH : QOS_PROTECT_CORE1_FLASH;
+  if (protect_flash) {
+    protect_flash_ram(supervisor);
   }
 }
 
@@ -99,8 +106,6 @@ static qos_supervisor_t* STRIPED_RAM get_supervisor() {
 }
 
 static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
-  memset(supervisor, 0, sizeof(*supervisor));
-
   supervisor->core = get_core_num();
 
   qos_init_dlist(&supervisor->ready.tasks);
@@ -121,7 +126,7 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   supervisor->idle_task.stack = (char*) idle_stack;
 }
 
-static void run_task(qos_proc_t entry) {
+static void STRIPED_RAM run_task(qos_proc_t entry) {
   for (;;) {
     entry();
     qos_sleep(1);
@@ -182,7 +187,39 @@ static void init_fifo() {
   irq_set_enabled(irq, true);
 }
 
-static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor, void* exception_stack_top) {
+static void STRIPED_RAM start_supervisor(qos_supervisor_t* supervisor) {
+  // Must not access flash RAM after this in case QOS_PROTECT_COREx_FLASH enabled.
+  assert(mpu_hw->ctrl == 0);
+  mpu_hw->ctrl = M0PLUS_MPU_CTRL_PRIVDEFENA_BITS | M0PLUS_MPU_CTRL_ENABLE_BITS;
+
+  qos_yield();
+
+  // The core's initial main stack, allocated in the core's dedicated scratch RAM bank, becomes the idle
+  // tasks's stack. This reduces interrupt jitter while the idle task is running.
+  run_idle_task(supervisor);
+}
+
+static void start_core(qos_proc_t init_proc, void* idle_stack) {
+  // Allocate the exception stack in a scratch RAM bank dedicated to this core. Reasons:
+  //  - the other core never access these data
+  //  - reduces interrupt jitter
+  //  - reduces runtime of supervisor exceptions, which reduces inter-task priority inversion
+  auto supervisor = get_supervisor();
+  supervisor_and_stack_t supervisor_and_stack;
+  supervisor_and_stack.supervisor = supervisor;
+
+  init_supervisor(supervisor, idle_stack);
+
+  init_mpu(supervisor);
+
+  if (QOS_PROTECT_IDLE_STACK) {
+    add_stack_guard(supervisor, idle_stack);
+  }
+
+  if (QOS_PROTECT_EXCEPTION_STACK) {
+    add_stack_guard(supervisor, supervisor_and_stack.exception_stack);
+  }
+
   init_proc();
 
   if (get_core_num() == 0) {
@@ -194,9 +231,8 @@ static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor,
     }
   }
 
-  init_mpu(supervisor);
   init_fifo();
-  qos_internal_init_stacks(exception_stack_top);
+  qos_internal_init_stacks(&supervisor_and_stack.supervisor);
 
   systick_hw->csr = 0;
   __dsb();
@@ -223,33 +259,7 @@ static void start_supervisor(qos_proc_t init_proc, qos_supervisor_t* supervisor,
   __dsb();
   __isb();
 
-  qos_yield();
-
-  // The core's initial main stack, allocated in the core's dedicated scratch RAM bank, becomes the idle
-  // tasks's stack. This reduces interrupt jitter while the idle task is running.
-  run_idle_task(supervisor);
-}
-
-static void start_core(qos_proc_t init_proc, void* idle_stack) {
-  // Allocate the exception stack in a scratch RAM bank dedicated to this core. Reasons:
-  //  - the other core never access these data
-  //  - reduces interrupt jitter
-  //  - reduces runtime of supervisor exceptions, which reduces inter-task priority inversion
-  auto supervisor = get_supervisor();
-  supervisor_and_stack_t supervisor_and_stack;
-  supervisor_and_stack.supervisor = supervisor;
-
-  init_supervisor(supervisor, idle_stack);
- 
-  if (QOS_PROTECT_EXCEPTION_STACK) {
-    add_stack_guard(supervisor, supervisor_and_stack.exception_stack);
-  }
-
-  if (QOS_PROTECT_IDLE_STACK) {
-    add_stack_guard(supervisor, idle_stack);
-  }
-
-  start_supervisor(init_proc, supervisor, &supervisor_and_stack.supervisor);
+  start_supervisor(supervisor);
 }
 
 static volatile qos_proc_t g_init_core1;

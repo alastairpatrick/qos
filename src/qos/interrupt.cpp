@@ -103,7 +103,7 @@ qos_task_state_t STRIPED_RAM qos_await_irq_supervisor(qos_supervisor_t* supervis
 
 bool STRIPED_RAM qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout) {
   // Make this function safe to call from an ISR.
-  if (__get_current_exception()) {
+  if (qos_get_exception()) {
     return true;
   }
 

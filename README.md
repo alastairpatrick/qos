@@ -237,6 +237,9 @@ bool qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t s
 // Deferred IRQ handling
 void qos_init_await_irq(int32_t irq);
 bool qos_await_irq(int32_t irq, io_rw_32* enable, int32_t mask, qos_time_t timeout);
+
+// Misc
+int32_t qos_get_exception();
 ```
 
 #### Example
