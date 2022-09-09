@@ -33,9 +33,13 @@
 #endif
 #endif
 
-// Reserve some MPU regions for the application.
-#ifndef QOS_APP_MPU_REGIONS
-#define QOS_APP_MPU_REGIONS 0
+// MPU regions reserved for RTOS.
+#ifndef QOS_FIRST_MPU_REGION
+#define QOS_FIRST_MPU_REGION 0
+#endif
+
+#ifndef QOS_LAST_MPU_REGION
+#define QOS_LAST_MPU_REGION 7
 #endif
 
 // Hard fault if guard region at end of any task other than idle task's stack is accessed.

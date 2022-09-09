@@ -52,7 +52,7 @@ extern "C" {
 static void run_idle_task(qos_supervisor_t*);
 
 static void add_mpu_region(qos_supervisor_t* supervisor, int32_t addr, int32_t rasr) {
-  if (supervisor->next_mpu_region >= 8) {
+  if (supervisor->next_mpu_region > QOS_LAST_MPU_REGION) {
     return;
   }
 
@@ -117,7 +117,7 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
     qos_init_dlist(&awaiting.tasks);
   }
 
-  supervisor->next_mpu_region = QOS_APP_MPU_REGIONS;
+  supervisor->next_mpu_region = QOS_FIRST_MPU_REGION;
 
   qos_init_dnode(&supervisor->idle_task.scheduling_node);
   qos_init_dnode(&supervisor->idle_task.timeout_node);
