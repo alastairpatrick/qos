@@ -4,6 +4,8 @@ add_executable(qos_test
   test.c
 )
 
+pico_set_binary_type(qos_test copy_to_ram)
+
 target_link_libraries(qos_test
   hardware_gpio
   hardware_irq
