@@ -44,19 +44,19 @@ inter-core atomic instructions, such as atomic compare-and-set.
 
 void task0a() {
   printf("Hello\n");
-  sleep(1000000);
+  qos_sleep(1000000);
 }
 
 void task0b() {
   printf("World\n");
-  sleep(1000000);
+  qos_sleep(1000000);
 }
 
 void task1() {
   led_on();
-  sleep(500000);
+  qos_sleep(500000);
   led_off();
-  sleep(500000);
+  qos_sleep(500000);
 }
 
 void init_core0() {
@@ -176,11 +176,11 @@ atop event objects, such as single producer / single constumer queues, have simi
 ### Priority Ceiling
 
 To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a priority ceiling.
+
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
-a mutex before task A attempts to acquire the same mutex. Next, task B preempts task A, which is a priority inversion
-because task A (the highest priority task) is waiting for task C to release the mutex. The fastest way to allow task
-A to run is to let task C continue. Task B should not run while task C holds the mutex, even though task B has higher
-priority than task C.
+a mutex before task A attempts to acquire the same mutex. Next, having the higher priority, task B preempts task A.
+The fastest way to allow task A to run wopuld be to let task C continue. So task B should not have preempted task C;
+that is a priority inversion. Task C should continue to run until it releases the mutex for task A.
 
 To prevent this from happening a mutex can be configured with a priority ceiling. When a task acquires a mutex, the
 task's priority is replaced with the mutex's priority ceiling, but only if this results in an increase in priority.
@@ -193,7 +193,7 @@ blocked waiting for a mutex to become available.
 
 If a priority ceiling is not configured, the default is auto priority ceiling. In this mode, whenever a mutex is acquired,
 its priority ceiling is set to the task's priority minus one, but only if that would result in an increase. This often leads
-to the system settling on suitable mutex priorities ceilings and, where it doesn't, they can be optimally configured.
+to the system settling on suitable mutex priorities ceilings and, where it doesn't, they can be better configured.
 
 
 ### Parallel Tasks
