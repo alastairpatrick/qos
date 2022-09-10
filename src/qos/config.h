@@ -67,14 +67,16 @@
 #define QOS_PROTECT_CORE1_SCRATCH_BANK 1
 #endif
 
-// Hard fault if core 0 attempts to access flash RAM.
+// Support for hard fault if core 0 attempts to access flash RAM. Must also be
+// enabled at runtime with qos_protect_flash().
 #ifndef QOS_PROTECT_CORE0_FLASH
-#define QOS_PROTECT_CORE0_FLASH 0
+#define QOS_PROTECT_CORE0_FLASH 1
 #endif
 
-// Hard fault if core 1 attempts to access flash RAM.
+// Support for hard fault if core 1 attempts to access flash RAM. Must also be
+// enabled at runtime with qos_protect_flash().
 #ifndef QOS_PROTECT_CORE1_FLASH
-#define QOS_PROTECT_CORE1_FLASH 0
+#define QOS_PROTECT_CORE1_FLASH 1
 #endif
 
 
