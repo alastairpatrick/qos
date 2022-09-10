@@ -178,7 +178,7 @@ atop event objects, such as single producer / single constumer queues, have simi
 To avoid certain task priority inversion scenarios, a mutex can optionally be configured with a priority ceiling.
 
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
-a mutex before task A attempts to acquire the same mutex. Next, having higher priority, task B preempts task A.
+a mutex before task A attempts to acquire the same mutex. Next, having higher priority, task B preempts task C.
 The fastest way to allow task A to run would be to let task C continue. So task B should _not_ preempt task C;
 that being a priority inversion. Rather, task C should continue to run until it releases the mutex for task A.
 
