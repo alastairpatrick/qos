@@ -103,7 +103,7 @@ qos_time_t can represent both absolute time or time relative to present. It has 
 of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (time_after_start - 2^63), i.e. negative
 and aging towards zero. Relative times are non-negative.
 
-qos_normalize_time() converts all input times to absolute times.
+qos_normalize_time() converts input time to absolute time.
 
 These both sleep for 100ms:
 ```c
@@ -179,10 +179,10 @@ To avoid certain task priority inversion scenarios, a mutex can optionally be co
 
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
 a mutex before task A attempts to acquire the same mutex. Next, having the higher priority, task B preempts task A.
-The fastest way to allow task A to run wopuld be to let task C continue. So task B should not have preempted task C;
+The fastest way to allow task A to run wopuld be to let task C continue. So task B should _not_ preempt task C;
 that is a priority inversion. Task C should continue to run until it releases the mutex for task A.
 
-To prevent this from happening a mutex can be configured with a priority ceiling. When a task acquires a mutex, the
+To prevent above happening a mutex can be configured with a priority ceiling. When a task acquires a mutex, the
 task's priority is replaced with the mutex's priority ceiling, but only if this results in an increase in priority.
 
 To use this to fix the opening example, the mutex's priority ceiling can be set to that of task B or higher. Then when
