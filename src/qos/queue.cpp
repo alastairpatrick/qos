@@ -11,13 +11,13 @@
 #include <algorithm>
 #include <cstring>
 
-qos_queue_t* qos_new_queue(int32_t capacity) {
+qos_queue_t* QOS_INITIALIZATION qos_new_queue(int32_t capacity) {
   auto queue = new qos_queue_t;
   qos_init_queue(queue, new char[capacity], capacity);
   return queue;
 }
 
-void qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
+void QOS_INITIALIZATION qos_init_queue(qos_queue_t* queue, void* buffer, int32_t capacity) {
   assert(capacity > 0);
   
   qos_init_semaphore(&queue->read_semaphore, 0);

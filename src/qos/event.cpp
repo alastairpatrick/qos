@@ -14,13 +14,13 @@ static int8_t g_next_idx[NUM_CORES];
 
 static void QOS_HANDLER_MODE signal_event_handler(qos_supervisor_t* supervisor, qos_task_state_t* task_state, intptr_t handler);
 
-qos_event_t* qos_new_event(int32_t core) {
+qos_event_t* QOS_INITIALIZATION qos_new_event(int32_t core) {
   auto event = new qos_event_t;
   qos_init_event(event, core);
   return event;
 }
 
-void qos_init_event(qos_event_t* event, int32_t core) {
+void QOS_INITIALIZATION qos_init_event(qos_event_t* event, int32_t core) {
   if (core < 0) {
     core = get_core_num();
   }

@@ -273,7 +273,7 @@ void do_divide_task2() {
   }
 }
 
-void init_core0() {
+void QOS_INITIALIZATION init_core0() {
   qos_new_task(1, do_deferred_printf_task, 1024);
   qos_new_task(100, do_delay_task, 1024);
   qos_new_task(1, do_producer_task1, 1024);
@@ -290,7 +290,7 @@ void init_core0() {
   qos_protect_flash();
 }
 
-void init_core1() {
+void QOS_INITIALIZATION init_core1() {
   qos_new_task(1, do_producer_task2, 1024);
   qos_new_task(1, do_consumer_task2, 1024);
   qos_new_task(1, do_spsc_consumer_task, 1024);
@@ -307,7 +307,7 @@ void init_core1() {
   qos_protect_flash();
 }
 
-int main() {
+int QOS_INITIALIZATION main() {
   stdio_init_all();
   qos_stdio_uart_init_full(uart0, 115200, PICO_DEFAULT_UART_TX_PIN, PICO_DEFAULT_UART_RX_PIN);
 

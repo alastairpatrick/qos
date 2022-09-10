@@ -73,16 +73,16 @@ static void add_stack_guard(qos_supervisor_t* supervisor, void* stack) {
   add_mpu_region(supervisor, addr, rasr);
 }
 
-static void protect_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
+static void QOS_INITIALIZATION protect_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
   auto rasr = 0x10000000 /* XN */ | (11 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(11+1) = 4K
   add_mpu_region(supervisor, base, rasr);
 }
 
-static void protect_flash_ram(qos_supervisor_t* supervisor) {
+static void QOS_INITIALIZATION protect_flash_ram(qos_supervisor_t* supervisor) {
   supervisor->flash_mpu_region = add_mpu_region(supervisor, XIP_BASE, 0);
 }
 
-static void init_mpu(qos_supervisor_t* supervisor) {
+static void QOS_INITIALIZATION init_mpu(qos_supervisor_t* supervisor) {
   // Check MPU is not already in use.
   assert(mpu_hw->ctrl == 0);
 
@@ -104,7 +104,7 @@ static qos_supervisor_t* QOS_HANDLER_MODE get_supervisor() {
   return &g_supervisors[get_core_num()];
 }
 
-static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
+static void QOS_INITIALIZATION init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   supervisor->core = get_core_num();
 
   qos_init_dlist(&supervisor->ready.tasks);
@@ -133,7 +133,7 @@ static void QOS_HANDLER_MODE run_task(qos_proc_t entry) {
   }
 }
 
-qos_task_t *qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size) {
+qos_task_t* QOS_INITIALIZATION qos_new_task(uint8_t priority, qos_proc_t entry, int32_t stack_size) {
   auto task = new qos_task_t;
   auto stack = new int32_t[(stack_size + 3) / 4];
   qos_init_task(task, priority, entry, stack, stack_size);
@@ -177,7 +177,7 @@ void qos_init_task(struct qos_task_t* task, uint8_t priority, qos_proc_t entry, 
   frame->xpsr = 0x1000000;
 }
 
-static void init_fifo() {
+static void QOS_INITIALIZATION init_fifo() {
   multicore_fifo_drain();
   multicore_fifo_clear_irq();
   
@@ -199,7 +199,7 @@ static void start_supervisor(qos_supervisor_t* supervisor) {
   run_idle_task(supervisor);
 }
 
-static void start_core(qos_proc_t init_proc, void* idle_stack) {
+static void QOS_INITIALIZATION start_core(qos_proc_t init_proc, void* idle_stack) {
   // Allocate the exception stack in a scratch RAM bank dedicated to this core. Reasons:
   //  - the other core never access these data
   //  - reduces interrupt jitter
@@ -264,12 +264,12 @@ static void start_core(qos_proc_t init_proc, void* idle_stack) {
 
 static volatile qos_proc_t g_init_core1;
 
-static void start_core1() {
+static void QOS_INITIALIZATION start_core1() {
   extern char __StackOneBottom;
   start_core(g_init_core1, &__StackOneBottom);
 }
 
-void qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
+void QOS_INITIALIZATION qos_start_tasks(qos_proc_t init_core0, qos_proc_t init_core1) {
   assert(get_core_num() == 0);
 
   g_init_core1 = init_core1;

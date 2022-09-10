@@ -86,7 +86,7 @@ static stdio_driver_t g_drivers[2] = {
   }
 };
 
-void qos_stdio_uart_init_full(uart_inst_t *uart, int32_t baud_rate, int32_t tx_pin, int32_t rx_pin) {
+void QOS_INITIALIZATION qos_stdio_uart_init_full(uart_inst_t *uart, int32_t baud_rate, int32_t tx_pin, int32_t rx_pin) {
   auto hw = (uart_hw_t*) uart;
 
   uart_init(uart, baud_rate);

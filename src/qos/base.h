@@ -17,6 +17,9 @@
 #define QOS_END_EXTERN_C
 #endif
 
+// Located in flash because it should only be called before RTOS start.
+#define QOS_INITIALIZATION __attribute__((section(".flashtext")))
+
 // Time critical because it executes in handler mode.
 #define QOS_HANDLER_MODE __attribute__((section(".time_critical.qos.handler")))
 

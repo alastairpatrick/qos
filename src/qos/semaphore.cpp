@@ -12,13 +12,13 @@
 #include <cassert>
 #include <cstdarg>
 
-qos_semaphore_t* qos_new_semaphore(int32_t initial_count) {
+qos_semaphore_t* QOS_INITIALIZATION qos_new_semaphore(int32_t initial_count) {
   auto semaphore = new qos_semaphore_t;
   qos_init_semaphore(semaphore, initial_count);
   return semaphore;
 }
 
-void qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
+void QOS_INITIALIZATION qos_init_semaphore(qos_semaphore_t* semaphore, int32_t initial_count) {
   assert(initial_count >= 0);
   semaphore->core = get_core_num();
   semaphore->count = initial_count;

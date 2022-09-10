@@ -17,13 +17,13 @@ enum mutex_state_t {
   ACQUIRED_CONTENDED,
 };
 
-qos_mutex_t* qos_new_mutex(int32_t priority_ceiling) {
+qos_mutex_t* QOS_INITIALIZATION qos_new_mutex(int32_t priority_ceiling) {
   auto mutex = new qos_mutex_t;
   qos_init_mutex(mutex, priority_ceiling);
   return mutex;
 }
 
-void qos_init_mutex(qos_mutex_t* mutex, int32_t priority_ceiling) {
+void QOS_INITIALIZATION qos_init_mutex(qos_mutex_t* mutex, int32_t priority_ceiling) {
   mutex->core = get_core_num();
 
   if (priority_ceiling == QOS_AUTO_PRIORITY_CEILING) {
@@ -203,13 +203,13 @@ bool QOS_HANDLER_MODE qos_owns_mutex(qos_mutex_t* mutex) {
 
 //////// qos_condition_var_t ////////
 
-qos_condition_var_t* qos_new_condition_var(qos_mutex_t* mutex) {
+qos_condition_var_t* QOS_INITIALIZATION qos_new_condition_var(qos_mutex_t* mutex) {
   auto var = new qos_condition_var_t;
   qos_init_condition_var(var, mutex);
   return var;
 }
 
-void qos_init_condition_var(qos_condition_var_t* var, qos_mutex_t* mutex) {
+void QOS_INITIALIZATION qos_init_condition_var(qos_condition_var_t* var, qos_mutex_t* mutex) {
   var->mutex = mutex;
   qos_init_dlist(&var->waiting.tasks);
 }

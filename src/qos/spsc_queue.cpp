@@ -5,13 +5,13 @@
 #include <algorithm>
 #include <cstring>
 
-qos_spsc_queue_t* qos_new_spsc_queue(int32_t capacity, int32_t write_core, int32_t read_core) {
+qos_spsc_queue_t* QOS_INITIALIZATION qos_new_spsc_queue(int32_t capacity, int32_t write_core, int32_t read_core) {
   auto queue = new qos_spsc_queue_t;
   qos_init_spsc_queue(queue, new char[capacity], capacity, write_core, read_core);
   return queue;
 }
 
-void qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t write_core, int32_t read_core) {
+void QOS_INITIALIZATION qos_init_spsc_queue(qos_spsc_queue_t* queue, void* buffer, int32_t capacity, int32_t write_core, int32_t read_core) {
   assert(capacity > 0);
 
   queue->buffer = (char*) buffer;
