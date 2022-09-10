@@ -180,7 +180,7 @@ To avoid certain task priority inversion scenarios, a mutex can optionally be co
 Consider 3 tasks: task A (highest priority), task B (middle priority) and task C (lowest priority). Task C acquires
 a mutex before task A attempts to acquire the same mutex. Next, having higher priority, task B preempts task C.
 The fastest way to allow task A to run would be to let task C continue. So task B should _not_ preempt task C.
-Rather, task B's prempting task C is a priority inversion and task C should run until it releases the mutex for
+Rather, task B's preemption is a priority inversion and task C should run until it releases the mutex for
 task A.
 
 To prevent above happening a mutex can be configured with a priority ceiling. When a task acquires a mutex, the
