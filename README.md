@@ -163,10 +163,15 @@ bool qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t s
 
 Synchronization objects have affinity to a particular core. Affinity of a synchronization object cannot be
 changed after initialization. For tasks with affinity to the same core, operations on synchronization objects
-are faster and cause less inter-task priority inversion. When a task with affinity to a different core encounters
-a synchronization object, it first migrates to the same core as the synchronization object, then
-performs the operation on the synchronization object, and finally migrates back.
+are fast and cause less inter-task priority inversion.
 
+When a task with affinity to a different core encounters a synchronization object, it first migrates
+to the same core as the synchronization object, then performs the operation on the synchronization object,
+and finally migrates back.
+
+Events are an exception; a task can signal an event object without first migrating to the core with which
+the event object has affinity. Also, ISRs may directly signal event objects. Synchronization objects built
+atop event objects, such as single producer / single constumer queues, have similar capabilities.
 
 ### Priority Ceiling
 
