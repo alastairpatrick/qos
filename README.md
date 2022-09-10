@@ -89,23 +89,23 @@ void migrating_task() {
 
 ### Time
 
-Units are microseconds.
+Times are derived from the RP2040 timer peripheral with units of microseconds.
 
 ```c
 typedef int64_t qos_time_t;
 
 void qos_sleep(qos_time_t timeout);
 qos_time_t qos_time();  // always returns -ve
-void qos_normalize_time(qos_time_t* time);  // *time is -ve after
+void qos_normalize_time(qos_time_t* time);
 ```
 
 qos_time_t can represent both absolute time or time relative to present. It has thousands of years
 of range so qos_time() can be treated as monotonically increasing. Absolute times are equal to (time_after_start - 2^63), i.e. negative
 and aging towards zero. Relative times are non-negative.
 
-qos_time_t is derived from the RP2040 timer peripheral.
+qos_normalize_time() converts all input times to absolute times.
 
-Both these calls sleep for 100ms:
+These both sleep for 100ms:
 ```c
 qos_sleep(100000);
 qos_sleep(100000 + qos_time());
