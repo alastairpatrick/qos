@@ -286,6 +286,8 @@ void init_core0() {
   qos_new_task(1, do_await_event_task, 1024);
   qos_new_task(1, do_signal_event_task, 1024);
   qos_new_task(100, do_lock_core_mutex_task1, 1024);
+
+  qos_protect_flash();
 }
 
 void init_core1() {
@@ -301,6 +303,8 @@ void init_core1() {
   qos_new_task(1, do_divide_task2, 1024);
 
   qos_new_task(100, do_lock_core_mutex_task2, 1024);
+
+  qos_protect_flash();
 }
 
 int main() {

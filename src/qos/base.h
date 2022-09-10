@@ -20,8 +20,11 @@
 // Time critical because it executes in handler mode.
 #define QOS_HANDLER_MODE __attribute__((section(".time_critical.qos.handler")))
 
-// Time critical for some other reason.
+// Time critical for another reason.
 #define QOS_TIME_CRITICAL __attribute__((section(".time_critical.qos.misc")))
+
+// Must not be in flash for reason other than performance
+#define QOS_NOT_FLASH __attribute__((section(".time_critical.qos.notflash")))
 
 typedef volatile int32_t qos_atomic32_t;
 typedef void* volatile qos_atomic_ptr_t;

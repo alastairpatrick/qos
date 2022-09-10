@@ -22,6 +22,8 @@ static inline struct qos_task_t* qos_current_task() {
 }
 
 void qos_check_stack_overflow();
+void qos_protect_flash();
+void qos_unprotect_flash();
 
 qos_error_t qos_get_error();
 void qos_set_error(qos_error_t error);

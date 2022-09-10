@@ -51,16 +51,16 @@ extern "C" {
 
 static void run_idle_task(qos_supervisor_t*);
 
-static void add_mpu_region(qos_supervisor_t* supervisor, int32_t addr, int32_t rasr) {
+static int32_t add_mpu_region(qos_supervisor_t* supervisor, int32_t addr, int32_t rasr) {
   if (supervisor->next_mpu_region > QOS_LAST_MPU_REGION) {
-    return;
+    return -1;
   }
 
   mpu_hw->rbar = (addr & ~0xFF) | M0PLUS_MPU_RBAR_VALID_BITS | supervisor->next_mpu_region;
   mpu_hw->rasr = rasr;
   mpu_hw->rnr = 0;
 
-  ++supervisor->next_mpu_region;
+  return supervisor->next_mpu_region++;
 }
 
 static void add_stack_guard(qos_supervisor_t* supervisor, void* stack) {
@@ -79,8 +79,7 @@ static void protect_scratch_bank(qos_supervisor_t* supervisor, intptr_t base) {
 }
 
 static void protect_flash_ram(qos_supervisor_t* supervisor) {
-  auto rasr = 0x10000000 /* XN */ | (23 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(23+1) = 16MB
-  add_mpu_region(supervisor, XIP_BASE, rasr);
+  supervisor->flash_mpu_region = add_mpu_region(supervisor, XIP_BASE, 0);
 }
 
 static void init_mpu(qos_supervisor_t* supervisor) {
@@ -118,7 +117,8 @@ static void init_supervisor(qos_supervisor_t* supervisor, void* idle_stack) {
   }
 
   supervisor->next_mpu_region = QOS_FIRST_MPU_REGION;
-
+  supervisor->flash_mpu_region = -1;
+  
   qos_init_dnode(&supervisor->idle_task.scheduling_node);
   qos_init_dnode(&supervisor->idle_task.timeout_node);
   supervisor->idle_task.priority = -1;
@@ -287,6 +287,22 @@ void qos_check_stack_overflow() {
     // assert (or anything) not expected to work reliably after a stack overflow.
     __breakpoint();
   }
+}
+
+void QOS_NOT_FLASH qos_protect_flash() {
+  auto supervisor = get_supervisor();
+  assert(supervisor->flash_mpu_region >= 0);
+  mpu_hw->rnr = supervisor->flash_mpu_region;
+  mpu_hw->rasr = 0x10000000 /* XN */ | (23 << M0PLUS_MPU_RASR_SIZE_LSB) | M0PLUS_MPU_RASR_ENABLE_BITS;  // 2^(23+1) = 16MB
+  mpu_hw->rnr = 0;
+}
+
+void QOS_NOT_FLASH qos_unprotect_flash() {
+  auto supervisor = get_supervisor();
+  assert(supervisor->flash_mpu_region >= 0);
+  mpu_hw->rnr = supervisor->flash_mpu_region;
+  mpu_hw->rasr = 0;
+  mpu_hw->rnr = 0;
 }
 
 qos_error_t qos_get_error() {

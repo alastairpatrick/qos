@@ -96,6 +96,7 @@ typedef struct qos_supervisor_t {
   bool migrate_task;
   
   int8_t next_mpu_region;
+  int8_t flash_mpu_region;
 } qos_supervisor_t;
 
 struct qos_exception_frame_t {
