@@ -64,6 +64,7 @@ static void QOS_HANDLER_MODE pop_owned(qos_task_t* task, qos_mutex_t* mutex) {
   mutex->next_owned = nullptr;
 }
 
+
 static qos_task_state_t QOS_HANDLER_MODE acquire_mutex_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto mutex = va_arg(args, qos_mutex_t*);
   auto timeout = va_arg(args, qos_time_t);
@@ -130,6 +131,7 @@ bool qos_acquire_mutex(qos_mutex_t* mutex, qos_time_t timeout) {
 
   return qos_call_supervisor_va(acquire_mutex_supervisor, mutex, timeout);
 }
+
 
 static qos_task_state_t QOS_HANDLER_MODE release_mutex_supervisor(qos_supervisor_t* supervisor, void* p) {
   auto mutex = (qos_mutex_t*) p;
@@ -218,6 +220,7 @@ bool qos_acquire_condition_var(struct qos_condition_var_t* var, qos_time_t timeo
   return qos_acquire_mutex(var->mutex, timeout);
 }
 
+
 qos_task_state_t QOS_HANDLER_MODE qos_wait_condition_var_supervisor(qos_supervisor_t* supervisor, va_list args) {
   auto var = va_arg(args, qos_condition_var_t*);
   auto timeout = va_arg(args, qos_time_t);
@@ -245,11 +248,8 @@ bool qos_wait_condition_var(qos_condition_var_t* var, qos_time_t timeout) {
   return qos_call_supervisor_va(qos_wait_condition_var_supervisor, var, timeout);
 }
 
-void qos_release_condition_var(qos_condition_var_t* var) {
-  qos_release_mutex(var->mutex);
-}
 
-static qos_task_state_t QOS_HANDLER_MODE release_and_signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+static qos_task_state_t QOS_HANDLER_MODE signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = supervisor->current_task;
@@ -269,18 +269,18 @@ static qos_task_state_t QOS_HANDLER_MODE release_and_signal_condition_var_superv
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
-  pop_owned(current_task, var->mutex);
-  return release_mutex_supervisor(supervisor, var->mutex);
+  return QOS_TASK_RUNNING;
 }
 
-void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
+void qos_signal_condition_var(qos_condition_var_t* var) {
   qos_core_migrator migrator(var->mutex->core);
 
   assert(qos_owns_mutex(var->mutex));
-  qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
+  qos_call_supervisor(signal_condition_var_supervisor, var);
 }
 
-static qos_task_state_t QOS_HANDLER_MODE release_and_broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+
+static qos_task_state_t QOS_HANDLER_MODE broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
   auto var = (qos_condition_var_t*) v;
 
   auto current_task = supervisor->current_task;
@@ -299,6 +299,48 @@ static qos_task_state_t QOS_HANDLER_MODE release_and_broadcast_condition_var_sup
     qos_remove_dnode(&signalled_task->timeout_node);
   }
 
+  return QOS_TASK_RUNNING;
+}
+
+void qos_broadcast_condition_var(qos_condition_var_t* var) {
+  qos_core_migrator migrator(var->mutex->core);
+
+  assert(qos_owns_mutex(var->mutex));
+  qos_call_supervisor(broadcast_condition_var_supervisor, var);
+}
+
+
+void qos_release_condition_var(qos_condition_var_t* var) {
+  qos_release_mutex(var->mutex);
+}
+
+
+static qos_task_state_t QOS_HANDLER_MODE release_and_signal_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+  auto var = (qos_condition_var_t*) v;
+
+  auto current_task = supervisor->current_task;
+
+  signal_condition_var_supervisor(supervisor, var);
+
+  pop_owned(current_task, var->mutex);
+  return release_mutex_supervisor(supervisor, var->mutex);
+}
+
+void qos_release_and_signal_condition_var(qos_condition_var_t* var) {
+  qos_core_migrator migrator(var->mutex->core);
+
+  assert(qos_owns_mutex(var->mutex));
+  qos_call_supervisor(release_and_signal_condition_var_supervisor, var);
+}
+
+
+static qos_task_state_t QOS_HANDLER_MODE release_and_broadcast_condition_var_supervisor(qos_supervisor_t* supervisor, void* v) {
+  auto var = (qos_condition_var_t*) v;
+
+  auto current_task = supervisor->current_task;
+
+  broadcast_condition_var_supervisor(supervisor, var);
+
   pop_owned(current_task, var->mutex);
   return release_mutex_supervisor(supervisor, var->mutex);
 }
@@ -309,3 +351,4 @@ void qos_release_and_broadcast_condition_var(qos_condition_var_t* var) {
   assert(qos_owns_mutex(var->mutex));
   qos_call_supervisor(release_and_broadcast_condition_var_supervisor, var);
 }
+
