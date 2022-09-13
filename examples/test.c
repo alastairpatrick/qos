@@ -107,14 +107,14 @@ void do_consumer_task2() {
 }
 
 void do_spsc_producer_task() {
-  qos_write_spsc_queue(g_spsc_queue, "hello", 6, QOS_NO_TIMEOUT);
+  qos_write_spsc_queue(g_spsc_queue, "hello", 6, 6, QOS_NO_TIMEOUT);
   qos_sleep(200);
 }
 
 void do_spsc_consumer_task() {
   char buffer[10];
   memset(buffer, 0, sizeof(buffer));
-  qos_read_spsc_queue(g_spsc_queue, buffer, 6, QOS_NO_TIMEOUT);
+  qos_read_spsc_queue(g_spsc_queue, buffer, 6, 6, QOS_NO_TIMEOUT);
   assert(strcmp(buffer, "hello") == 0);
 }
 

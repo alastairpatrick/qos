@@ -52,28 +52,36 @@ void QOS_HANDLER_MODE internal_write_spsc_queue(qos_spsc_queue_t* queue, const v
   queue->write_tail = queue->write_head;
 }
 
-bool qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t size, qos_time_t timeout) {
+int32_t qos_write_spsc_queue(qos_spsc_queue_t* queue, const void* data, int32_t min_size, int32_t max_size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
-  while (max_producer_avail(queue) < size) {
+  int32_t avail;
+  for (;;) {
+    avail = max_producer_avail(queue);
+    if (avail >= min_size) {
+      break;
+    }
     if (!qos_await_event(&queue->write_event, timeout)) {
-      return false;
+      return -1;
     }
   }
 
+  auto size = std::min(max_size, avail);
   internal_write_spsc_queue(queue, data, size);
   qos_signal_event(&queue->read_event);
-  return true;
+  return size;
 }
 
-bool QOS_HANDLER_MODE qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const void* data, int32_t size) {
-  if (max_producer_avail(queue) < size) {
-    return false;
+int32_t QOS_HANDLER_MODE qos_write_spsc_queue_from_isr(qos_spsc_queue_t* queue, const void* data, int32_t min_size, int32_t max_size) {
+  auto avail = max_producer_avail(queue);
+  if (avail < min_size) {
+    return -1;
   }
 
+  auto size = std::min(max_size, avail);
   internal_write_spsc_queue(queue, data, size);
   qos_signal_event_from_isr(&queue->read_event);
-  return true;
+  return size;
 }
 
 
@@ -99,26 +107,34 @@ void QOS_HANDLER_MODE internal_read_spsc_queue(qos_spsc_queue_t* queue, void* da
   queue->read_tail = queue->read_head;
 }
 
-bool qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t size, qos_time_t timeout) {
+int32_t qos_read_spsc_queue(qos_spsc_queue_t* queue, void* data, int32_t min_size, int32_t max_size, qos_time_t timeout) {
   qos_normalize_time(&timeout);
 
-  while (max_consumer_avail(queue) < size) {
+  int32_t avail;
+  for (;;) {
+    avail = max_consumer_avail(queue);
+    if (avail >= min_size) {
+      break;
+    }
     if (!qos_await_event(&queue->read_event, timeout)) {
-      return false;
+      return -1;
     }
   }
 
+  auto size = std::min(max_size, avail);
   internal_read_spsc_queue(queue, data, size);
   qos_signal_event(&queue->write_event);
-  return true;
+  return size;
 }
 
-bool QOS_HANDLER_MODE qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t size) {
-  if (max_consumer_avail(queue) < size) {
-    return false;
+int32_t QOS_HANDLER_MODE qos_read_spsc_queue_from_isr(qos_spsc_queue_t* queue, void* data, int32_t min_size, int32_t max_size) {
+  auto avail = max_consumer_avail(queue);
+  if (avail < min_size) {
+    return -1;
   }
 
+  auto size = std::min(max_size, avail);
   internal_read_spsc_queue(queue, data, size);
   qos_signal_event_from_isr(&queue->write_event);
-  return true;
+  return size;
 }
